@@ -1,0 +1,14 @@
+build/
+build_qt/
+bin/
+lisp/
+msg_gen/
+CMakeLists.txt.user
+CMakeLists.txt.user.1.3
+*.so
+*.cfgc
+*.pyc
+.metadata/
+_*.py
+*.bag
+*.bak

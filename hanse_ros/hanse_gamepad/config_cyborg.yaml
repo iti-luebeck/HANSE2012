@@ -1,0 +1,18 @@
+{
+axis_angular: 3,
+axis_depth: 2,
+axis_linear: 1,
+button_emegency_stop: 1,
+button_hand_control: 2,
+frequency: 10,
+button_up: 3,
+button_down: 3,
+use_throttle: true,
+depth_delta: 10,
+joy_gate: 0.001,
+scale_angular: -100.0,
+scale_depth: 200.0,
+scale_linear: 100.0,
+server_hosts: '10.13.37.33,10.13.37.34,10.13.37.50,10.13.37.30',
+server_port: 1234
+}

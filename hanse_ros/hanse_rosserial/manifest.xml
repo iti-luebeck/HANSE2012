@@ -1,0 +1,14 @@
+<package>
+  <description brief="hanse_rosserial">
+
+     hanse_rosserial
+
+  </description>
+  <author>Dariush Forouher</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_rosserial</url>
+  <depend package="rosserial_arduino"/>
+  <depend package="diagnostic_msgs"/>
+
+</package>
