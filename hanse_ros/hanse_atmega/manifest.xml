@@ -1,0 +1,17 @@
+<package>
+  <description brief="hanse_atmega">
+
+     hanse_atmega
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_atmega</url>
+  <depend package="rosserial_arduino"/>
+  <depend package="diagnostic_msgs"/>
+  <depend package="hanse_msgs"/>
+
+</package>
+
+
