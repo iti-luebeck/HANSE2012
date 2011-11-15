@@ -1,0 +1,13 @@
+<package>
+  <description brief="hanse_sonardriver">
+
+     hanse_sonardriver
+
+  </description>
+  <author>Jannis Harder, Jan Fechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_sonardriver</url>
+  <depend package="roscpp"/>
+
+</package>
