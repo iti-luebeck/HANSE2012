@@ -14,6 +14,7 @@ public:
 
 private:
     ros::NodeHandle nh;
+    ros::Publisher publisher;
     SonarDataSourceSerial serialSource;
 };
 

@@ -52,6 +52,11 @@ rosbuild_add_executable(sonardriver
   ${qextserialport_HEADERS_MOC}
 )
 
+rosbuild_add_executable(sonarvisualize
+  src/sonarvisualize.cpp
+)
+
+
 include_directories(qextserialport)
 
 target_link_libraries(sonardriver ${QT_LIBRARIES})

@@ -9,5 +9,6 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hanse_sonardriver</url>
   <depend package="roscpp"/>
+  <depend package="hanse_msgs"/>
 
 </package>
