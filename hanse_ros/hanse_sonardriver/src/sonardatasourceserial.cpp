@@ -8,6 +8,7 @@
 #include "sonardatasourceserial.h"
 #include "sonarreturndata.h"
 #include "sonarswitchcommand.h"
+#include "scanningsonarswitchcommand.h"
 
 SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
 {
@@ -16,8 +17,7 @@ SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
 
 const SonarReturnData SonarDataSourceSerial::getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config)
 {
-    SonarSwitchCommand cmd;
-
+    ScanningSonarSwitchCommand cmd;
     cmd.range = config.range;
     cmd.startGain = config.start_gain;
     cmd.trainAngle = config.train_angle;
@@ -27,8 +27,11 @@ const SonarReturnData SonarDataSourceSerial::getNextPacket(const hanse_sonardriv
     cmd.dataPoints = config.data_points;
     cmd.switchDelay = config.switch_delay;
     cmd.frequency = config.frequency;
+    return getNextPacket(cmd);
+}
 
-
+const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchCommand &cmd)
+{
     QByteArray sendArray = cmd.toSerialCmd();
 
     port->write(sendArray);

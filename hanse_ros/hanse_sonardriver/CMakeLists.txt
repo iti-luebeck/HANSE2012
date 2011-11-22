@@ -47,6 +47,7 @@ rosbuild_add_executable(sonardriver
   src/sonardatasourceserial.cpp
   src/sonarreturndata.cpp
   src/sonarswitchcommand.cpp
+  src/scanningsonarswitchcommand.cpp
 
   qextserialport/qextserialport.cpp
   qextserialport/posix_qextserialport.cpp

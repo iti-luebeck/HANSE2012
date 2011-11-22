@@ -12,6 +12,7 @@ public:
     ~SonarDataSourceSerial();
 
     const SonarReturnData getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config);
+    const SonarReturnData getNextPacket(const SonarSwitchCommand &cmd);
 
     bool isOpen();
 
