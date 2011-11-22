@@ -10,5 +10,6 @@
   <url>http://ros.org/wiki/hanse_sonardriver</url>
   <depend package="roscpp"/>
   <depend package="hanse_msgs"/>
+  <depend package="dynamic_reconfigure"/>
 
 </package>
