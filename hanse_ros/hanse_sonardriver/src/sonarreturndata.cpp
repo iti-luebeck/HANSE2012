@@ -21,41 +21,43 @@ SonarReturnData::SonarReturnData(const SonarSwitchCommand& cmd, QByteArray& retu
     this->switchCommand = cmd;
 
     valid = true;
-    if (packet.size()<8)
+    if (packet.size()<8) {
         valid = false;
-
-    // ID Bytes
-    if (packet[0] != 'I' || packet[2] != 'X')
+    } else if (packet[0] != 'I' || packet[2] != 'X') {
+        // ID Bytes
         valid = false;
-
-    if (packet.size() < 8) {
+    } else if (packet.size() < 8) {
         valid = false;
-    } else if (packet.length()==265) {
-        if (packet[1] != 'M')
+    } else if ((char)packet[3] != cmd.getHeadId()) {
+        valid = false;
+    } else if (!isSwitchesAccepted()) {
+        valid = false;
+    } else if (isCharacterOverrun()) {
+        valid = false;
+    } else if (packet.length() == 265) {
+        if (packet[1] != 'M') {
             valid = false;
-        if (getDataBytes() != 252)
+        } else if (getDataBytes() != 252) {
             valid = false;
-    } else {
-        if (packet.length()==513) {
-            if (packet[1] != 'G')
-                valid = false;
-            if (getDataBytes() != 500)
-                valid = false;
-        } else {
-            if (!isSwitchesAccepted())
-                valid = false;
-            if (isCharacterOverrun())
-                valid = false;
-
-            // HeadID
-            if ((char)packet[3] != cmd.getHeadId())
-                valid = false;
-
-            // Termination byte
-            if (packet[packet.length()-1] != (char)0xFC)
-                valid = false;
+        }
+    } else if (packet.length() == 513) {
+        if (packet[1] != 'G') {
+            valid = false;
+        } else if (getDataBytes() != 500) {
+            valid = false;
+        }
+    } else if (packet.length() == 13) {
+        if (packet[1] != 'P') {
+            valid = false;
+        } else if (getDataBytes() != 0) {
+            valid = false;
         }
     }
+
+    // Termination byte
+    if (valid && packet[packet.length()-1] != (char)0xFC)
+        valid = false;
+
 
     if (valid) {
         echo = packet;
@@ -68,6 +70,8 @@ SonarReturnData::SonarReturnData(const SonarSwitchCommand& cmd, QByteArray& retu
         //+90 offset
 
         range = packet[7];
+
+        profileRange = THCDecoder(packet[8], packet[9]);
     }
 }
 
@@ -131,6 +135,11 @@ double SonarReturnData::getHeadPosition() const
 int SonarReturnData::getRange() const
 {
     return range;
+}
+
+int SonarReturnData::getProfileRange() const
+{
+    return profileRange;
 }
 
 bool SonarReturnData::isPacketValid() const

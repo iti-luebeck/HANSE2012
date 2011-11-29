@@ -53,6 +53,8 @@ public:
       */
     int getRange() const;
 
+    int getProfileRange() const;
+
     /**
       * The orientation of the sonar head when the meassurement was made.
       */
@@ -87,6 +89,7 @@ protected:
     bool valid;
     QByteArray echo;
     int range;
+    int profileRange;
 
 private:
 
