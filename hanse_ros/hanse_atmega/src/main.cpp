@@ -73,6 +73,9 @@ ros::Subscriber <hanse_msgs::sollSpeed> motright("/auv_name/motors/right", &cbmo
 ros::Subscriber <hanse_msgs::sollSpeed> motfront("/auv_name/motors/front", &cbmotorfront );
 ros::Subscriber <hanse_msgs::sollSpeed> motback("/auv_name/motors/back", &cbmotorback );
 
+ros::Publisher pubPressure;
+ros::Publisher pubTemperature;
+
 /*
  *Initialisieren des Nodehandlers, Topics auf die gelauscht werden soll,
  *Aufbau der I2c Verbindung, Init der Motorcontroller
@@ -85,6 +88,9 @@ void setup()
   nh.subscribe(motright);
   nh.subscribe(motback);
   nh.subscribe(motfront);
+
+  pubPressure = nh.advertise<hanse_msgs::pressure>("/auv_name/pressure/depth", 5);
+  pubTemperature = nh.advertise<hanse_msgs::temperature>("/auv_name/pressure/temp", 5);
   
   //Blinken der LED 
   //kurzes Blinken zeigt an, dass setup() ausgefuehrt wird
@@ -122,12 +128,15 @@ void setup()
 void loop()
 {
   digitalWrite(10, HIGH);
-  // nh.spinOnce();
+
+  nh.spinOnce();
+
   delay(500);
   digitalWrite(10, LOW);
   delay(500);
 
-  
+  read_pressure();
+  read_temperature();
 }
 
 void i2c_scan()
@@ -180,6 +189,10 @@ void alt_i2c_scan()
 #define STATUS_MAGIC_VALUE 0x55
 #define CALIB_MAGIC_VALUE 224
 
+/*
+ * Liesst num Bytes von Register reg aus und schreibt diese in data. 
+ * data muss bereits vorinitialisiert sein. Gibt die Anzahl der tatsächlich gelesenen Bytes zurück
+ */
 int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data)
 {
 	int _num = 0;
@@ -198,6 +211,9 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 	return _num;
 }
 
+/*
+ * Liesst den Druck aus und schickt ihn über ROS.
+ */
 void read_pressure()
 {
 	unsigned char buffer[2];
@@ -207,11 +223,15 @@ void read_pressure()
 	}
 	else
 	{
-		int res = 256*buffer[0] + buffer[1];
-		// success, TODO: publish
+		hanse_msgs::pressure msg;
+		msg.data = 256*buffer[0] + buffer[1];
+		pubPressure.publish(msg);
 	}
 }
 
+/*
+ * Liesst die Temperatur aus und schickt sie über ROS.
+ */
 void read_temperature()
 {
 	unsigned char buffer[2];
@@ -221,7 +241,8 @@ void read_temperature()
 	}
 	else
 	{
-		int res = 256*buffer[0] + buffer[1];
-		// success, TODO: publish
+		hanse_msgs::temperature msg;
+		msg.data = 256*buffer[0] + buffer[1];
+		pubTemperature.publish(msg);
 	}
 }
