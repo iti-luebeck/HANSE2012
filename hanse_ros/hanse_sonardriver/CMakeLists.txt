@@ -20,6 +20,11 @@ FIND_PACKAGE(Qt4 REQUIRED)
 INCLUDE(${QT_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 
+#add dynamic reconfigure api
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
+
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
@@ -42,6 +47,7 @@ rosbuild_add_executable(sonardriver
   src/sonardatasourceserial.cpp
   src/sonarreturndata.cpp
   src/sonarswitchcommand.cpp
+  src/scanningsonarswitchcommand.cpp
 
   qextserialport/qextserialport.cpp
   qextserialport/posix_qextserialport.cpp

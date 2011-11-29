@@ -11,7 +11,8 @@ public:
     SonarDataSourceSerial(QString portName);
     ~SonarDataSourceSerial();
 
-    const SonarReturnData getNextPacket();
+    const SonarReturnData getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config);
+    const SonarReturnData getNextPacket(const SonarSwitchCommand &cmd);
 
     bool isOpen();
 

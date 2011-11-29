@@ -15,7 +15,7 @@ SonarReturnData::SonarReturnData(const SonarReturnData& c)
     this->range = c.range;
 }
 
-SonarReturnData::SonarReturnData(SonarSwitchCommand& cmd, QByteArray& returnDataPacket)
+SonarReturnData::SonarReturnData(const SonarSwitchCommand& cmd, QByteArray& returnDataPacket)
 {
     this->packet = returnDataPacket;
     this->switchCommand = cmd;

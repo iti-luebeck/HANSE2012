@@ -1,31 +1,37 @@
 #include <unistd.h>
 
 #include "ros/ros.h"
+#include "qextserialport.h"
+
+#include "hanse_sonardriver/ScanningSonarConfig.h"
+
 #include "sonardatasourceserial.h"
 #include "sonarreturndata.h"
-#include "qextserialport.h"
 #include "sonarswitchcommand.h"
+#include "scanningsonarswitchcommand.h"
 
 SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
 {
     configurePort(portName);
 }
 
-const SonarReturnData SonarDataSourceSerial::getNextPacket()
+const SonarReturnData SonarDataSourceSerial::getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config)
 {
-    SonarSwitchCommand cmd;
+    ScanningSonarSwitchCommand cmd;
+    cmd.range = config.range;
+    cmd.startGain = config.start_gain;
+    cmd.trainAngle = config.train_angle;
+    cmd.sectorWidth = config.sector_width;
+    cmd.stepSize = config.step_size;
+    cmd.pulseLength = config.pulse_length;
+    cmd.dataPoints = config.data_points;
+    cmd.switchDelay = config.switch_delay;
+    cmd.frequency = config.frequency;
+    return getNextPacket(cmd);
+}
 
-    cmd.range = 50;
-    cmd.startGain = 15;
-    cmd.trainAngle = 70;
-    cmd.sectorWidth = 120;
-    cmd.stepSize = 2;
-    cmd.pulseLength = 127;
-    cmd.dataPoints = 25;
-    cmd.switchDelay = 0;
-    cmd.frequency = 1;
-
-
+const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchCommand &cmd)
+{
     QByteArray sendArray = cmd.toSerialCmd();
 
     port->write(sendArray);

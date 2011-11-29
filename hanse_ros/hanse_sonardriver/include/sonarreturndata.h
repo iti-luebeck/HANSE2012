@@ -27,7 +27,7 @@ public:
 
 public:
 
-    SonarReturnData(SonarSwitchCommand& cmd, QByteArray& returnDataPacket);
+    SonarReturnData(const SonarSwitchCommand& cmd, QByteArray& returnDataPacket);
 
     SonarReturnData();
     SonarReturnData(const SonarReturnData& c);
