@@ -120,4 +120,61 @@ void i2c_scan()
   }
 }
 
+#define PRESSURE_TEMP_I2C_ADDR 0x50<<1
 
+#define REGISTER_CALIB 0
+#define REGISTER_PRESSURE_RAW 8
+#define REGISTER_TEMP_RAW 10
+#define REGISTER_PRESSURE 12
+#define REGISTER_TEMP 14
+#define REGISTER_STATUS 17
+#define REGISTER_COUNTER 20
+
+#define STATUS_MAGIC_VALUE 0x55
+#define CALIB_MAGIC_VALUE 224
+
+int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data)
+{
+	int _num = 0;
+
+	Wire.beginTransmission(addr);
+	Wire.send(reg);
+	Wire.endTransmission();
+	Wire.beginTransmission(addr);
+	Wire.requestFrom(addr, num);
+	for(_num=0; _num<num && Wire.available(); _num++)
+	{
+		data[_num] = Wire.receive();
+	}
+	Wire.endTransmission();
+
+	return _num;
+}
+
+void read_pressure()
+{
+	unsigned char buffer[2];
+	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2, &buffer))
+	{
+		// error
+	}
+	else
+	{
+		int res = 256*buffer[0] + buffer[1];
+		// success, TODO: publish
+	}
+}
+
+void read_temperature()
+{
+	unsigned char buffer[2];
+	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2, &buffer))
+	{
+		// error
+	}
+	else
+	{
+		int res = 256*buffer[0] + buffer[1];
+		// success, TODO: publish
+	}
+}
