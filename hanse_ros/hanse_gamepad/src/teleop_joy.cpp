@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <joy/Joy.h>
+#include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
 #include <dynamic_reconfigure/server.h>
 
@@ -12,7 +12,7 @@ public:
 
 private:
 
-  void joyCallback(const joy::Joy::ConstPtr& joy);
+  void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
   void timerCallback(const ros::TimerEvent &e);
   
   void dyn_reconfigure_callback(hanse_gamepad::NodeConfig &config, uint32_t level);
@@ -56,7 +56,7 @@ TeleopHanse::TeleopHanse() {
   button_down = false;
 
   pub_cmd_vel = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
-  sub_joy = node.subscribe<joy::Joy>("joy", 10, &TeleopHanse::joyCallback, this);
+  sub_joy = node.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopHanse::joyCallback, this);
 
   // will be set to actual value once config is loaded
   control_loop_timer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
@@ -80,17 +80,15 @@ void TeleopHanse::dyn_reconfigure_callback(hanse_gamepad::NodeConfig &config, ui
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e)
 {
-    if (!config.use_throttle && button_down) {
-        value_depth += config.depth_delta;
-        button_down = 0;
+    if (button_down) {
+        value_depth = value_depth + config.depth_delta;
+        button_down = false;
     }
-    if (!config.use_throttle && button_up) {
-        value_depth -= config.depth_delta;
-        button_up = 0;
+    if (button_up) {
+	if (value_depth > 0)
+        	value_depth = value_depth - config.depth_delta;
+        button_up = false;
     }
-    
-    if (value_depth < 0)
-	value_depth = 0;
 
     // publish data on topic. no use for this, yet
     geometry_msgs::Twist vel;
@@ -105,42 +103,47 @@ void TeleopHanse::timerCallback(const ros::TimerEvent &e)
 
     if (emergency_stop) {
         ROS_INFO("Pressed emergency_stop button");
-        emergency_stop = 0;
+        emergency_stop = false;
 	value_depth = 0;
 	ROS_INFO("value_depth set to 0");
-    }
-    if (enable_handcontrol) {
-        ROS_INFO("Pressed enable_handcontrol button");
-        enable_handcontrol = 0;
+	enable_handcontrol = false;
+	ROS_INFO("handcontrol disabled");
     }
 }
 
-void TeleopHanse::joyCallback(const joy::Joy::ConstPtr& joy)
+void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-    if (fabs(joy->axes[config.axis_angular]) < config.joy_gate)
-        value_angular = 0;
-    else
-        value_angular = config.scale_angular * joy->axes[config.axis_angular];
+    if (enable_handcontrol)
+    {
+    	if (fabs(joy->axes[config.axis_angular]) < config.joy_gate)
+        	value_angular = 0;
+    	else
+        	value_angular = config.scale_angular * joy->axes[config.axis_angular];
 
-    if (fabs(joy->axes[config.axis_linear]) < config.joy_gate)
-        value_linear = 0;
-    else
-        value_linear = config.scale_linear * joy->axes[config.axis_linear];
+    	if (fabs(joy->axes[config.axis_linear]) < config.joy_gate)
+        	value_linear = 0;
+    	else
+        	value_linear = config.scale_linear * joy->axes[config.axis_linear];
 
-    if (config.use_throttle)
-	value_depth = config.scale_depth * (joy->axes[config.axis_depth]+1);
+    	//if (config.use_throttle)
+		//value_depth = config.scale_depth * (joy->axes[config.axis_depth]+1);
+
+    	if (joy->buttons[config.button_down])
+	{
+		button_down = true;
+	}
+
+    	if (joy->buttons[config.button_up])
+	{
+        	button_up = true;
+	}
+    }
 
     if (joy->buttons[config.button_emegency_stop])
-	emergency_stop = 1;
+	emergency_stop = true;
 
     if (joy->buttons[config.button_hand_control])
-        enable_handcontrol = 1;
-
-    if (joy->buttons[config.button_down])
-	button_down = 1;
-
-    if (joy->buttons[config.button_up])
-        button_up = 1;
+        enable_handcontrol = true;
 }
 
 int main(int argc, char** argv)

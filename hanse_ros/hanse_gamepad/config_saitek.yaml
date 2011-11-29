@@ -1,0 +1,14 @@
+{
+axis_angular: 0,
+axis_depth: 2,
+axis_linear: 1,
+button_emegency_stop: 1,
+button_hand_control: 0,
+button_up: 4,
+button_down: 5,
+depth_delta: 5,
+frequency: 10,
+joy_gate: 0.15,
+scale_angular: -0.2,
+scale_linear: 0.2
+}
