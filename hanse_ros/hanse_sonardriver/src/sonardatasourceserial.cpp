@@ -63,7 +63,7 @@ const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchComm
 
     ROS_DEBUG("Received in total: %s", QString(retData.toHex()).toStdString().c_str());
 
-    SonarReturnData d(cmd,retData);
+    SonarReturnData d(cmd, retData);
 
     return d;
 }

@@ -20,7 +20,7 @@ QByteArray SonarSwitchCommand::toSerialCmd() const
     a.resize(27);
     a[0]  = 0xFE;        // Switch data header
     a[1]  = 0x44;        // Switch data header
-    a[2]  = 0;        // Head ID
+    a[2]  = headId;        // Head ID
     a[3]  = range;       // Range
     a[4]  = 0;           // Reserved
     a[5]  = 0;           // Reverse direction
@@ -65,4 +65,5 @@ void SonarSwitchCommand::clone(const SonarSwitchCommand &other)
     this->switchDelay = other.switchDelay;
     this->totalBytes = other.totalBytes;
     this->nToRead = other.nToRead;
+    this->headId = other.headId;
 }

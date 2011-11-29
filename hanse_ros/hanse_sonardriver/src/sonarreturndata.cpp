@@ -48,7 +48,7 @@ SonarReturnData::SonarReturnData(const SonarSwitchCommand& cmd, QByteArray& retu
                 valid = false;
 
             // HeadID
-            if ((char)packet[3] != 0x10)
+            if ((char)packet[3] != cmd.getHeadId())
                 valid = false;
 
             // Termination byte
