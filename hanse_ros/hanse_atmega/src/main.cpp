@@ -12,6 +12,8 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Int8.h>
 #include "hanse_msgs/sollSpeed.h"
+#include "hanse_msgs/pressure.h"
+#include "hanse_msgs/temperature.h"
 #include "utility/twi.h"
 
 /*
@@ -73,8 +75,17 @@ ros::Subscriber <hanse_msgs::sollSpeed> motright("/auv_name/motors/right", &cbmo
 ros::Subscriber <hanse_msgs::sollSpeed> motfront("/auv_name/motors/front", &cbmotorfront );
 ros::Subscriber <hanse_msgs::sollSpeed> motback("/auv_name/motors/back", &cbmotorback );
 
-ros::Publisher pubPressure;
-ros::Publisher pubTemperature;
+hanse_msgs::pressure press;
+hanse_msgs::temperature temp;
+
+ros::Publisher pubPressure("pressure", &press);
+ros::Publisher pubTemperature("temperature", &temp);
+
+/*
+ *Deklaration der Funktionen
+ */
+void read_pressure();
+void read_temperature();
 
 /*
  *Initialisieren des Nodehandlers, Topics auf die gelauscht werden soll,
@@ -89,9 +100,16 @@ void setup()
   nh.subscribe(motback);
   nh.subscribe(motfront);
 
-  pubPressure = nh.advertise<hanse_msgs::pressure>("/auv_name/pressure/depth", 5);
-  pubTemperature = nh.advertise<hanse_msgs::temperature>("/auv_name/pressure/temp", 5);
+ /*
+  ros::Publisher temp = nh.advertise<hanse_msgs::pressure>("/auv_name/pressure/depth", 5);
+  pubPressure = &temp;
+  ros::Publisher temp2 = nh.advertise<hanse_msgs::temperature>("/auv_name/pressure/temp", 5);
+  pubTemperature = &temp2;
+ */
   
+  nh.advertise(pubPressure);
+  nh.advertise(pubTemperature);
+
   //Blinken der LED 
   //kurzes Blinken zeigt an, dass setup() ausgefuehrt wird
   pinMode(10, OUTPUT);
@@ -147,8 +165,9 @@ void i2c_scan()
     cb = twi_writeTo(addr, &data, 0, 1);
     if(cb == 0)
      //publish i2c addr
-     //7bit shift ->
-	;
+     //7bit shift 
+  	;
+}
 }
 
 /*
@@ -201,7 +220,7 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 	Wire.send(reg);
 	Wire.endTransmission();
 	Wire.beginTransmission(addr);
-	Wire.requestFrom(addr, num);
+	Wire.requestFrom((int)addr, num);
 	for(_num=0; _num<num && Wire.available(); _num++)
 	{
 		data[_num] = Wire.receive();
@@ -217,7 +236,7 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 void read_pressure()
 {
 	unsigned char buffer[2];
-	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2, &buffer))
+	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer))
 	{
 		// error
 	}
@@ -225,7 +244,7 @@ void read_pressure()
 	{
 		hanse_msgs::pressure msg;
 		msg.data = 256*buffer[0] + buffer[1];
-		pubPressure.publish(msg);
+		pubPressure.publish( &msg );
 	}
 }
 
@@ -235,7 +254,7 @@ void read_pressure()
 void read_temperature()
 {
 	unsigned char buffer[2];
-	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2, &buffer))
+	if(2 != i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer))
 	{
 		// error
 	}
@@ -243,6 +262,6 @@ void read_temperature()
 	{
 		hanse_msgs::temperature msg;
 		msg.data = 256*buffer[0] + buffer[1];
-		pubTemperature.publish(msg);
+		pubTemperature.publish( &msg );
 	}
 }
