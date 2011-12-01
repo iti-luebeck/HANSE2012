@@ -26,21 +26,22 @@ void SonarDriver<C, M, SC>::tick()
 {
     SonarReturnData returnData = serialSource.getNextPacket(switchCommand);
 
-    M msg;
+    if (returnData.isPacketValid()) {
+        M msg;
 
-    QByteArray echoData = returnData.getEchoData();
+        QByteArray echoData = returnData.getEchoData();
 
-    for (QByteArray::const_iterator i = echoData.begin(); i != echoData.end(); ++i) {
-        msg.echoData.push_back(*i);
+        for (QByteArray::const_iterator i = echoData.begin(); i != echoData.end(); ++i) {
+            msg.echoData.push_back(*i);
+        }
+
+        msg.range = returnData.getRange();
+        msg.startGain = returnData.switchCommand.startGain;
+
+        completeMessage(msg, returnData);
+
+        publisher.publish(msg);
     }
-
-    msg.range = returnData.getRange();
-    msg.startGain = returnData.switchCommand.startGain;
-
-    completeMessage(msg, returnData);
-
-    publisher.publish(msg);
-
     diagnosticUpdater.update();
 }
 
