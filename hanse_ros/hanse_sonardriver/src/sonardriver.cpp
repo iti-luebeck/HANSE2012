@@ -1,23 +1,26 @@
 #include "ros/ros.h"
 #include "hanse_msgs/ScanningSonar.h"
 #include "sonardriver.h"
-
+#include <sys/stat.h>
 
 SonarDriver::SonarDriver(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<hanse_msgs::ScanningSonar>("scanning_sonar", 1000)),
-    serialSource("/dev/ttyUSB1")
+    serialSource("/dev/ttyUSB0")
 {
     diagnosticUpdater.setHardwareID("none");
     diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);
     reconfigServer.setCallback(boost::bind(&SonarDriver::reconfigure, this, _1, _2));
 }
 
-void SonarDriver::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
+void SonarDriver::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &status)
 {
-    //struct stat status;
-    //stat(argv[1], &status);
-    stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "device not found");
+    ROS_DEBUG("SonarDriver::produce_diagnostics");
+    struct stat sta;
+    if(stat("/dev/ttyUSB0", &sta) == -1)
+        status.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "device not found");
+    else
+        status.summary(diagnostic_msgs::DiagnosticStatus::OK, "device found");
 }
 
 void SonarDriver::tick()
