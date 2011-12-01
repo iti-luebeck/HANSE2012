@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hanse_gamepad</url>
   <depend package="roscpp"/>
-  <depend package="joy"/>
+  <depend package="sensor_msgs"/>
   <depend package="geometry_msgs"/>
   <depend package="driver_base" />
   <depend package="dynamic_reconfigure"/>
