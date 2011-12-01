@@ -16,21 +16,6 @@ SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
     configurePort(portName);
 }
 
-const SonarReturnData SonarDataSourceSerial::getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config)
-{
-    ScanningSonarSwitchCommand cmd;
-    cmd.range = config.range;
-    cmd.startGain = config.start_gain;
-    cmd.trainAngle = config.train_angle;
-    cmd.sectorWidth = config.sector_width;
-    cmd.stepSize = config.step_size;
-    cmd.pulseLength = config.pulse_length;
-    cmd.dataPoints = config.data_points;
-    cmd.switchDelay = config.switch_delay;
-    cmd.frequency = config.frequency;
-    return getNextPacket(cmd);
-}
-
 const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchCommand &cmd)
 {
     QByteArray sendArray = cmd.toSerialCmd();

@@ -42,8 +42,7 @@ QT4_WRAP_CPP(qextserialport_HEADERS_MOC
   qextserialport/qextserialport_global.h
 )
 
-rosbuild_add_executable(sonardriver
-  src/sonardriver.cpp
+set(SONAR_SOURCES
   src/sonardatasourceserial.cpp
   src/sonarreturndata.cpp
   src/sonarswitchcommand.cpp
@@ -52,12 +51,23 @@ rosbuild_add_executable(sonardriver
 
   qextserialport/qextserialport.cpp
   qextserialport/posix_qextserialport.cpp
-#  qextserialport/qextserialenumerator_osx.cpp
   qextserialport/qextserialenumerator_unix.cpp
-#  qextserialport/qextserialenumerator_win.cpp
 
   ${qextserialport_HEADERS_MOC}
 )
+
+rosbuild_add_executable(scanningsonardriver
+  src/scanningsonardriver.cpp
+  ${SONAR_SOURCES}
+)
+target_link_libraries(scanningsonardriver ${QT_LIBRARIES})
+
+rosbuild_add_executable(echosounderdriver
+  src/echosounderdriver.cpp
+  ${SONAR_SOURCES}
+)
+target_link_libraries(echosounderdriver ${QT_LIBRARIES})
+
 
 rosbuild_add_executable(sonarvisualize
   src/sonarvisualize.cpp
@@ -65,5 +75,3 @@ rosbuild_add_executable(sonarvisualize
 
 
 include_directories(qextserialport)
-
-target_link_libraries(sonardriver ${QT_LIBRARIES})
