@@ -11,5 +11,6 @@
   <depend package="roscpp"/>
   <depend package="hanse_msgs"/>
   <depend package="dynamic_reconfigure"/>
+  <depend package="diagnostic_updater"/>
 
 </package>

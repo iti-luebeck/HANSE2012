@@ -8,11 +8,20 @@ SonarDriver::SonarDriver(ros::NodeHandle handle) :
     publisher(handle.advertise<hanse_msgs::ScanningSonar>("scanning_sonar", 1000)),
     serialSource("/dev/ttyUSB1")
 {
+    diagnosticUpdater.setHardwareID("none");
+    diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);
     reconfigServer.setCallback(boost::bind(&SonarDriver::reconfigure, this, _1, _2));
 }
 
-void SonarDriver::tick()
+void SonarDriver::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
 {
+    //struct stat status;
+    //stat(argv[1], &status);
+    stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "device not found");
+}
+
+void SonarDriver::tick()
+{    
     SonarReturnData returnData = serialSource.getNextPacket(config);
 
     hanse_msgs::ScanningSonar msg;
@@ -28,6 +37,8 @@ void SonarDriver::tick()
     msg.startGain = returnData.switchCommand.startGain;
 
     publisher.publish(msg);
+
+    diagnosticUpdater.update();
 }
 
 void SonarDriver::reconfigure(hanse_sonardriver::ScanningSonarConfig &newConfig, uint32_t level)

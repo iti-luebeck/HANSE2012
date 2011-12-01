@@ -1,6 +1,8 @@
 #ifndef HANSE_SONARDRIVER_H
 #define HANSE_SONARDRIVER_H
 
+#include "diagnostic_updater/diagnostic_updater.h"
+
 #include "ros/ros.h"
 #include "dynamic_reconfigure/server.h"
 #include "hanse_sonardriver/ScanningSonarConfig.h"
@@ -16,7 +18,9 @@ public:
     void tick();
 
 private:
+    diagnostic_updater::Updater diagnosticUpdater;
 
+    void produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
     void reconfigure(hanse_sonardriver::ScanningSonarConfig &newConfig, uint32_t level);
 
     ros::NodeHandle nh;
