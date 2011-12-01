@@ -95,6 +95,7 @@ bool SonarDataSourceSerial::isOpen()
 
 SonarDataSourceSerial::~SonarDataSourceSerial()
 {
+    stop();
 }
 
 void SonarDataSourceSerial::stop()
