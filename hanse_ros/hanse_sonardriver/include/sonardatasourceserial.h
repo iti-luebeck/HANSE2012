@@ -19,6 +19,7 @@ public:
     void stop();
 
 private:
+    QString portName;
     QextSerialPort* port;
 
     void configurePort(QString portName);

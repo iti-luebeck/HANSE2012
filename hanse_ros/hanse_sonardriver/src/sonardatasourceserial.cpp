@@ -11,6 +11,7 @@
 #include "scanningsonarswitchcommand.h"
 
 SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
+    :portName(portName)
 {
     configurePort(portName);
 }
@@ -57,6 +58,11 @@ const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchComm
 
     if (expectedLength - retData.length()>0) {
         ROS_DEBUG("Received less than expected: %i bytes missing; expected=%i", (int)(expectedLength - retData.length()), (int)expectedLength);
+        if(port->lastError() == E_READ_FAILED) {
+            stop();
+            configurePort(portName);
+        }
+        
     } else {
         ROS_DEBUG("received full packet");
     }

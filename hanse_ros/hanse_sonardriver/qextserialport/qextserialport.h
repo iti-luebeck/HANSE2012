@@ -255,7 +255,7 @@ class QEXTSERIALPORT_EXPORT QextSerialPort: public QIODevice
 
         void ungetChar(char c);
 
-        ulong lastError() const;
+        ulong lastError() const { return lastErr; }
         void translateError(ulong error);
 
         void setDtr(bool set=true);
