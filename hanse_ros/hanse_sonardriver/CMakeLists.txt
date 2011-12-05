@@ -73,5 +73,12 @@ rosbuild_add_executable(sonarvisualize
   src/sonarvisualize.cpp
 )
 
+rosbuild_add_executable(recordeddatapublisher
+  src/recordeddatapublisher.cpp
+  src/sonarreturndata.cpp
+  src/sonarswitchcommand.cpp
+  src/scanningsonarswitchcommand.cpp
+)
+target_link_libraries(recordeddatapublisher ${QT_LIBRARIES})
 
 include_directories(qextserialport)
