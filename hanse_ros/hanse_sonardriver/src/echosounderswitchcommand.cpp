@@ -7,7 +7,7 @@ EchoSounderSwitchCommand::EchoSounderSwitchCommand()
 
 QByteArray EchoSounderSwitchCommand::toSerialCmd() const
 {
-    QByteArray a = EchoSounderSwitchCommand::toSerialCmd();
+    QByteArray a = SonarSwitchCommand::toSerialCmd();
     a[10] = 20; // Absorption
     a[15] = profileMinimumRange; // Profile minimum range
     a[22] = profile ? 1 : 0; // Profile
