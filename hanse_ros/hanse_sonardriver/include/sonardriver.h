@@ -23,8 +23,10 @@ protected:
     virtual void completeMessage(Message &msg, const SonarReturnData &returnData) = 0;
 
 private:
+    bool isInitialized;
     diagnostic_updater::Updater diagnosticUpdater;
 
+    void init();
     void produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &status);
     void reconfigure(Config &newConfig, uint32_t level);
 

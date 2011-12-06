@@ -10,8 +10,14 @@ SonarDriver<C, M, SC>::SonarDriver(ros::NodeHandle handle, const std::string &to
     min_freq = 1;
     max_freq = 1000;
     diagnosticUpdater.setHardwareID("none");
-    diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);
-    reconfigServer.setCallback(boost::bind(&SonarDriver::reconfigure, this, _1, _2));
+    diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);    
+}
+
+template <class C, class M, class SC>
+void SonarDriver<C, M, SC>::init()
+{
+  isInitialized = true;
+  reconfigServer.setCallback(boost::bind(&SonarDriver::reconfigure, this, _1, _2));
 }
 
 template <class C, class M, class SC>
@@ -27,6 +33,10 @@ void SonarDriver<C, M, SC>::produce_diagnostics(diagnostic_updater::DiagnosticSt
 template <class C, class M, class SC>
 void SonarDriver<C, M, SC>::tick()
 {
+    // init aufruf erst hier, da boost::bind mit templatemethode sonst schiefgeht
+    if(!isInitialized)
+      init();
+
     SonarReturnData returnData = serialSource.getNextPacket(switchCommand);
 
     if (returnData.isPacketValid()) {
