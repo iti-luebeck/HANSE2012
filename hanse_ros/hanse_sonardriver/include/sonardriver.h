@@ -4,6 +4,8 @@
 #include "ros/ros.h"
 
 #include "diagnostic_updater/diagnostic_updater.h"
+#include "diagnostic_updater/update_functions.h"
+#include "diagnostic_updater/publisher.h"
 #include "dynamic_reconfigure/server.h"
 
 #include "sonardatasourceserial.h"
@@ -32,7 +34,10 @@ private:
     Config config;
     SwitchCommand switchCommand;
 
+    double min_freq;
+    double max_freq;
     ros::Publisher publisher;
+    diagnostic_updater::DiagnosedPublisher<Message> diagnosedPublisher;
     SonarDataSourceSerial serialSource;
 };
 

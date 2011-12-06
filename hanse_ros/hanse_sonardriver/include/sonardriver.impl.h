@@ -3,9 +3,12 @@
 template <class C, class M, class SC>
 SonarDriver<C, M, SC>::SonarDriver(ros::NodeHandle handle, const std::string &topicName) :
     nh(handle),
-    publisher(handle.advertise<M>(topicName, 1000)),
+    publisher(handle.advertise<M>(topicName, 1000)), 
+    diagnosedPublisher(publisher, diagnosticUpdater, diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq), diagnostic_updater::TimeStampStatusParam()),
     serialSource("/dev/ttyUSB1")
 {
+    min_freq = 1;
+    max_freq = 1000;
     diagnosticUpdater.setHardwareID("none");
     diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);
     reconfigServer.setCallback(boost::bind(&SonarDriver::reconfigure, this, _1, _2));
@@ -40,7 +43,7 @@ void SonarDriver<C, M, SC>::tick()
 
         completeMessage(msg, returnData);
 
-        publisher.publish(msg);
+        diagnosedPublisher.publish(msg);
     }
     diagnosticUpdater.update();
 }
