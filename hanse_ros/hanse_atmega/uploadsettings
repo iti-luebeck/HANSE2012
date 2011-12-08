@@ -1,0 +1,11 @@
+#!/bin/sh
+
+PORT=usb
+BAUD=38400
+PROTOCOL=avrispmkii
+PART=atmega644p
+AVRDUDE=avrdude 
+
+${AVRDUDE} -c ${PROTOCOL} -p ${PART} -P ${PORT} -b ${BAUD} -U flash:w:build/hanse_atmega.hex
+
+
