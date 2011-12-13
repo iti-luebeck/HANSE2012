@@ -12,6 +12,8 @@
   <rosdep name="cairomm" />
 
   <depend package="roscpp" />
+
+  <depend package="sensor_msgs" />
 </package>
 
 
