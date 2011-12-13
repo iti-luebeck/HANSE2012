@@ -1,0 +1,17 @@
+<package>
+  <description brief="hanse_sonarviz">
+
+     hanse_sonarviz
+
+  </description>
+  <author>Jannis Harder</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_sonarviz</url>
+
+  <rosdep name="cairomm" />
+
+  <depend package="roscpp" />
+</package>
+
+
