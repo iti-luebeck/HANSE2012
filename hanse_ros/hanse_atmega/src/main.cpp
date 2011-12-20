@@ -32,6 +32,7 @@
 ros::NodeHandle nh;
 
 void cbmotorfront(const hanse_msgs::sollSpeed& msg){
+	nh.loginfo("test");
 	Wire.beginTransmission(ADDRR);
   	Wire.send(2);
   	Wire.send(msg.data);
@@ -39,7 +40,7 @@ void cbmotorfront(const hanse_msgs::sollSpeed& msg){
 }
 
 void cbmotorback(const hanse_msgs::sollSpeed& msg){
-	Wire.beginTransmission(ADDRR);
+	Wire.beginTransmission(ADDRL);
 	Wire.send(2);
 	Wire.send(msg.data);
 	Wire.endTransmission();
@@ -73,6 +74,17 @@ ros::Publisher pubTemperature("temperature", &temp);
 
 void setup()
 {
+	//Aufbau der I2C Verbindung
+  	Wire.begin();
+	pinMode(7, OUTPUT);
+	delay(200);
+	digitalWrite(7,HIGH);
+	delay(1000);
+	digitalWrite(7,LOW);
+	delay(1000);
+	digitalWrite(7,HIGH);
+	delay(1000);
+	digitalWrite(7,LOW);
 
 	nh.initNode();
 	nh.subscribe(motfront);
@@ -84,9 +96,6 @@ void setup()
    	nh.advertise(pubPressure);
    	nh.advertise(pubTemperature);
 	
-	//Aufbau der I2C Verbindung
-  	Wire.begin();
-
   	//INIT Motorcontroller links Umstellung auf signed int
   	Wire.beginTransmission(ADDRL);
   	Wire.send(0);
@@ -98,22 +107,16 @@ void setup()
   	Wire.send(1);
   	Wire.endTransmission();
 
-	pinMode(7, OUTPUT);
-	delay(200);
-	digitalWrite(7,HIGH);
-	delay(1000);
-	digitalWrite(7,LOW);
-	delay(1000);
-	digitalWrite(7,HIGH);
-	delay(1000);
-	digitalWrite(7,LOW);
+	nh.loginfo("setup");
+
 }
 
 void loop()
 {
+	nh.loginfo("1");
 	nh.spinOnce();
 	digitalWrite(7,HIGH);
-	delay(200);
+	delay(100);
 	digitalWrite(7,LOW);
-	delay(200);
+	delay(100);
 }
