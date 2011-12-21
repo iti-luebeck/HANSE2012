@@ -1,0 +1,19 @@
+<package>
+  <description brief="hanse_pidcontrol">
+
+     hanse_pidcontrol
+
+  </description>
+  <author>sven</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_pidcontrol</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="driver_base"/>
+  <depend package="dynamic_reconfigure"/>
+
+</package>
+
+

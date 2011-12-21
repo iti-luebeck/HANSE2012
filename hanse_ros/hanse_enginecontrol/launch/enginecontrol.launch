@@ -1,0 +1,15 @@
+<launch>
+
+  <!-- ENGINE -->
+
+  <node name="engine_control" pkg="hanse_enginecontrol" type="engine_control" output="screen">
+    <rosparam file="$(find hanse_enginecontrol)/config_engine.yaml"/>
+  </node>
+
+  <!-- DEPTH PID -->
+
+  <group ns="depth_pid">
+    <rosparam file="$(find hanse_enginecontrol)/config_depth_pid.yaml"/>
+    <node name="pid" pkg="hanse_pidcontrol" type="pid_control" output="screen"></node>
+  </group>
+</launch>
