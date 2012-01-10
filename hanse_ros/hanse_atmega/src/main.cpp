@@ -17,6 +17,7 @@
 #include "hanse_msgs/temperature.h"
 #include "utility/twi.h"
 
+
 /*
  *Adresse eines Motorcontrollers
  *M1: Motor links, M2: Motor hinten
@@ -30,6 +31,9 @@
 
 
 ros::NodeHandle nh;
+
+void read_pressure();
+void read_temperature();
 
 void cbmotorfront(const hanse_msgs::sollSpeed& msg){
 	nh.loginfo("test");
@@ -61,6 +65,7 @@ void cbmotorright( const hanse_msgs::sollSpeed& msg){
 }
 
 
+
 ros::Subscriber <hanse_msgs::sollSpeed> motfront("front", &cbmotorfront);
 ros::Subscriber <hanse_msgs::sollSpeed> motback("back", &cbmotorback);
 ros::Subscriber <hanse_msgs::sollSpeed> motright("right", &cbmotorright);
@@ -71,6 +76,8 @@ hanse_msgs::temperature temp;
 
 ros::Publisher pubPressure("pressure", &press);
 ros::Publisher pubTemperature("temperature", &temp);
+
+
 
 void setup()
 {
@@ -91,7 +98,6 @@ void setup()
 	nh.subscribe(motback);
 	nh.subscribe(motright);
 	nh.subscribe(motleft);
-
   
    	nh.advertise(pubPressure);
    	nh.advertise(pubTemperature);
@@ -113,10 +119,114 @@ void setup()
 
 void loop()
 {
-	nh.loginfo("1");
+
 	nh.spinOnce();
 	digitalWrite(7,HIGH);
 	delay(100);
 	digitalWrite(7,LOW);
 	delay(100);
+	read_pressure();
+  	read_temperature();
 }
+
+
+#define PRESSURE_TEMP_I2C_ADDR 0x50>>1
+
+#define REGISTER_CALIB 0
+#define REGISTER_PRESSURE_RAW 8
+#define REGISTER_TEMP_RAW 10
+#define REGISTER_PRESSURE 12
+#define REGISTER_TEMP 14
+#define REGISTER_STATUS 17
+#define REGISTER_COUNTER 20
+
+#define STATUS_MAGIC_VALUE 0x55
+#define CALIB_MAGIC_VALUE 224
+
+/*
+ * Liesst num Bytes von Register reg aus und schreibt diese in data. 
+ * data muss bereits vorinitialisiert sein. Gibt die Anzahl der tatsächlich gelesenen Bytes zurück
+ */
+
+int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data)
+{
+	int _num = 0;
+
+	Wire.beginTransmission(addr);
+	Wire.send(reg);
+	Wire.endTransmission();
+	Wire.beginTransmission(addr);
+	Wire.requestFrom((int)addr, num);
+	for(_num=0; _num<num && Wire.available(); _num++)
+	{
+		data[_num] = Wire.receive();
+	}
+	Wire.endTransmission();
+
+	return _num;
+}
+
+/*
+ * Liesst den Druck aus und schickt ihn über ROS.
+ */
+
+void read_pressure()
+{
+	unsigned int var;
+	unsigned char buffer[2];
+	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
+	if(var!=2)
+	{
+		// error
+		char var2[16];
+		sprintf((char*)&var2,"error%d",var);
+		nh.loginfo((char*)&var2);
+	
+	}
+	else{
+		press.data = 256*buffer[0] + buffer[1];
+		press.header.stamp = nh.now();
+		char temp[2] = "0";
+		press.header.frame_id = temp;
+
+		char var2[16];
+		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
+		nh.loginfo((char*)&var2);
+		pubPressure.publish( &press );
+	}
+
+	
+}
+
+/*
+ * Liesst die Temperatur aus und schickt sie über ROS.
+ */
+
+
+void read_temperature()
+{
+	unsigned int var;
+	unsigned char buffer[2];
+	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
+	if(var!=2)
+	{
+		// error
+		char var2[16];
+		sprintf((char*)&var2,"error%d",var);
+		nh.loginfo((char*)&var2);
+	}
+	else{
+		temp.data = 256*buffer[0] + buffer[1];
+		temp.header.stamp = nh.now();
+		char str[2] = "0";
+		temp.header.frame_id = str;
+
+		char var2[16];
+		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
+		nh.loginfo((char*)&var2);
+		pubTemperature.publish( &temp );
+	}
+	
+
+}
+
