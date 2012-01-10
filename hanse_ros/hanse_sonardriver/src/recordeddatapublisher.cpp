@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include "angles/angles.h"
 #include "QtCore"
 #include "hanse_msgs/ScanningSonar.h"
 #include "sonarreturndata.h"
@@ -60,14 +61,14 @@ const SonarReturnData getNextPacket(QDataStream& stream)
 int main( int argc, char** argv )
 {
   ros::init(argc, argv, "recordeddatapublisher");
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh;
   std::string filename;
 
-  if (!nh.getParam("filename", filename)) {
-    ROS_ERROR("filename parameter missing");
-    return -1;
-  }
-  ROS_INFO("%s", filename.c_str());
+  //if (!nh.getParam("filename", filename)) {
+  //  ROS_ERROR("filename parameter missing");
+  //  return -1;
+  //}
+  //ROS_INFO("%s", filename.c_str());
 
   ros::Publisher publisher = nh.advertise<hanse_msgs::ScanningSonar>("scanning_sonar", 1000);
 
@@ -91,7 +92,7 @@ int main( int argc, char** argv )
         msg.echoData.push_back(*i);
     }
 
-    msg.headPosition = returnData.getHeadPosition();
+    msg.headPosition = angles::from_degrees(returnData.getHeadPosition());
     msg.range = returnData.getRange();
     msg.startGain = returnData.switchCommand.startGain;
 

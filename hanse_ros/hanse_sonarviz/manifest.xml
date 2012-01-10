@@ -12,8 +12,9 @@
   <rosdep name="cairomm" />
 
   <depend package="roscpp" />
-
+  <depend package="hanse_msgs"/>
   <depend package="sensor_msgs" />
+  <depend package="angles" />
 </package>
 
 

@@ -1,10 +1,39 @@
 #include "sonarviz.h"
+#include "angles/angles.h"
 
 
 SonarViz::SonarViz(ros::NodeHandle handle) :
   nh(handle),
-  publisher(handle.advertise<sensor_msgs::Image>("sonarviz", 1))
+  publisher(handle.advertise<sensor_msgs::Image>("sonarviz", 1)),
+  subscriber(handle.subscribe("scanning_sonar", 1, &SonarViz::callback, this)),
+  lastHeadPosition(0)
 {
+}
+
+void SonarViz::callback(const hanse_msgs::ScanningSonar &msg)
+{
+  double posDiff = angles::normalize_angle(lastHeadPosition - msg.headPosition);
+  double posLow, posHigh;
+  if(posDiff < 0) {
+    posLow = lastHeadPosition;
+    posHigh = msg.headPosition;
+  } else {
+    posLow = msg.headPosition;
+    posHigh = lastHeadPosition;  
+  }
+
+  if(posHigh > posLow) {
+    sonarDataMap.erase(sonarDataMap.upper_bound(posLow), sonarDataMap.lower_bound(posHigh));
+  } else {
+    sonarDataMap.erase(sonarDataMap.upper_bound(posHigh), sonarDataMap.end());
+    sonarDataMap.erase(sonarDataMap.begin(), sonarDataMap.lower_bound(posLow));
+  }
+
+  sonarDataMap.insert(std::make_pair(msg.headPosition, msg));
+  lastHeadPosition = msg.headPosition;
+  tick();
+
+  ROS_INFO("%d", sonarDataMap.size());
 }
 
 sensor_msgs::Image SonarViz::cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> surface)
@@ -58,12 +87,13 @@ int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "sonarviz");
   ros::NodeHandle n;
-  ros::Rate r(1);
+  //ros::Rate r(1);
 
   SonarViz sonarViz(n);
 
   while (ros::ok()) {
-    sonarViz.tick();
-    r.sleep();
+    //sonarViz.tick();
+    //r.sleep();
+    ros::spinOnce();
   }
 }

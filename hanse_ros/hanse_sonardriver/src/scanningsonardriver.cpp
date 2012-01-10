@@ -1,3 +1,4 @@
+#include "angles/angles.h"
 #include "scanningsonardriver.h"
 
 ScanningSonarDriver::ScanningSonarDriver(ros::NodeHandle handle) :
@@ -17,7 +18,7 @@ void ScanningSonarDriver::updateSwitchCommand(ScanningSonarSwitchCommand &cmd,
 void ScanningSonarDriver::completeMessage(hanse_msgs::ScanningSonar &msg,
                                           const SonarReturnData &returnData)
 {
-    msg.headPosition = returnData.getHeadPosition();
+    msg.headPosition = angles::from_degrees(returnData.getHeadPosition());
 }
 
 int main(int argc, char * argv[])

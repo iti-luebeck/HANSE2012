@@ -12,5 +12,6 @@
   <depend package="hanse_msgs"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="diagnostic_updater"/>
+  <depend package="angles"/>
 
 </package>
