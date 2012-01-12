@@ -16,7 +16,7 @@
 #include "hanse_msgs/pressure.h"
 #include "hanse_msgs/temperature.h"
 #include "utility/twi.h"
-
+#include <diagnotisc_updater/diagnostic_updater.h>
 
 /*
  *Adresse eines Motorcontrollers
@@ -66,16 +66,16 @@ void cbmotorright( const hanse_msgs::sollSpeed& msg){
 
 
 
-ros::Subscriber <hanse_msgs::sollSpeed> motfront("front", &cbmotorfront);
-ros::Subscriber <hanse_msgs::sollSpeed> motback("back", &cbmotorback);
-ros::Subscriber <hanse_msgs::sollSpeed> motright("right", &cbmotorright);
-ros::Subscriber <hanse_msgs::sollSpeed> motleft("left", &cbmotorleft);
+ros::Subscriber <hanse_msgs::sollSpeed> motfront("/hanse/motors/left", &cbmotorfront);
+ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downFront", &cbmotorback);
+ros::Subscriber <hanse_msgs::sollSpeed> motright("/hanse/motors/right", &cbmotorright);
+ros::Subscriber <hanse_msgs::sollSpeed> motleft("/hanse/motors/downBack", &cbmotorleft);
 
 hanse_msgs::pressure press;
 hanse_msgs::temperature temp;
 
-ros::Publisher pubPressure("pressure", &press);
-ros::Publisher pubTemperature("temperature", &temp);
+ros::Publisher pubPressure("/hanse/pressure/depth", &press);
+ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
 
 
 
