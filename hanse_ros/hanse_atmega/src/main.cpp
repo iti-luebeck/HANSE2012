@@ -2,7 +2,7 @@
  *  Robotik Praktikum WS11/12
  *  Peter Hegen, Cedric Isokeit
  *  Projekt I2C Treiber
- *  Implementierung fuer den ATMega168
+ *  Implementierung fuer den ATMega644p
  *  Ansteuerung der Motorcontroller und des Drucksensors
  */
 
@@ -16,7 +16,7 @@
 #include "hanse_msgs/pressure.h"
 #include "hanse_msgs/temperature.h"
 #include "utility/twi.h"
-#include <diagnotisc_updater/diagnostic_updater.h>
+
 
 /*
  *Adresse eines Motorcontrollers
@@ -35,6 +35,14 @@ ros::NodeHandle nh;
 void read_pressure();
 void read_temperature();
 
+/*
+ *Ansteuerung der einzelnen Motoren
+ *Aufbau einer Verbindung zum Motorcontroller
+ *und Auswahl des Motors. Senden des sollSpeed Wertes
+ *mit anschliessendem schliessen der Verbindung
+ */
+
+//Ansteuerung Motor vorne (/hanse/motors/downFront)
 void cbmotorfront(const hanse_msgs::sollSpeed& msg){
 	nh.loginfo("test");
 	Wire.beginTransmission(ADDRR);
@@ -43,6 +51,7 @@ void cbmotorfront(const hanse_msgs::sollSpeed& msg){
   	Wire.endTransmission();
 }
 
+//Ansteuerung Motor hinten (/hanse/motors/downBack)
 void cbmotorback(const hanse_msgs::sollSpeed& msg){
 	Wire.beginTransmission(ADDRL);
 	Wire.send(2);
@@ -50,39 +59,45 @@ void cbmotorback(const hanse_msgs::sollSpeed& msg){
 	Wire.endTransmission();
 }
 
+//Ansteuerung Motor links (/hanse/motors/left)
 void cbmotorleft( const hanse_msgs::sollSpeed & msg){
-  Wire.beginTransmission(ADDRL);
-  Wire.send(1);
-  Wire.send(msg.data);
-  Wire.endTransmission();
+  	Wire.beginTransmission(ADDRL);
+  	Wire.send(1);
+  	Wire.send(msg.data);
+  	Wire.endTransmission();
 }  
 
+//Ansteuerung Motor rechts (/hanse/motors/right)
 void cbmotorright( const hanse_msgs::sollSpeed& msg){
-  Wire.beginTransmission(ADDRR);
-  Wire.send(1);
-  Wire.send(msg.data);
-  Wire.endTransmission();
+  	Wire.beginTransmission(ADDRR);
+  	Wire.send(1);
+  	Wire.send(msg.data);
+  	Wire.endTransmission();
 }
 
 
-
+//Definition der Subscriber fuer jeden der vier Motoren
 ros::Subscriber <hanse_msgs::sollSpeed> motfront("/hanse/motors/left", &cbmotorfront);
 ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downFront", &cbmotorback);
 ros::Subscriber <hanse_msgs::sollSpeed> motright("/hanse/motors/right", &cbmotorright);
 ros::Subscriber <hanse_msgs::sollSpeed> motleft("/hanse/motors/downBack", &cbmotorleft);
 
+//Definition der Message Typen
 hanse_msgs::pressure press;
 hanse_msgs::temperature temp;
 
+//Definition der Publisher
 ros::Publisher pubPressure("/hanse/pressure/depth", &press);
 ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
 
 
-
+//Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
 	//Aufbau der I2C Verbindung
   	Wire.begin();
+
+	//Langsames Aufleuchten der LED
 	pinMode(7, OUTPUT);
 	delay(200);
 	digitalWrite(7,HIGH);
@@ -93,6 +108,7 @@ void setup()
 	delay(1000);
 	digitalWrite(7,LOW);
 
+	//Initialisierung des Nodehandlers, der Subscriber und der Publisher
 	nh.initNode();
 	nh.subscribe(motfront);
 	nh.subscribe(motback);
@@ -116,7 +132,10 @@ void setup()
 	nh.loginfo("setup");
 
 }
-
+/*
+ *loop() Lässt die LED auf dem Mikrocontroller schnell aufleuchten, wartet auf Anweisungen für die Subscriber der Motoren und published 
+ *alle 200ms die Temperatur und Druck Werte des Sensors.
+ */
 void loop()
 {
 
@@ -144,7 +163,7 @@ void loop()
 #define CALIB_MAGIC_VALUE 224
 
 /*
- * Liesst num Bytes von Register reg aus und schreibt diese in data. 
+ * Liest num Bytes von Register reg aus und schreibt diese in data. 
  * data muss bereits vorinitialisiert sein. Gibt die Anzahl der tatsächlich gelesenen Bytes zurück
  */
 
@@ -174,24 +193,29 @@ void read_pressure()
 {
 	unsigned int var;
 	unsigned char buffer[2];
+	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
-		// error
+		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden
 		char var2[16];
 		sprintf((char*)&var2,"error%d",var);
 		nh.loginfo((char*)&var2);
 	
 	}
 	else{
-		press.data = 256*buffer[0] + buffer[1];
-		press.header.stamp = nh.now();
+		//Bau einer Header msg 
+		press.data = 256*buffer[0] + buffer[1]; //Darstellung der Summe von den 2 Byte Daten
+		press.header.stamp = nh.now(); // Zeitstempel für den Header auf aktuelle Zeit setzen
 		char temp[2] = "0";
-		press.header.frame_id = temp;
+		press.header.frame_id = temp; // Frame_id auf 0 setzen (keine Frame_id)
 
+		//Ausgabe der Druckdaten auf der Konsole
 		char var2[16];
 		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
+
+		//Druckdaten werden gepublished
 		pubPressure.publish( &press );
 	}
 
@@ -202,28 +226,32 @@ void read_pressure()
  * Liesst die Temperatur aus und schickt sie über ROS.
  */
 
-
 void read_temperature()
 {
 	unsigned int var;
 	unsigned char buffer[2];
+	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
-		// error
+		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden
 		char var2[16];
 		sprintf((char*)&var2,"error%d",var);
 		nh.loginfo((char*)&var2);
 	}
 	else{
-		temp.data = 256*buffer[0] + buffer[1];
-		temp.header.stamp = nh.now();
-		char str[2] = "0";
-		temp.header.frame_id = str;
+		//Bau einer Header msg 
+		temp.data = 256*buffer[0] + buffer[1]; // Darstellung der Summe der 2 Byte Daten
+		temp.header.stamp = nh.now(); // Zeitstempel auf die aktuelle Uhrzeit setzen
+		char str[2] = "0"; 
+		temp.header.frame_id = str; // Frame_id auf 0 setzen (keine Frame_id)
 
+		//Ausgabe der Sensordaten des Temperatursensors auf der Konsole
 		char var2[16];
 		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
+
+		//Temperaturdaten werden gepublished
 		pubTemperature.publish( &temp );
 	}
 	
