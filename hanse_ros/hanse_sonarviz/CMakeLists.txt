@@ -30,6 +30,9 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
+
+add_definitions(-std=c++0x)
+
 pkg_check_modules(CAIROMM cairomm-1.0)
 include_directories(${CAIROMM_INCLUDE_DIRS})
 
