@@ -16,7 +16,7 @@
 #include "hanse_msgs/pressure.h"
 #include "hanse_msgs/temperature.h"
 #include "utility/twi.h"
-
+#include <avr/wdt.h> 
 
 /*
  *Adresse eines Motorcontrollers
@@ -94,8 +94,11 @@ ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
+	//Reset des Registers MCUSR und auschalten des watchdog timers	
+	MCUSR = 0;
+      	wdt_disable();
 	//Aufbau der I2C Verbindung
-  	Wire.begin();
+  	Wire.begin();		
 
 	//Langsames Aufleuchten der LED
 	pinMode(7, OUTPUT);
@@ -109,6 +112,7 @@ void setup()
 	digitalWrite(7,LOW);
 
 	//Initialisierung des Nodehandlers, der Subscriber und der Publisher
+
 	nh.initNode();
 	nh.subscribe(motfront);
 	nh.subscribe(motback);
@@ -118,6 +122,9 @@ void setup()
    	nh.advertise(pubPressure);
    	nh.advertise(pubTemperature);
 	
+	//Aktivieren des watchdog timers mit parameter 2 sekunden
+	wdt_enable(WDTO_2S);
+
   	//INIT Motorcontroller links Umstellung auf signed int
   	Wire.beginTransmission(ADDRL);
   	Wire.send(0);
@@ -131,6 +138,10 @@ void setup()
 
 	nh.loginfo("setup");
 
+	//Zurücksetzen des watchdog timers
+	wdt_reset();
+
+
 }
 /*
  *loop() Lässt die LED auf dem Mikrocontroller schnell aufleuchten, wartet auf Anweisungen für die Subscriber der Motoren und published 
@@ -138,14 +149,18 @@ void setup()
  */
 void loop()
 {
-
+	 
 	nh.spinOnce();
 	digitalWrite(7,HIGH);
 	delay(100);
 	digitalWrite(7,LOW);
 	delay(100);
+
 	read_pressure();
   	read_temperature();
+
+	//Zurücksetzen des watchdog timers
+	wdt_reset();
 }
 
 
