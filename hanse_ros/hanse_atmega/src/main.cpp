@@ -78,10 +78,12 @@ void cbmotorright( const hanse_msgs::sollSpeed& msg){
 
 
 //Definition der Subscriber fuer jeden der vier Motoren
-ros::Subscriber <hanse_msgs::sollSpeed> motfront("/hanse/motors/left", &cbmotorfront);
-ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downFront", &cbmotorback);
+ros::Subscriber <hanse_msgs::sollSpeed> motleft("/hanse/motors/left", &cbmotorleft);
+ros::Subscriber <hanse_msgs::sollSpeed> motfront("/hanse/motors/downFront", &cbmotorfront);
 ros::Subscriber <hanse_msgs::sollSpeed> motright("/hanse/motors/right", &cbmotorright);
-ros::Subscriber <hanse_msgs::sollSpeed> motleft("/hanse/motors/downBack", &cbmotorleft);
+ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downBack", &cbmotorback);
+
+
 
 //Definition der Message Typen
 hanse_msgs::pressure press;
