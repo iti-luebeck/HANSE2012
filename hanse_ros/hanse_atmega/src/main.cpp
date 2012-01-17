@@ -12,6 +12,7 @@
 #include <Wire.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Int8.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 #include "hanse_msgs/sollSpeed.h"
 #include "hanse_msgs/pressure.h"
 #include "hanse_msgs/temperature.h"
@@ -85,10 +86,12 @@ ros::Subscriber <hanse_msgs::sollSpeed> motleft("/hanse/motors/downBack", &cbmot
 //Definition der Message Typen
 hanse_msgs::pressure press;
 hanse_msgs::temperature temp;
+diagnostic_msgs::DiagnosticStatus status;
 
 //Definition der Publisher
 ros::Publisher pubPressure("/hanse/pressure/depth", &press);
 ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
+ros::Publisher pubStatus("/hanse/diagnostic/status", &status);
 
 
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
@@ -121,7 +124,8 @@ void setup()
   
    	nh.advertise(pubPressure);
    	nh.advertise(pubTemperature);
-	
+	nh.advertise(pubStatus);	
+
 	//Aktivieren des watchdog timers mit parameter 2 sekunden
 	wdt_enable(WDTO_2S);
 
@@ -206,16 +210,31 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 
 void read_pressure()
 {
+
+	
 	unsigned int var;
 	unsigned char buffer[2];
+
+	char sname[25] = "/hanse/pressure/depth";
+	char sid[2] = "0";
+	status.name = sname;
+	status.hardware_id = sid;
+
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
-		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden
+		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
+		/*
 		char var2[16];
 		sprintf((char*)&var2,"error%d",var);
 		nh.loginfo((char*)&var2);
+		*/
+ 		
+		char smsg[10] = "error";
+		status.message = smsg;
+		status.level = 2;
+		status.values = 0;
 	
 	}
 	else{
@@ -226,13 +245,24 @@ void read_pressure()
 		press.header.frame_id = temp; // Frame_id auf 0 setzen (keine Frame_id)
 
 		//Ausgabe der Druckdaten auf der Konsole
+		/*
 		char var2[16];
 		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
+		*/		
+
 
 		//Druckdaten werden gepublished
 		pubPressure.publish( &press );
+
+		char smsg[2] = "";
+		status.message = smsg;
+		status.level = 0;
+		status.values = 0;
+		
+
 	}
+	pubStatus.publish( &status);
 
 	
 }
@@ -245,14 +275,27 @@ void read_temperature()
 {
 	unsigned int var;
 	unsigned char buffer[2];
+
+	char sname[30] = "/hanse/pressure/temperature";
+	char sid[2] = "0";
+	status.name = sname;
+	status.hardware_id = sid;
+
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
-		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden
+		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
+		/*
 		char var2[16];
 		sprintf((char*)&var2,"error%d",var);
 		nh.loginfo((char*)&var2);
+		*/		
+
+		char smsg[10] = "error";
+		status.message = smsg;
+		status.level = 2;
+		status.values = 0;
 	}
 	else{
 		//Bau einer Header msg 
@@ -262,14 +305,24 @@ void read_temperature()
 		temp.header.frame_id = str; // Frame_id auf 0 setzen (keine Frame_id)
 
 		//Ausgabe der Sensordaten des Temperatursensors auf der Konsole
+		/*
 		char var2[16];
 		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
+		*/
 
 		//Temperaturdaten werden gepublished
 		pubTemperature.publish( &temp );
+
+
+		char smsg[2] = "";
+		status.message = smsg;
+		status.level = 0;
+		status.values = 0;
+		
 	}
 	
+	pubStatus.publish( &status);	
 
 }
 
