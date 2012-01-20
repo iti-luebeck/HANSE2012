@@ -42,6 +42,8 @@ void SonarDriver<C, M, SC>::tick()
     if (returnData.isPacketValid()) {
         M msg;
 
+	msg.header.stamp = ros::Time::now();
+
         QByteArray echoData = returnData.getEchoData();
 
         for (QByteArray::const_iterator i = echoData.begin(); i != echoData.end(); ++i) {

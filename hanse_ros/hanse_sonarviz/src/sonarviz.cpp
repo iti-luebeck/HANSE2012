@@ -32,6 +32,9 @@ void SonarViz::callback(const hanse_msgs::ScanningSonar &msg)
     sonarDataMap.erase(msg.headPosition);
     sonarDataMap.insert(std::make_pair(msg.headPosition, msg));
     lastHeadPosition = msg.headPosition;
+
+
+    lastMsgTime = msg.header.stamp;
     tick();
 }
 
@@ -65,17 +68,9 @@ void SonarViz::tick()
 
 
     cr->save(); // save the state of the context
-    cr->set_source_rgb(0.86, 0 * 0.85, 0.47);
+    cr->set_source_rgb(1.0, 1.0, 1.0);
     cr->paint(); // fill image with the color
     cr->restore(); // color is back to black now
-
-    cr->save();
-    // draw a border around the image
-    cr->set_source_rgb(0, 1, 0);
-    cr->set_line_width(20.0); // make the line wider
-    cr->rectangle(0.0, 0.0, surface->get_width(), surface->get_height());
-    cr->stroke();
-    cr->restore();
 
     cr->save();
 
@@ -108,7 +103,10 @@ void SonarViz::tick()
 
         if (msg.first - lastPos < M_PI / 2) {
             for (int i = 0; i < dataPoints; i++) {
-                cr->set_source_rgb(0, msg.second.echoData[i] / 255.0, 0);
+		ros::Time msgTime = msg.second.header.stamp;
+		double d = (lastMsgTime - msgTime).toSec();
+		double f = 0.5 * exp(-2 * d);
+                cr->set_source_rgb(0, msg.second.echoData[i] / 255.0, f);
                 cr->begin_new_path();
                 double r1 = (double)i / dataPoints;
                 double r2 = (double)(i + 1) / dataPoints;
@@ -124,6 +122,20 @@ void SonarViz::tick()
         lastPos = msg.first;
         cr->restore();
     }
+
+    cr->set_antialias(Cairo::ANTIALIAS_DEFAULT);
+
+    cr->set_source_rgba(1, 1, 1, 0.5);
+    cr->set_line_width(1);
+    cr->begin_new_path();
+    cr->move_to(-1, 0);
+    cr->line_to(1, 0);
+    cr->move_to(0, -1);
+    cr->line_to(0, 1);
+
+    cr->scale(2.0 / surface->get_width(), 2.0 / surface->get_height());
+
+    cr->stroke();
 
     cr->restore();
 

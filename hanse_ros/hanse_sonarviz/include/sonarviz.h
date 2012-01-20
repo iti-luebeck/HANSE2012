@@ -21,6 +21,7 @@ private:
   ros::Subscriber subscriber;
   std::map<double, hanse_msgs::ScanningSonar> sonarDataMap;
   double lastHeadPosition;
+  ros::Time lastMsgTime;
 
   void callback(const hanse_msgs::ScanningSonar &msg);
   sensor_msgs::Image cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> surface);
