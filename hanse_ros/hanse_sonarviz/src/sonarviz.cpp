@@ -5,7 +5,7 @@
 SonarViz::SonarViz(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<sensor_msgs::Image>("sonarviz", 1)),
-    subscriber(handle.subscribe("scanning_sonar", 1, &SonarViz::callback, this)),
+    subscriber(handle.subscribe("/hanse/sonar/scan", 1, &SonarViz::callback, this)),
     lastHeadPosition(0)
 {
 }

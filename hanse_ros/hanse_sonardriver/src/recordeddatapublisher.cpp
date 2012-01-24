@@ -70,9 +70,9 @@ int main( int argc, char** argv )
   //}
   //ROS_INFO("%s", filename.c_str());
 
-  ros::Publisher publisher = nh.advertise<hanse_msgs::ScanningSonar>("scanning_sonar", 1000);
+  ros::Publisher publisher = nh.advertise<hanse_msgs::ScanningSonar>("/hanse/sonar/scan", 1000);
 
-  QFile file("/home/jf/Projects/therapiebecken_1.852");//QString::fromStdString(filename));
+  QFile file("/home/jix/Projects/uni/HANSE/data/SonarData/recordings/2010-11-01 Wakenitz/wak20100929b.852");//QString::fromStdString(filename));
   if(!file.open(QFile::ReadOnly))
   {
     ROS_ERROR("could not open file %s", filename.c_str());
@@ -92,6 +92,7 @@ int main( int argc, char** argv )
         msg.echoData.push_back(*i);
     }
 
+    msg.header.stamp = ros::Time::now();
     msg.headPosition = angles::from_degrees(returnData.getHeadPosition());
     msg.range = returnData.getRange();
     msg.startGain = returnData.switchCommand.startGain;

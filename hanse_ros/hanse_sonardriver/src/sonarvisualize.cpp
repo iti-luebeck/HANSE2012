@@ -2,7 +2,7 @@
 
 SonarVisualize::SonarVisualize(ros::NodeHandle handle) :
     nh(handle),
-    subscriber(handle.subscribe("scanning_sonar", 1, &SonarVisualize::callback, this))
+    subscriber(handle.subscribe("/hanse/sonar/scan", 1, &SonarVisualize::callback, this))
 {
 }
 
