@@ -106,6 +106,8 @@ ros::Publisher pubStatus("/hanse/diagnostic/status", &status);
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
+
+
 	// Wert von MCUSCR merken um reset Ursache festzustellen
     	unsigned char mcusr_mirror = MCUSR;
 
@@ -157,17 +159,28 @@ void setup()
   	Wire.send(1);
   	Wire.endTransmission();
 
-	nh.loginfo("setup");
+	nh.loginfo("setup"); 
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
 
+	//Setzen des Sollspeeds der Motoren auf 0
+	hanse_msgs::sollSpeed msg;
+	msg.data = 0;
+	cbmotorright(msg);
+	cbmotorleft(msg);
+	cbmotorfront(msg);
+	cbmotorback(msg);
+	
 
 }
 /*
  *loop() Lässt die LED auf dem Mikrocontroller schnell aufleuchten, wartet auf Anweisungen für die Subscriber der Motoren und published 
  *alle 200ms die Temperatur und Druck Werte des Sensors.
  */
+unsigned char connected;
+unsigned char disconnect_timer;
+
 void loop()
 {
 	 
@@ -182,6 +195,23 @@ void loop()
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
+
+	if(nh.connected()){
+		//nh.loginfo("connected");
+		connected = 1;
+		disconnect_timer = 0;
+	}
+
+	if(!nh.connected()&&(disconnect_timer>10)&&connected){
+		
+		hanse_msgs::sollSpeed msg;		
+		msg.data= 80;
+	
+		cbmotorfront(msg);
+		cbmotorback(msg);	
+	}
+	disconnect_timer++;
+
 }
 
 
