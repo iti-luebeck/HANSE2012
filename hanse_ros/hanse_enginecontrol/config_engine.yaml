@@ -1,3 +1,7 @@
 {
-frequency: 10,
+topic_thrusterDown1_publication: /hanse2/thrusterDownFront,
+topic_thrusterDown2_publication: /hanse2/thrusterDown,
+topic_thrusterLeft_publication: a,
+topic_thrusterRight_publication: a,
+topic_pressure_subscription: /hanse2/press
 }
