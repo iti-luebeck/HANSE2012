@@ -13,6 +13,8 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Int8.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
+#include <diagnostic_msgs/KeyValue.h>
 #include "hanse_msgs/sollSpeed.h"
 #include "hanse_msgs/pressure.h"
 #include "hanse_msgs/temperature.h"
@@ -35,6 +37,7 @@ ros::NodeHandle nh;
 
 void read_pressure();
 void read_temperature();
+void diagnostics();
 
 /*
  *Ansteuerung der einzelnen Motoren
@@ -45,7 +48,6 @@ void read_temperature();
 
 //Ansteuerung Motor vorne (/hanse/motors/downFront)
 void cbmotorfront(const hanse_msgs::sollSpeed& msg){
-	nh.loginfo("test");
 	Wire.beginTransmission(ADDRR);
   	Wire.send(2);
   	Wire.send(msg.data);
@@ -88,12 +90,14 @@ ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downBack", &cbmot
 //Definition der Message Typen
 hanse_msgs::pressure press;
 hanse_msgs::temperature temp;
-diagnostic_msgs::DiagnosticStatus status;
+diagnostic_msgs::DiagnosticArray diag_array;
+
+
 
 //Definition der Publisher
 ros::Publisher pubPressure("/hanse/pressure/depth", &press);
 ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
-ros::Publisher pubStatus("/hanse/diagnostic/status", &status);
+ros::Publisher pubStatus("/hanse/diagnostic/status", &diag_array);
 
 
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
@@ -102,8 +106,6 @@ void setup()
 	//Reset des Registers MCUSR und auschalten des watchdog timers	
 	MCUSR = 0;
       	wdt_disable();
-	//Aufbau der I2C Verbindung
-  	Wire.begin();		
 
 	//Langsames Aufleuchten der LED
 	pinMode(7, OUTPUT);
@@ -115,6 +117,13 @@ void setup()
 	digitalWrite(7,HIGH);
 	delay(1000);
 	digitalWrite(7,LOW);
+
+        //Aktivieren des watchdog timers mit parameter 2 sekunden
+        wdt_enable(WDTO_2S);
+
+        //Aufbau der I2C Verbindung
+        Wire.begin();
+
 
 	//Initialisierung des Nodehandlers, der Subscriber und der Publisher
 
@@ -128,8 +137,8 @@ void setup()
    	nh.advertise(pubTemperature);
 	nh.advertise(pubStatus);	
 
-	//Aktivieren des watchdog timers mit parameter 2 sekunden
-	wdt_enable(WDTO_2S);
+
+
 
   	//INIT Motorcontroller links Umstellung auf signed int
   	Wire.beginTransmission(ADDRL);
@@ -167,6 +176,7 @@ void loop()
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
+        diagnostics();
 }
 
 
@@ -217,26 +227,20 @@ void read_pressure()
 	unsigned int var;
 	unsigned char buffer[2];
 
-	char sname[25] = "/hanse/pressure/depth";
-	char sid[2] = "0";
-	status.name = sname;
-	status.hardware_id = sid;
+
 
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-		/*
+
 		char var2[16];
-		sprintf((char*)&var2,"error%d",var);
+                sprintf((char*)&var2,"error press%d",var);
 		nh.loginfo((char*)&var2);
-		*/
+
  		
-		char smsg[10] = "error";
-		status.message = smsg;
-		status.level = 2;
-		status.values = 0;
+
 	
 	}
 	else{
@@ -247,7 +251,7 @@ void read_pressure()
 		press.header.frame_id = temp; // Frame_id auf 0 setzen (keine Frame_id)
 
 		//Ausgabe der Druckdaten auf der Konsole
-		/*
+                /*
 		char var2[16];
 		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
@@ -257,14 +261,10 @@ void read_pressure()
 		//Druckdaten werden gepublished
 		pubPressure.publish( &press );
 
-		char smsg[2] = "";
-		status.message = smsg;
-		status.level = 0;
-		status.values = 0;
-		
+
 
 	}
-	pubStatus.publish( &status);
+        //pubStatus.publish( &status);
 
 	
 }
@@ -278,26 +278,20 @@ void read_temperature()
 	unsigned int var;
 	unsigned char buffer[2];
 
-	char sname[30] = "/hanse/pressure/temperature";
-	char sid[2] = "0";
-	status.name = sname;
-	status.hardware_id = sid;
+
 
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-		/*
-		char var2[16];
-		sprintf((char*)&var2,"error%d",var);
-		nh.loginfo((char*)&var2);
-		*/		
 
-		char smsg[10] = "error";
-		status.message = smsg;
-		status.level = 2;
-		status.values = 0;
+		char var2[16];
+                sprintf((char*)&var2,"error temp%d",var);
+		nh.loginfo((char*)&var2);
+
+
+
 	}
 	else{
 		//Bau einer Header msg 
@@ -309,7 +303,7 @@ void read_temperature()
 		//Ausgabe der Sensordaten des Temperatursensors auf der Konsole
 		/*
 		char var2[16];
-		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
+                sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
 		nh.loginfo((char*)&var2);
 		*/
 
@@ -317,14 +311,65 @@ void read_temperature()
 		pubTemperature.publish( &temp );
 
 
-		char smsg[2] = "";
-		status.message = smsg;
-		status.level = 0;
-		status.values = 0;
+
 		
 	}
 	
-	pubStatus.publish( &status);	
+        //pubStatus.publish( &status);
 
 }
 
+
+
+diagnostic_msgs::KeyValue key_val;
+
+void diagnostics(){
+  diagnostic_msgs::DiagnosticStatus status_msg[2];
+  diagnostic_msgs::KeyValue kv[2];
+
+  diag_array.header.stamp = nh.now();
+  diag_array.header.frame_id = "";
+  diag_array.status_length = 2;
+
+
+
+  //motoren twi fehler
+  //kv motor values
+  //druck und temp
+  //watchdog
+
+
+  status_msg[0].level = 0;
+  status_msg[0].name ="test";
+  status_msg[0].message ="dies ist ein test";
+  status_msg[0].hardware_id = "0";
+  status_msg[0].values_length = 2;
+  kv[0].key ="testkey";
+  kv[0].value="testvalaue";
+  kv[1].key ="testkey2";
+  kv[1].value="testvalaue2";
+
+  status_msg[0].values = kv;
+
+  status_msg[1].level = 0;
+  status_msg[1].name ="test2";
+  status_msg[1].message ="dies ist ein test2";
+  status_msg[1].hardware_id = "1";
+  status_msg[1].values_length = 2;
+  kv[0].key ="testkey";
+  kv[0].value="testvalaue";
+  kv[1].key ="testkey2";
+  kv[1].value="testvalaue2";
+
+  status_msg[1].values = kv;
+
+  diag_array.status = status_msg;
+
+
+
+  pubStatus.publish( &diag_array);
+
+
+
+
+}
