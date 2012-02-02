@@ -90,50 +90,22 @@ ros::Subscriber <hanse_msgs::sollSpeed> motback("/hanse/motors/downBack", &cbmot
 //Definition der Message Typen
 hanse_msgs::pressure press;
 hanse_msgs::temperature temp;
-<<<<<<< HEAD
 diagnostic_msgs::DiagnosticArray diag_array;
 
 
-=======
-
-/*
-*löschen
-diagnostic_msgs::DiagnosticStatus status;
-*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 
 //Definition der Publisher
 ros::Publisher pubPressure("/hanse/pressure/depth", &press);
 ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
-<<<<<<< HEAD
 ros::Publisher pubStatus("/hanse/diagnostic/status", &diag_array);
-=======
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 
-/*
-*löschen
-ros::Publisher pubStatus("/hanse/diagnostic/status", &status);
-*/
 
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
-
-
-	// Wert von MCUSCR merken um reset Ursache festzustellen
-    	unsigned char mcusr_mirror = MCUSR;
-
 	//Reset des Registers MCUSR und auschalten des watchdog timers	
 	MCUSR = 0;
       	wdt_disable();
-<<<<<<< HEAD
-=======
-
-		
-
-	//Aufbau der I2C Verbindung
-  	Wire.begin();		
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 
 	//Langsames Aufleuchten der LED
 	pinMode(7, OUTPUT);
@@ -163,17 +135,10 @@ void setup()
   
    	nh.advertise(pubPressure);
    	nh.advertise(pubTemperature);
-
-<<<<<<< HEAD
-
-
-=======
-	/*
-	*löschen
 	nh.advertise(pubStatus);	
-	*/
-	
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
+
+
+
 
   	//INIT Motorcontroller links Umstellung auf signed int
   	Wire.beginTransmission(ADDRL);
@@ -186,28 +151,17 @@ void setup()
   	Wire.send(1);
   	Wire.endTransmission();
 
-	nh.loginfo("setup"); 
+	nh.loginfo("setup");
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
 
-	//Setzen des Sollspeeds der Motoren auf 0
-	hanse_msgs::sollSpeed msg;
-	msg.data = 0;
-	cbmotorright(msg);
-	cbmotorleft(msg);
-	cbmotorfront(msg);
-	cbmotorback(msg);
-	
 
 }
 /*
  *loop() Lässt die LED auf dem Mikrocontroller schnell aufleuchten, wartet auf Anweisungen für die Subscriber der Motoren und published 
  *alle 200ms die Temperatur und Druck Werte des Sensors.
  */
-unsigned char connected;
-unsigned char disconnect_timer;
-
 void loop()
 {
 	 
@@ -222,27 +176,7 @@ void loop()
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
-<<<<<<< HEAD
         diagnostics();
-=======
-
-	if(nh.connected()){
-		//nh.loginfo("connected");
-		connected = 1;
-		disconnect_timer = 0;
-	}
-
-	if(!nh.connected()&&(disconnect_timer>10)&&connected){
-		
-		hanse_msgs::sollSpeed msg;		
-		msg.data= 80;
-	
-		cbmotorfront(msg);
-		cbmotorback(msg);	
-	}
-	disconnect_timer++;
-
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 }
 
 
@@ -292,22 +226,9 @@ void read_pressure()
 	
 	unsigned int var;
 	unsigned char buffer[2];
-<<<<<<< HEAD
 
 
 
-=======
-	
-	/*
-	*löschen
-	*	
-	char sname[25] = "/hanse/pressure/depth";
-	char sid[2] = "0";
-	status.name = sname;
-	status.hardware_id = sid;
-	*/	
-	
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
 	if(var!=2)
@@ -320,19 +241,7 @@ void read_pressure()
 
  		
 
-<<<<<<< HEAD
 	
-=======
-		/*
-		*
-		*löschen
-		*
-		char smsg[10] = "error";
-		status.message = smsg;
-		status.level = 2;
-		status.values = 0;
-		*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 	}
 	else{
 		//Bau einer Header msg 
@@ -352,29 +261,11 @@ void read_pressure()
 		//Druckdaten werden gepublished
 		pubPressure.publish( &press );
 
-<<<<<<< HEAD
 
 
 	}
         //pubStatus.publish( &status);
 
-=======
-		/*
-		*
-		*löschen
-		*
-		char smsg[2] = "";
-		status.message = smsg;
-		status.level = 0;
-		status.values = 0;
-		*/
-
-	}
-	/*
-	* löschen
-	pubStatus.publish( &status);
-	*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 	
 }
 
@@ -386,20 +277,8 @@ void read_temperature()
 {
 	unsigned int var;
 	unsigned char buffer[2];
-<<<<<<< HEAD
 
 
-=======
-	
-	/*
-	*löschen
-	*
-	char sname[30] = "/hanse/pressure/temperature";
-	char sid[2] = "0";
-	status.name = sname;
-	status.hardware_id = sid;
-	*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
 	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
@@ -411,20 +290,8 @@ void read_temperature()
                 sprintf((char*)&var2,"error temp%d",var);
 		nh.loginfo((char*)&var2);
 
-<<<<<<< HEAD
 
 
-=======
-		/*
-		*
-		*löschen
-		*
-		char smsg[10] = "error";
-		status.message = smsg;
-		status.level = 2;
-		status.values = 0;
-		*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 	}
 	else{
 		//Bau einer Header msg 
@@ -443,7 +310,6 @@ void read_temperature()
 		//Temperaturdaten werden gepublished
 		pubTemperature.publish( &temp );
 
-<<<<<<< HEAD
 
 
 		
@@ -451,23 +317,6 @@ void read_temperature()
 	
         //pubStatus.publish( &status);
 
-=======
-		/*
-		*
-		*löschen
-		*
-		char smsg[2] = "";
-		status.message = smsg;
-		status.level = 0;
-		status.values = 0;
-		*/
-		
-	}
-	/*
-	*löschen
-	pubStatus.publish( &status);	
-	*/
->>>>>>> aa33daadbf4547ce624f003d502166b7bd31e83a
 }
 
 
