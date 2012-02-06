@@ -32,12 +32,42 @@
  */
 #define ADDRR 0xB0>>1
 
+/*
+ *Definition der I2C Adresse des Drucksensors, sowie
+ *der Register Adressen.
+ */
+#define PRESSURE_TEMP_I2C_ADDR 0x50>>1
 
+#define REGISTER_CALIB 0
+#define REGISTER_PRESSURE_RAW 8
+#define REGISTER_TEMP_RAW 10
+#define REGISTER_PRESSURE 12
+#define REGISTER_TEMP 14
+#define REGISTER_STATUS 17
+#define REGISTER_COUNTER 20
+
+#define STATUS_MAGIC_VALUE 0x55
+#define CALIB_MAGIC_VALUE 224
+
+
+
+// Definition des NodeHandle und der Funktionen
 ros::NodeHandle nh;
 
 void read_pressure();
 void read_temperature();
 void diagnostics();
+
+/*
+ *disconnect_timer ist ein counter für den test ob die serial_node noch verbunden ist
+ *connected ist eine variable ob die verbindung mit der serial_node aufgebaut wurde
+ *error_x sind variablen die sich merken ob ein Fehler aufgetreten ist
+ */
+int disconnect_timer = 0;
+int connected = 0;
+int error_motor = 0;
+int error_depth = 0;
+int error_temp = 0;
 
 /*
  *Ansteuerung der einzelnen Motoren
@@ -103,8 +133,10 @@ ros::Publisher pubStatus("/hanse/diagnostic/status", &diag_array);
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
-	//Reset des Registers MCUSR und auschalten des watchdog timers	
-	MCUSR = 0;
+        //Sichern des Registers MCUSR
+        unsigned char mcusr_mirror = MCUSR;
+        //Reset des Registers MCUSR und auschalten des watchdog timers
+        MCUSR = 0;
       	wdt_disable();
 
 	//Langsames Aufleuchten der LED
@@ -166,7 +198,7 @@ void loop()
 {
 	 
 	nh.spinOnce();
-	digitalWrite(7,HIGH);
+        digitalWrite(7,HIGH);
 	delay(100);
 	digitalWrite(7,LOW);
 	delay(100);
@@ -177,21 +209,45 @@ void loop()
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
         diagnostics();
+
+        /*
+         *Sobald eine Verbindung mit der Serial_node besteht, wird connected auf 1
+         * gesetzt und der disconnect_timer auf 0 gesetzt.
+         */
+        if(nh.connected()&&connected==0){
+                //nh.loginfo("connected");
+                connected = 1;
+                disconnect_timer = 0;
+        }
+
+        /*
+         *Sobald keine Verbindung zur Serial_node mehr besteht und eine gewisse Zeit
+         *abgelaufen ist, werden die Motoren so angeseteuert, dass das auv auftaucht.
+         */
+        if(!nh.connected()&&(disconnect_timer>10)&&connected){
+
+                //Definition des msg Typs
+                hanse_msgs::sollSpeed msg;
+                //Setzen der Sollgeschwindigkeit auf 110
+                msg.data= 110;
+
+                //Ansteuerung der Thruster vorne und hinten
+                cbmotorfront(msg);
+                cbmotorback(msg);
+
+                //reset der Variable connected
+                connected = 0;
+        }
+
+        disconnect_timer++;
+
+
+
+
 }
 
 
-#define PRESSURE_TEMP_I2C_ADDR 0x50>>1
 
-#define REGISTER_CALIB 0
-#define REGISTER_PRESSURE_RAW 8
-#define REGISTER_TEMP_RAW 10
-#define REGISTER_PRESSURE 12
-#define REGISTER_TEMP 14
-#define REGISTER_STATUS 17
-#define REGISTER_COUNTER 20
-
-#define STATUS_MAGIC_VALUE 0x55
-#define CALIB_MAGIC_VALUE 224
 
 /*
  * Liest num Bytes von Register reg aus und schreibt diese in data. 
@@ -239,7 +295,7 @@ void read_pressure()
                 sprintf((char*)&var2,"error press%d",var);
 		nh.loginfo((char*)&var2);
 
- 		
+                error_depth = 1;
 
 	
 	}
@@ -290,6 +346,8 @@ void read_temperature()
                 sprintf((char*)&var2,"error temp%d",var);
 		nh.loginfo((char*)&var2);
 
+                error_temp = 1;
+
 
 
 	}
@@ -321,15 +379,20 @@ void read_temperature()
 
 
 
-diagnostic_msgs::KeyValue key_val;
+
 
 void diagnostics(){
-  diagnostic_msgs::DiagnosticStatus status_msg[2];
-  diagnostic_msgs::KeyValue kv[2];
 
-  diag_array.header.stamp = nh.now();
-  diag_array.header.frame_id = "";
-  diag_array.status_length = 2;
+    //Definition der msg Typen
+    diagnostic_msgs::DiagnosticStatus status_msg[2];
+    diagnostic_msgs::KeyValue kv[1];
+
+    //Definition des Headers des diagnostic_arrays
+    diag_array.header.stamp = nh.now();
+    diag_array.header.frame_id = "";
+
+
+    diag_array.status_length = 2;
 
 
 
@@ -338,7 +401,7 @@ void diagnostics(){
   //druck und temp
   //watchdog
 
-
+/*
   status_msg[0].level = 0;
   status_msg[0].name ="test";
   status_msg[0].message ="dies ist ein test";
@@ -346,8 +409,6 @@ void diagnostics(){
   status_msg[0].values_length = 2;
   kv[0].key ="testkey";
   kv[0].value="testvalaue";
-  kv[1].key ="testkey2";
-  kv[1].value="testvalaue2";
 
   status_msg[0].values = kv;
 
@@ -358,16 +419,32 @@ void diagnostics(){
   status_msg[1].values_length = 2;
   kv[0].key ="testkey";
   kv[0].value="testvalaue";
-  kv[1].key ="testkey2";
-  kv[1].value="testvalaue2";
 
   status_msg[1].values = kv;
 
   diag_array.status = status_msg;
 
+  */
+    for(int i = 0;i<4;i++){
+        switch ( i ) {
+        case 0:
+
+          break;
+        case 1:
+          // Code
+          break;
+        case 2:
+          // Code
+          break;
+        case 3:
+          // Code
+          break;
+        }
 
 
-  pubStatus.publish( &diag_array);
+    }
+
+    pubStatus.publish( &diag_array);
 
 
 
