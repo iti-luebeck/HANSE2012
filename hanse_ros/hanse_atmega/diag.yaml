@@ -1,0 +1,7 @@
+analyzers:
+   hanse_atmega:
+     type: GenericAnalyzer
+     path: hanse_atmega
+     find_and_remove_prefix: diag_
+     num_items: 3
+     timeout: 5.0

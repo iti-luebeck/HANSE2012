@@ -57,17 +57,22 @@ ros::NodeHandle nh;
 void read_pressure();
 void read_temperature();
 void diagnostics();
+int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data);
 
 /*
  *disconnect_timer ist ein counter für den test ob die serial_node noch verbunden ist
  *connected ist eine variable ob die verbindung mit der serial_node aufgebaut wurde
  *error_x sind variablen die sich merken ob ein Fehler aufgetreten ist
  */
-int disconnect_timer = 0;
-int connected = 0;
-int error_motor = 0;
-int error_depth = 0;
-int error_temp = 0;
+char disconnect_timer = 0;
+char diagnostic_timer = 0;
+char connected = 0;
+char error_motor = 0;
+char error_depth = 0;
+char error_temp = 0;
+int  press_val;
+int  temp_val;
+unsigned char mcusr_mirror;
 
 /*
  *Ansteuerung der einzelnen Motoren
@@ -81,7 +86,9 @@ void cbmotorfront(const hanse_msgs::sollSpeed& msg){
 	Wire.beginTransmission(ADDRR);
   	Wire.send(2);
   	Wire.send(msg.data);
-  	Wire.endTransmission();
+        if(Wire.endTransmission()>0){
+            error_motor = 1;
+        }
 }
 
 //Ansteuerung Motor hinten (/hanse/motors/downBack)
@@ -89,7 +96,9 @@ void cbmotorback(const hanse_msgs::sollSpeed& msg){
 	Wire.beginTransmission(ADDRL);
 	Wire.send(2);
 	Wire.send(msg.data);
-	Wire.endTransmission();
+        if(Wire.endTransmission()>0){
+            error_motor = 1;
+        }
 }
 
 //Ansteuerung Motor links (/hanse/motors/left)
@@ -97,7 +106,9 @@ void cbmotorleft( const hanse_msgs::sollSpeed & msg){
   	Wire.beginTransmission(ADDRL);
   	Wire.send(1);
   	Wire.send(msg.data);
-  	Wire.endTransmission();
+        if(Wire.endTransmission()>0){
+            error_motor = 1;
+        }
 }  
 
 //Ansteuerung Motor rechts (/hanse/motors/right)
@@ -105,7 +116,23 @@ void cbmotorright( const hanse_msgs::sollSpeed& msg){
   	Wire.beginTransmission(ADDRR);
   	Wire.send(1);
   	Wire.send(msg.data);
-  	Wire.endTransmission();
+        if(Wire.endTransmission()>0){
+            error_motor = 1;
+        }
+}
+
+
+/*
+ *Liest den Wert vom Motor aus und lieftert ihn zurück
+ *      addr : Adresse des Motors
+ *      reg : Register aus dem gelesen wird
+ *returns Daten des Motors
+ */
+signed char motor_value(unsigned char addr, unsigned char reg)
+{
+    char data;
+    i2c_read_registers(addr, reg, 1,(unsigned char*) &data);
+    return data;
 }
 
 
@@ -127,14 +154,14 @@ diagnostic_msgs::DiagnosticArray diag_array;
 //Definition der Publisher
 ros::Publisher pubPressure("/hanse/pressure/depth", &press);
 ros::Publisher pubTemperature("/hanse/pressure/temp", &temp);
-ros::Publisher pubStatus("/hanse/diagnostic/status", &diag_array);
+ros::Publisher pubStatus("/diagnostics", &diag_array);
 
 
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
         //Sichern des Registers MCUSR
-        unsigned char mcusr_mirror = MCUSR;
+        mcusr_mirror = MCUSR;
         //Reset des Registers MCUSR und auschalten des watchdog timers
         MCUSR = 0;
       	wdt_disable();
@@ -183,6 +210,17 @@ void setup()
   	Wire.send(1);
   	Wire.endTransmission();
 
+        //Definition des msg Typs
+        hanse_msgs::sollSpeed msg;
+        //Setzen der Sollgeschwindigkeit auf 0
+        msg.data= 0;
+
+        //Ansteuerung der Thruster vorne und hinten
+        cbmotorfront(msg);
+        cbmotorback(msg);
+
+
+
 	nh.loginfo("setup");
 
 	//Zurücksetzen des watchdog timers
@@ -203,21 +241,33 @@ void loop()
 	digitalWrite(7,LOW);
 	delay(100);
 
+        //Auslesen des Drucks un der Temperatur
 	read_pressure();
   	read_temperature();
 
 	//Zurücksetzen des watchdog timers
 	wdt_reset();
+
         diagnostics();
+
+        //Aufruf der Diagnose Funktion
+        if(diagnostic_timer==10){
+
+            diagnostic_timer = 0;
+            mcusr_mirror = 2;
+        }
 
         /*
          *Sobald eine Verbindung mit der Serial_node besteht, wird connected auf 1
-         * gesetzt und der disconnect_timer auf 0 gesetzt.
+         * gesetzt und der disconnect_timer auf 0 gesetzt. Zurücksetzen des
+         *mcusr_mirror für die reset Ursache
          */
         if(nh.connected()&&connected==0){
                 //nh.loginfo("connected");
                 connected = 1;
                 disconnect_timer = 0;
+
+
         }
 
         /*
@@ -241,8 +291,10 @@ void loop()
 
         disconnect_timer++;
 
-
-
+        //Diagnostic timer hochzählen für den reset des mcusr_mirror
+        if(nh.connected()){
+                diagnostic_timer++;
+        }
 
 }
 
@@ -290,11 +342,11 @@ void read_pressure()
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-
+                /*
 		char var2[16];
                 sprintf((char*)&var2,"error press%d",var);
 		nh.loginfo((char*)&var2);
-
+                */
                 error_depth = 1;
 
 	
@@ -315,6 +367,7 @@ void read_pressure()
 
 
 		//Druckdaten werden gepublished
+                press_val = press.data;
 		pubPressure.publish( &press );
 
 
@@ -341,11 +394,11 @@ void read_temperature()
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-
+                /*
 		char var2[16];
                 sprintf((char*)&var2,"error temp%d",var);
 		nh.loginfo((char*)&var2);
-
+                */
                 error_temp = 1;
 
 
@@ -366,6 +419,7 @@ void read_temperature()
 		*/
 
 		//Temperaturdaten werden gepublished
+                temp_val = temp.data;
 		pubTemperature.publish( &temp );
 
 
@@ -380,69 +434,142 @@ void read_temperature()
 
 
 
-
+/*
+ *diagnostics published ein diagnostic_array für den Status der Motoren und
+ *des Druck Sensors. Ausserdem wird die letzte Reset Ursache des Controllers
+ *mitgesendet
+ */
 void diagnostics(){
 
     //Definition der msg Typen
-    diagnostic_msgs::DiagnosticStatus status_msg[2];
-    diagnostic_msgs::KeyValue kv[1];
+    diagnostic_msgs::DiagnosticStatus status_msg[3];
+    diagnostic_msgs::KeyValue kv1[1];
+    diagnostic_msgs::KeyValue kv2[4];
+    diagnostic_msgs::KeyValue kv3[2];
+
+    //Definition von Variablen für die Pointer
+    char var1[16];
+    char var2[16];
+    char var3[16];
+    char var4[16];
+    char var5[16];
+    char var6[16];
+    char var7[16];
 
     //Definition des Headers des diagnostic_arrays
     diag_array.header.stamp = nh.now();
     diag_array.header.frame_id = "";
 
-
-    diag_array.status_length = 2;
-
-
-
-  //motoren twi fehler
-  //kv motor values
-  //druck und temp
-  //watchdog
-
-/*
-  status_msg[0].level = 0;
-  status_msg[0].name ="test";
-  status_msg[0].message ="dies ist ein test";
-  status_msg[0].hardware_id = "0";
-  status_msg[0].values_length = 2;
-  kv[0].key ="testkey";
-  kv[0].value="testvalaue";
-
-  status_msg[0].values = kv;
-
-  status_msg[1].level = 0;
-  status_msg[1].name ="test2";
-  status_msg[1].message ="dies ist ein test2";
-  status_msg[1].hardware_id = "1";
-  status_msg[1].values_length = 2;
-  kv[0].key ="testkey";
-  kv[0].value="testvalaue";
-
-  status_msg[1].values = kv;
-
-  diag_array.status = status_msg;
-
-  */
-    for(int i = 0;i<4;i++){
-        switch ( i ) {
-        case 0:
-
-          break;
-        case 1:
-          // Code
-          break;
-        case 2:
-          // Code
-          break;
-        case 3:
-          // Code
-          break;
-        }
+    //Setzen der Länge auf 3 für 3 Nachrichten
+    diag_array.status_length = 3;
 
 
+
+
+    /*
+     *Reset Ursache des Controllers
+     *Wenn der Wert des Registers mcusr auf 8 stand wird der Level auf 2 also error gesetzt
+     *und in den Keyvalues wird nochmal der Wert des mcusr übergeben.
+     */
+    if(mcusr_mirror == 8){
+        status_msg[0].level = 2;
+    }else{
+        status_msg[0].level = 0;
     }
+
+
+    //Bau der Status msg
+    status_msg[0].name ="diag_reset";
+    status_msg[0].message ="";
+    status_msg[0].hardware_id = "0";
+    status_msg[0].values_length = 1;
+
+    //Zuweisung der Key values
+    kv1[0].key ="MCUSR";
+    sprintf((char*)&var1,"%d",mcusr_mirror);
+    kv1[0].value=var1;
+
+    status_msg[0].values = kv1;
+
+    /*
+     *Diagnose der Motoren
+     *Wenn beim Schreiben auf die Motoren von twi_endtransmission ein Fehler festgestellt wurde
+     *wird level auf 2 also auf error gesetzt, außerdem wird in den Keyvalues die entsprechenden
+     *Werte der Motoren geschrieben
+     */
+    if(error_motor==1){
+        status_msg[1].level = 2;
+        error_motor = 0;
+    }else{
+        status_msg[1].level = 0;
+    }
+
+    //Bau der Status msg
+    status_msg[1].name ="diag_motoren";
+    status_msg[1].message ="";
+    status_msg[1].hardware_id = "1";
+    status_msg[1].values_length = 4;
+
+    //Zuweisung der Key values
+    // /hanse/motors/left
+    kv2[0].key ="left";
+    sprintf((char*)&var2,"%d",motor_value(ADDRL,1));
+    kv2[0].value=var2;
+
+    // /hanse/motors/right
+    kv2[1].key ="right";
+    sprintf((char*)&var3,"%d",motor_value(ADDRR,1));
+    kv2[1].value=var3;
+
+    // /hanse/motors/downFront
+    kv2[2].key ="front";
+    sprintf((char*)&var4,"%d",motor_value(ADDRR,2));
+    kv2[2].value=var4;
+
+    // /hanse/motors/downBack
+    kv2[3].key ="back";
+    sprintf((char*)&var5,"%d",motor_value(ADDRL,2));
+    kv2[3].value=var5;
+
+    status_msg[1].values = kv2;
+
+
+    /*
+    *Diagnose Druck Sensor
+    *Wenn weniger als 2 Byte übertragen wurden, wird level auf 2 also error gesetzt
+    *und in den Key Values werden die Werte der Sensoren übergeben
+    */
+    if(error_depth == 1 || error_temp == 1){
+        status_msg[2].level = 2;
+        error_depth = 0;
+        error_temp = 0;
+    }else{
+        status_msg[2].level = 0;
+    }
+
+    //Bau der Status msg
+    status_msg[2].name ="diag_druck";
+    status_msg[2].message ="";
+    status_msg[2].hardware_id = "2";
+    status_msg[2].values_length = 2;
+
+    //Zuweisung der Key Values
+
+    // Druck Daten
+    kv3[0].key ="Druck";
+    sprintf((char*)&var6,"%d",press_val);
+    kv3[0].value=var6;
+
+    // Temperatur Daten
+    kv3[1].key ="Temperatur";
+    sprintf((char*)&var7,"%d",temp_val);
+    kv3[1].value=var7;
+
+    status_msg[2].values = kv3;
+
+
+
+    diag_array.status = status_msg;
 
     pubStatus.publish( &diag_array);
 

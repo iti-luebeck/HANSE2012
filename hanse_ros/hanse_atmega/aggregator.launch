@@ -1,0 +1,11 @@
+<launch>
+	
+	<node name ="rosserial" pkg="rosserial_python" type="serial_node.py"/>
+
+	<node name ="aggregator" pkg="diagnostic_aggregator" type="aggregator_node">
+		<rosparam file="$(find hanse_atmega)/diag.yaml"/>
+	</node>
+
+	<node name="robot_monitor" pkg="robot_monitor" type="robot_monitor"/>
+
+</launch>
