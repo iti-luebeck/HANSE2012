@@ -58,20 +58,32 @@ void read_pressure();
 void read_temperature();
 void diagnostics();
 int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data);
+void i2c_write(unsigned char addr, unsigned char reg, const hanse_msgs::sollSpeed& msg);
 
 /*
  *disconnect_timer ist ein counter für den test ob die serial_node noch verbunden ist
  *connected ist eine variable ob die verbindung mit der serial_node aufgebaut wurde
  *error_x sind variablen die sich merken ob ein Fehler aufgetreten ist
  */
+
+//timer Variable für den Test ob die serial_node noch verbunden ist
 char disconnect_timer = 0;
+//timer Variable für die Ausgabe der Fehlermeldung nach wdt reset. Fehlermeldung wird eine gewisse Zeit gehalten,
+//da sie ansonsten nach Neustart der serial_Node schon wieder zurückgesetzt wurde
 char diagnostic_timer = 0;
+//connected = 0 : bisher keine Verbindung zur Serial_node, connected = 1 : Verbindung zur Serial_node wurde hergestellt
 char connected = 0;
+//error_motor = 0 : kein Fehler beim Schreiben auf die Motoren festgestellt, error_motor = 1 : Fehler beim Schreiben festgestellt
 char error_motor = 0;
+//error_depth = 0 : kein Fehler, 2 Bytes vom Druck Sensor erhalten, error_depth = 1 : Fehler, weniger als 2 Bytes erhalten
 char error_depth = 0;
+//error_temp = 0 : kein Fehler, 2 Bytes vom Druck Sensor erhalten, error_temp = 1 : Fehler, weniger als 2 Bytes erhalten
 char error_temp = 0;
+//press_val speichert den letzten ausgelesenen Druck Wert für die Diagnostic Nachrichten
 int  press_val;
+//temp_val speichert den letzten ausgelesenen Temperatur Wert für die Diagnostic Nachrichten
 int  temp_val;
+//mcusr_mirror speichert den Zustand des MCU Status Registers um später die Reset Ursache des Controllers auswerten zu können
 unsigned char mcusr_mirror;
 
 /*
@@ -83,42 +95,26 @@ unsigned char mcusr_mirror;
 
 //Ansteuerung Motor vorne (/hanse/motors/downFront)
 void cbmotorfront(const hanse_msgs::sollSpeed& msg){
-	Wire.beginTransmission(ADDRR);
-  	Wire.send(2);
-  	Wire.send(msg.data);
-        if(Wire.endTransmission()>0){
-            error_motor = 1;
-        }
+
+        i2c_write(ADDRR, 2, msg);
 }
 
 //Ansteuerung Motor hinten (/hanse/motors/downBack)
 void cbmotorback(const hanse_msgs::sollSpeed& msg){
-	Wire.beginTransmission(ADDRL);
-	Wire.send(2);
-	Wire.send(msg.data);
-        if(Wire.endTransmission()>0){
-            error_motor = 1;
-        }
+
+        i2c_write(ADDRL, 2, msg);
 }
 
 //Ansteuerung Motor links (/hanse/motors/left)
 void cbmotorleft( const hanse_msgs::sollSpeed & msg){
-  	Wire.beginTransmission(ADDRL);
-  	Wire.send(1);
-  	Wire.send(msg.data);
-        if(Wire.endTransmission()>0){
-            error_motor = 1;
-        }
+
+        i2c_write(ADDRL, 1, msg);
 }  
 
 //Ansteuerung Motor rechts (/hanse/motors/right)
 void cbmotorright( const hanse_msgs::sollSpeed& msg){
-  	Wire.beginTransmission(ADDRR);
-  	Wire.send(1);
-  	Wire.send(msg.data);
-        if(Wire.endTransmission()>0){
-            error_motor = 1;
-        }
+
+        i2c_write(ADDRR, 1, msg);
 }
 
 
@@ -160,7 +156,7 @@ ros::Publisher pubStatus("/diagnostics", &diag_array);
 //Initialisiert I2C, Nodehandler, Subscriber, Publisher und Motoren.
 void setup()
 {
-        //Sichern des Registers MCUSR
+        //Sichern des Registers MCUSR zum Auswerten der Reset Ursache
         mcusr_mirror = MCUSR;
         //Reset des Registers MCUSR und auschalten des watchdog timers
         MCUSR = 0;
@@ -177,10 +173,10 @@ void setup()
 	delay(1000);
 	digitalWrite(7,LOW);
 
-        //Aktivieren des watchdog timers mit parameter 2 sekunden
+        //Aktivierung des wdt um sich aus Deadlocks von i2c zu retten
         wdt_enable(WDTO_2S);
 
-        //Aufbau der I2C Verbindung
+        //Initialisierungen für die i2c Verbindung
         Wire.begin();
 
 
@@ -215,22 +211,25 @@ void setup()
         //Setzen der Sollgeschwindigkeit auf 0
         msg.data= 0;
 
-        //Ansteuerung der Thruster vorne und hinten
+        //Ansteuerung der Thruster: Zurücksetzen der Geschwindigkeit auf 0
+        //damit Werte die eventuell noch in dem Motor Controllern gespeichert sind auf 0 gesetzt werden
         cbmotorfront(msg);
         cbmotorback(msg);
+        cbmotorleft(msg);
+        cbmotorright(msg);
 
 
 
 	nh.loginfo("setup");
 
-	//Zurücksetzen des watchdog timers
+
 	wdt_reset();
 
 
 }
 /*
  *loop() Lässt die LED auf dem Mikrocontroller schnell aufleuchten, wartet auf Anweisungen für die Subscriber der Motoren und published 
- *alle 200ms die Temperatur und Druck Werte des Sensors.
+ *alle 200ms die Temperatur und Druck Werte des Sensors. Wenn Probleme mit dem Delay auftauchen können die Delay Werte angepasst werden
  */
 void loop()
 {
@@ -241,16 +240,20 @@ void loop()
 	digitalWrite(7,LOW);
 	delay(100);
 
-        //Auslesen des Drucks un der Temperatur
+        //Auslesen des Drucks un der Temperatur und publishen
 	read_pressure();
   	read_temperature();
 
-	//Zurücksetzen des watchdog timers
 	wdt_reset();
 
+        //Bau der Diagnostic Nachricht und publishen
         diagnostics();
 
-        //Aufruf der Diagnose Funktion
+        /*
+         *Der Wert von mcusr_mirror wird nach 10 Durchläufen von loop() auf 2 gesetzt (normaler Reset)
+         *damit bei einem wdt reset die Fehlermeldung auch auf dem Robot Monitor erscheint und nicht
+         *verloren geht, weil die serial_node zu lange gebraucht hat um neu zu connecten
+         */
         if(diagnostic_timer==10){
 
             diagnostic_timer = 0;
@@ -259,15 +262,14 @@ void loop()
 
         /*
          *Sobald eine Verbindung mit der Serial_node besteht, wird connected auf 1
-         * gesetzt und der disconnect_timer auf 0 gesetzt. Zurücksetzen des
-         *mcusr_mirror für die reset Ursache
+         * gesetzt und der disconnect_timer auf 0 gesetzt.  Wenn nun die Verbindung abbricht
+         * wird der Wert für den disconnect_timer nicht mehr zurückgesetzt und die andere
+         * if Abfrage für das Auftauchen wird erfüllt
          */
-        if(nh.connected()&&connected==0){
-                //nh.loginfo("connected");
+        if(nh.connected()){
+                nh.loginfo("connected");
                 connected = 1;
                 disconnect_timer = 0;
-
-
         }
 
         /*
@@ -300,6 +302,25 @@ void loop()
 
 
 
+
+/*
+ *i2c_write schreibt per i2c die Daten der hanse_msgs::sollSpeed auf das Register der angegebenen Adresse
+ *param:
+ *  addr: Zieladresse des Motorcontrollers
+ *  reg: Zielregister des Motorcontrollers
+ *  msg: hanse_msgs::sollSpeed enthält die Sollgeschwindigkeit
+ */
+
+void i2c_write(unsigned char addr, unsigned char reg, const hanse_msgs::sollSpeed& msg)
+{
+        Wire.beginTransmission(addr);
+        Wire.send(reg);
+        Wire.send(msg.data);
+        //Wenn etwas anderes als 0 := ACK zurückgegeben wird, ist ein Fehler aufgetreten.
+        if(Wire.endTransmission()>0){
+            error_motor = 1;
+        }
+ }
 
 /*
  * Liest num Bytes von Register reg aus und schreibt diese in data. 
@@ -342,11 +363,11 @@ void read_pressure()
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-                /*
+
 		char var2[16];
                 sprintf((char*)&var2,"error press%d",var);
 		nh.loginfo((char*)&var2);
-                */
+
                 error_depth = 1;
 
 	
@@ -394,11 +415,11 @@ void read_temperature()
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-                /*
+
 		char var2[16];
                 sprintf((char*)&var2,"error temp%d",var);
 		nh.loginfo((char*)&var2);
-                */
+
                 error_temp = 1;
 
 
@@ -439,139 +460,140 @@ void read_temperature()
  *des Druck Sensors. Ausserdem wird die letzte Reset Ursache des Controllers
  *mitgesendet
  */
-void diagnostics(){
+void diagnostics()
+{
 
-    //Definition der msg Typen
-    diagnostic_msgs::DiagnosticStatus status_msg[3];
-    diagnostic_msgs::KeyValue kv1[1];
-    diagnostic_msgs::KeyValue kv2[4];
-    diagnostic_msgs::KeyValue kv3[2];
+        //Definition der msg Typen
+        diagnostic_msgs::DiagnosticStatus status_msg[3];
+        diagnostic_msgs::KeyValue kv1[1];
+        diagnostic_msgs::KeyValue kv2[4];
+        diagnostic_msgs::KeyValue kv3[2];
 
-    //Definition von Variablen für die Pointer
-    char var1[16];
-    char var2[16];
-    char var3[16];
-    char var4[16];
-    char var5[16];
-    char var6[16];
-    char var7[16];
+        //Definition von Variablen für die Pointer
+        char var1[16];
+        char var2[16];
+        char var3[16];
+        char var4[16];
+        char var5[16];
+        char var6[16];
+        char var7[16];
 
-    //Definition des Headers des diagnostic_arrays
-    diag_array.header.stamp = nh.now();
-    diag_array.header.frame_id = "";
+        //Definition des Headers des diagnostic_arrays
+        diag_array.header.stamp = nh.now();
+        diag_array.header.frame_id = "";
 
-    //Setzen der Länge auf 3 für 3 Nachrichten
-    diag_array.status_length = 3;
-
-
-
-
-    /*
-     *Reset Ursache des Controllers
-     *Wenn der Wert des Registers mcusr auf 8 stand wird der Level auf 2 also error gesetzt
-     *und in den Keyvalues wird nochmal der Wert des mcusr übergeben.
-     */
-    if(mcusr_mirror == 8){
-        status_msg[0].level = 2;
-    }else{
-        status_msg[0].level = 0;
-    }
-
-
-    //Bau der Status msg
-    status_msg[0].name ="diag_reset";
-    status_msg[0].message ="";
-    status_msg[0].hardware_id = "0";
-    status_msg[0].values_length = 1;
-
-    //Zuweisung der Key values
-    kv1[0].key ="MCUSR";
-    sprintf((char*)&var1,"%d",mcusr_mirror);
-    kv1[0].value=var1;
-
-    status_msg[0].values = kv1;
-
-    /*
-     *Diagnose der Motoren
-     *Wenn beim Schreiben auf die Motoren von twi_endtransmission ein Fehler festgestellt wurde
-     *wird level auf 2 also auf error gesetzt, außerdem wird in den Keyvalues die entsprechenden
-     *Werte der Motoren geschrieben
-     */
-    if(error_motor==1){
-        status_msg[1].level = 2;
-        error_motor = 0;
-    }else{
-        status_msg[1].level = 0;
-    }
-
-    //Bau der Status msg
-    status_msg[1].name ="diag_motoren";
-    status_msg[1].message ="";
-    status_msg[1].hardware_id = "1";
-    status_msg[1].values_length = 4;
-
-    //Zuweisung der Key values
-    // /hanse/motors/left
-    kv2[0].key ="left";
-    sprintf((char*)&var2,"%d",motor_value(ADDRL,1));
-    kv2[0].value=var2;
-
-    // /hanse/motors/right
-    kv2[1].key ="right";
-    sprintf((char*)&var3,"%d",motor_value(ADDRR,1));
-    kv2[1].value=var3;
-
-    // /hanse/motors/downFront
-    kv2[2].key ="front";
-    sprintf((char*)&var4,"%d",motor_value(ADDRR,2));
-    kv2[2].value=var4;
-
-    // /hanse/motors/downBack
-    kv2[3].key ="back";
-    sprintf((char*)&var5,"%d",motor_value(ADDRL,2));
-    kv2[3].value=var5;
-
-    status_msg[1].values = kv2;
-
-
-    /*
-    *Diagnose Druck Sensor
-    *Wenn weniger als 2 Byte übertragen wurden, wird level auf 2 also error gesetzt
-    *und in den Key Values werden die Werte der Sensoren übergeben
-    */
-    if(error_depth == 1 || error_temp == 1){
-        status_msg[2].level = 2;
-        error_depth = 0;
-        error_temp = 0;
-    }else{
-        status_msg[2].level = 0;
-    }
-
-    //Bau der Status msg
-    status_msg[2].name ="diag_druck";
-    status_msg[2].message ="";
-    status_msg[2].hardware_id = "2";
-    status_msg[2].values_length = 2;
-
-    //Zuweisung der Key Values
-
-    // Druck Daten
-    kv3[0].key ="Druck";
-    sprintf((char*)&var6,"%d",press_val);
-    kv3[0].value=var6;
-
-    // Temperatur Daten
-    kv3[1].key ="Temperatur";
-    sprintf((char*)&var7,"%d",temp_val);
-    kv3[1].value=var7;
-
-    status_msg[2].values = kv3;
+        //Setzen der Länge auf 3 für 3 Nachrichten
+        diag_array.status_length = 3;
 
 
 
-    diag_array.status = status_msg;
 
-    pubStatus.publish( &diag_array);
+        /*
+         *Reset Ursache des Controllers
+         *Wenn der Wert des Registers mcusr auf 8 stand wird der Level auf 2 also error gesetzt
+         *und in den Keyvalues wird nochmal der Wert des mcusr übergeben.
+         */
+        if(mcusr_mirror == 8){
+            status_msg[0].level = 2;
+        }else{
+            status_msg[0].level = 0;
+        }
+
+
+        //Bau der Status msg
+        status_msg[0].name ="diag_reset";
+        status_msg[0].message ="";
+        status_msg[0].hardware_id = "0";
+        status_msg[0].values_length = 1;
+
+        //Zuweisung der Key values
+        kv1[0].key ="MCUSR";
+        sprintf((char*)&var1,"%d",mcusr_mirror);
+        kv1[0].value=var1;
+
+        status_msg[0].values = kv1;
+
+        /*
+         *Diagnose der Motoren
+         *Wenn beim Schreiben auf die Motoren von twi_endtransmission ein Fehler festgestellt wurde
+         *wird level auf 2 also auf error gesetzt, außerdem wird in den Keyvalues die entsprechenden
+         *Werte der Motoren geschrieben
+         */
+        if(error_motor==1){
+            status_msg[1].level = 2;
+            error_motor = 0;
+        }else{
+            status_msg[1].level = 0;
+        }
+
+        //Bau der Status msg
+        status_msg[1].name ="diag_motoren";
+        status_msg[1].message ="";
+        status_msg[1].hardware_id = "1";
+        status_msg[1].values_length = 4;
+
+        //Zuweisung der Key values
+        // /hanse/motors/left
+        kv2[0].key ="left";
+        sprintf((char*)&var2,"%d",motor_value(ADDRL,1));
+        kv2[0].value=var2;
+
+        // /hanse/motors/right
+        kv2[1].key ="right";
+        sprintf((char*)&var3,"%d",motor_value(ADDRR,1));
+        kv2[1].value=var3;
+
+        // /hanse/motors/downFront
+        kv2[2].key ="front";
+        sprintf((char*)&var4,"%d",motor_value(ADDRR,2));
+        kv2[2].value=var4;
+
+        // /hanse/motors/downBack
+        kv2[3].key ="back";
+        sprintf((char*)&var5,"%d",motor_value(ADDRL,2));
+        kv2[3].value=var5;
+
+        status_msg[1].values = kv2;
+
+
+        /*
+        *Diagnose Druck Sensor
+        *Wenn weniger als 2 Byte übertragen wurden, wird level auf 2 also error gesetzt
+        *und in den Key Values werden die Werte der Sensoren übergeben
+        */
+        if(error_depth == 1 || error_temp == 1){
+            status_msg[2].level = 2;
+            error_depth = 0;
+            error_temp = 0;
+        }else{
+            status_msg[2].level = 0;
+        }
+
+        //Bau der Status msg
+        status_msg[2].name ="diag_druck";
+        status_msg[2].message ="";
+        status_msg[2].hardware_id = "2";
+        status_msg[2].values_length = 2;
+
+        //Zuweisung der Key Values
+
+        // Druck Daten
+        kv3[0].key ="Druck";
+        sprintf((char*)&var6,"%d",press_val);
+        kv3[0].value=var6;
+
+        // Temperatur Daten
+        kv3[1].key ="Temperatur";
+        sprintf((char*)&var7,"%d",temp_val);
+        kv3[1].value=var7;
+
+        status_msg[2].values = kv3;
+
+
+
+        diag_array.status = status_msg;
+
+        pubStatus.publish( &diag_array);
 
 
 
