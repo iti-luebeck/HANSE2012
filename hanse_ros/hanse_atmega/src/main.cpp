@@ -173,7 +173,7 @@ void setup()
 	delay(1000);
 	digitalWrite(7,LOW);
 
-        //Aktivierung des wdt um sich aus Deadlocks von i2c zu retten
+        //Aktivierung des watchdogtimer um sich aus Deadlocks von i2c zu retten
         wdt_enable(WDTO_2S);
 
         //Initialisierungen für die i2c Verbindung
@@ -267,7 +267,7 @@ void loop()
          * if Abfrage für das Auftauchen wird erfüllt
          */
         if(nh.connected()){
-                nh.loginfo("connected");
+                //nh.loginfo("connected");
                 connected = 1;
                 disconnect_timer = 0;
         }
@@ -346,110 +346,73 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 }
 
 /*
- * Liesst den Druck aus und schickt ihn über ROS.
+ * Auslesen des ATmega, der den Druck-/Temperatursensor ansteuert.
  */
-
-void read_pressure()
+int16_t read_temp_pressure(uint8_t addr, uint8_t reg)
 {
-
-	
 	unsigned int var;
 	unsigned char buffer[2];
 
-
-
 	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
-	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE, 2,(unsigned char*) &buffer);
+	var = i2c_read_registers(addr, reg, 2,(unsigned char*) &buffer);
 	if(var!=2)
 	{
 		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-
 		char var2[16];
                 sprintf((char*)&var2,"error press%d",var);
 		nh.loginfo((char*)&var2);
 
-                error_depth = 1;
-
-	
+		// Fehler. Druck und Temperatur dürften im Wasser nicht negativ werden.
+		return -1;
 	}
-	else{
-		//Bau einer Header msg 
-		press.data = 256*buffer[0] + buffer[1]; //Darstellung der Summe von den 2 Byte Daten
-		press.header.stamp = nh.now(); // Zeitstempel für den Header auf aktuelle Zeit setzen
-		char temp[2] = "0";
-		press.header.frame_id = temp; // Frame_id auf 0 setzen (keine Frame_id)
-
-		//Ausgabe der Druckdaten auf der Konsole
-                /*
-		char var2[16];
-		sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
-		nh.loginfo((char*)&var2);
-		*/		
-
-
-		//Druckdaten werden gepublished
-                press_val = press.data;
-		pubPressure.publish( &press );
-
-
-
-	}
-        //pubStatus.publish( &status);
-
 	
+	return 256*buffer[0] + buffer[1];
+}
+
+/*
+ * Liesst den Druck aus und schickt ihn über ROS.
+ */
+void read_pressure()
+{
+	int16_t ret = read_temp_pressure(PRESSURE_TEMP_I2C_ADDR, REGISTER_PRESSURE);
+	if(ret < 0)
+	{
+		error_depth = 1;
+		return;
+	}
+
+	//Bau einer Header msg 
+	press.data = ret;
+	press.header.stamp = nh.now(); // Zeitstempel für den Header auf aktuelle Zeit setzen
+	char temp[2] = "0";
+	press.header.frame_id = temp; // Frame_id auf 0 setzen (keine Frame_id)
+
+	//Druckdaten werden gepublished
+	press_val = press.data;
+	pubPressure.publish( &press );
 }
 
 /*
  * Liesst die Temperatur aus und schickt sie über ROS.
  */
-
 void read_temperature()
 {
-	unsigned int var;
-	unsigned char buffer[2];
-
-
-
-	//Aufruf der Methode i2c_read_registers. Speicherung der Sensordaten in buffer. Anzahl der gelesenen Bytes in var.
-	var = i2c_read_registers(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP, 2,(unsigned char*) &buffer);
-	if(var!=2)
+	int16_t ret = read_temp_pressure(PRESSURE_TEMP_I2C_ADDR, REGISTER_TEMP);
+	if(ret < 0)
 	{
-		// error im Fall das weniger als 2 Byte auf dem I2C Bus gelesen wurden (Konsolenausgabe)
-
-		char var2[16];
-                sprintf((char*)&var2,"error temp%d",var);
-		nh.loginfo((char*)&var2);
-
-                error_temp = 1;
-
-
-
+		error_temp = 1;
+		return;
 	}
-	else{
-		//Bau einer Header msg 
-		temp.data = 256*buffer[0] + buffer[1]; // Darstellung der Summe der 2 Byte Daten
-		temp.header.stamp = nh.now(); // Zeitstempel auf die aktuelle Uhrzeit setzen
-		char str[2] = "0"; 
-		temp.header.frame_id = str; // Frame_id auf 0 setzen (keine Frame_id)
 
-		//Ausgabe der Sensordaten des Temperatursensors auf der Konsole
-		/*
-		char var2[16];
-                sprintf((char*)&var2,"%d %d",buffer[0], buffer[1]);
-		nh.loginfo((char*)&var2);
-		*/
+	//Bau einer Header msg 
+	temp.data = ret;
+	temp.header.stamp = nh.now(); // Zeitstempel auf die aktuelle Uhrzeit setzen
+	char str[2] = "0"; 
+	temp.header.frame_id = str; // Frame_id auf 0 setzen (keine Frame_id)
 
-		//Temperaturdaten werden gepublished
-                temp_val = temp.data;
-		pubTemperature.publish( &temp );
-
-
-
-		
-	}
-	
-        //pubStatus.publish( &status);
-
+	//Temperaturdaten werden gepublished
+	temp_val = temp.data;
+	pubTemperature.publish( &temp );
 }
 
 
