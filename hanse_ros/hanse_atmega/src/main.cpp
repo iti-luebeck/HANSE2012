@@ -325,6 +325,11 @@ void i2c_write(unsigned char addr, unsigned char reg, const hanse_msgs::sollSpee
 /*
  * Liest num Bytes von Register reg aus und schreibt diese in data. 
  * data muss bereits vorinitialisiert sein. Gibt die Anzahl der tatsächlich gelesenen Bytes zurück
+ *  addr: Zieladresse des Geräts
+ *  reg: Zielregister des Geräts
+ *  num: Anzahl der Bytes die empfangen werden sollen
+ *  data: Pointer für Bytes der empfangenen Daten
+ *    returns Anzahl der empfangenen Bytes
  */
 
 int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned char* data)
@@ -347,6 +352,9 @@ int i2c_read_registers(unsigned char addr, unsigned char reg, int num, unsigned 
 
 /*
  * Auslesen des ATmega, der den Druck-/Temperatursensor ansteuert.
+ *  addr:  Zieladresse des Geräts
+ *  reg: Zielregister des Geräts
+ *     returns 2Bytes Druck bzw. Temperatur Daten
  */
 int16_t read_temp_pressure(uint8_t addr, uint8_t reg)
 {
