@@ -38,3 +38,12 @@ add_definitions(-std=c++0x)
 rosbuild_add_executable(wall_detection
   src/wall_detection.cpp
 )
+rosbuild_add_executable(localization
+  src/localization.cpp
+  src/world_map.cpp
+  src/particle_filter.cpp
+)
+
+find_package(OpenCV REQUIRED)
+
+target_link_libraries(localization ${OpenCV_LIBS})
