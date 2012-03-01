@@ -23,6 +23,11 @@ public:
     unsigned short totalBytes;
     unsigned short nToRead;
 
+    unsigned char getHeadId() const { return headId; }
+
+protected:
+    unsigned char headId;
+
 private:
     void clone(const SonarSwitchCommand& other);
 };

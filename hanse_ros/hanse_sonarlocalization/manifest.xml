@@ -1,0 +1,23 @@
+<package>
+  <description brief="hanse_sonarlocalization">
+
+     hanse_sonarlocalization
+
+  </description>
+  <author>Jannis Harder</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_sonarlocalization</url>
+
+  <depend package="roscpp" />
+  <depend package="hanse_msgs"/>
+  <depend package="sensor_msgs" />
+  <depend package="visualization_msgs" />
+  <depend package="dynamic_reconfigure"/>
+  <depend package="angles" />
+  <depend package="eigen" />
+
+  <rosdep name="opencv2.3"/>
+</package>
+
+

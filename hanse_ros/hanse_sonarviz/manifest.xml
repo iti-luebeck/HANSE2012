@@ -1,0 +1,20 @@
+<package>
+  <description brief="hanse_sonarviz">
+
+     hanse_sonarviz
+
+  </description>
+  <author>Jannis Harder</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_sonarviz</url>
+
+  <rosdep name="cairomm" />
+
+  <depend package="roscpp" />
+  <depend package="hanse_msgs"/>
+  <depend package="sensor_msgs" />
+  <depend package="angles" />
+</package>
+
+

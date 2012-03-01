@@ -11,23 +11,9 @@
 #include "scanningsonarswitchcommand.h"
 
 SonarDataSourceSerial::SonarDataSourceSerial(QString portName)
+    :portName(portName)
 {
     configurePort(portName);
-}
-
-const SonarReturnData SonarDataSourceSerial::getNextPacket(const hanse_sonardriver::ScanningSonarConfig &config)
-{
-    ScanningSonarSwitchCommand cmd;
-    cmd.range = config.range;
-    cmd.startGain = config.start_gain;
-    cmd.trainAngle = config.train_angle;
-    cmd.sectorWidth = config.sector_width;
-    cmd.stepSize = config.step_size;
-    cmd.pulseLength = config.pulse_length;
-    cmd.dataPoints = config.data_points;
-    cmd.switchDelay = config.switch_delay;
-    cmd.frequency = config.frequency;
-    return getNextPacket(cmd);
 }
 
 const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchCommand &cmd)
@@ -57,13 +43,18 @@ const SonarReturnData SonarDataSourceSerial::getNextPacket(const SonarSwitchComm
 
     if (expectedLength - retData.length()>0) {
         ROS_DEBUG("Received less than expected: %i bytes missing; expected=%i", (int)(expectedLength - retData.length()), (int)expectedLength);
+        if(port->lastError() == E_READ_FAILED) {
+            stop();
+            configurePort(portName);
+        }
+        
     } else {
         ROS_DEBUG("received full packet");
     }
 
     ROS_DEBUG("Received in total: %s", QString(retData.toHex()).toStdString().c_str());
 
-    SonarReturnData d(cmd,retData);
+    SonarReturnData d(cmd, retData);
 
     return d;
 }
@@ -95,6 +86,7 @@ bool SonarDataSourceSerial::isOpen()
 
 SonarDataSourceSerial::~SonarDataSourceSerial()
 {
+    stop();
 }
 
 void SonarDataSourceSerial::stop()
