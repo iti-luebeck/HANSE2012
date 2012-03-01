@@ -33,13 +33,13 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 add_definitions(-std=c++0x)
 
-pkg_check_modules(CAIROMM cairomm-1.0)
-include_directories(${CAIROMM_INCLUDE_DIRS})
+pkg_check_modules(CAIRO "cairomm-1.0")
+include_directories(${CAIRO_INCLUDE_DIRS})
 
 rosbuild_add_executable(${PROJECT_NAME}
   src/sonarviz.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
-  ${CAIROMM_LIBRARIES}
+  ${CAIRO_LIBRARIES}
 )
