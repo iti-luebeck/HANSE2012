@@ -32,6 +32,17 @@ private:
 
     ros::NodeHandle nh;
 
+    class ParamHelper
+    {
+    public:
+	std::string serialPort;
+	ParamHelper()
+	{
+	    ros::param::param<std::string>("~serial_port", serialPort, "/dev/ttyUSB0");
+	};
+    };
+
+    ParamHelper paramHelper;
     dynamic_reconfigure::Server<Config> reconfigServer;
     Config config;
     SwitchCommand switchCommand;

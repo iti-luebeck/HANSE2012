@@ -56,29 +56,29 @@ set(SONAR_SOURCES
   ${qextserialport_HEADERS_MOC}
 )
 
-rosbuild_add_executable(scanningsonardriver
+rosbuild_add_executable(sonar_driver_scan
   src/scanningsonardriver.cpp
   ${SONAR_SOURCES}
 )
-target_link_libraries(scanningsonardriver ${QT_LIBRARIES})
+target_link_libraries(sonar_driver_scan ${QT_LIBRARIES})
 
-rosbuild_add_executable(echosounderdriver
+rosbuild_add_executable(sonar_driver_echo
   src/echosounderdriver.cpp
   ${SONAR_SOURCES}
 )
-target_link_libraries(echosounderdriver ${QT_LIBRARIES})
+target_link_libraries(sonar_driver_echo ${QT_LIBRARIES})
 
 
-rosbuild_add_executable(sonarvisualize
+rosbuild_add_executable(sonar_visualize_terminal
   src/sonarvisualize.cpp
 )
 
-rosbuild_add_executable(recordeddatapublisher
+rosbuild_add_executable(sonar_recordeddatapublisher
   src/recordeddatapublisher.cpp
   src/sonarreturndata.cpp
   src/sonarswitchcommand.cpp
   src/scanningsonarswitchcommand.cpp
 )
-target_link_libraries(recordeddatapublisher ${QT_LIBRARIES})
+target_link_libraries(sonar_recordeddatapublisher ${QT_LIBRARIES})
 
 include_directories(qextserialport)

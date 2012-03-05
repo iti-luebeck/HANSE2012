@@ -3,14 +3,15 @@
 template <class C, class M, class SC>
 SonarDriver<C, M, SC>::SonarDriver(ros::NodeHandle handle, const std::string &topicName) :
     nh(handle),
-    publisher(handle.advertise<M>(topicName, 1000)), 
+    paramHelper(),
+    publisher(handle.advertise<M>(topicName, 1000)),
     diagnosedPublisher(publisher, diagnosticUpdater, diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq), diagnostic_updater::TimeStampStatusParam()),
-    serialSource("/dev/ttyUSB1")
+    serialSource(QString::fromStdString(paramHelper.serialPort))
 {
     min_freq = 1;
     max_freq = 1000;
     diagnosticUpdater.setHardwareID("none");
-    diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);    
+    diagnosticUpdater.add("Method updater", this, &SonarDriver::produce_diagnostics);
 }
 
 template <class C, class M, class SC>
@@ -24,7 +25,7 @@ template <class C, class M, class SC>
 void SonarDriver<C, M, SC>::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &status)
 {
     struct stat sta;
-    if(stat("/dev/ttyUSB0", &sta) == -1)
+    if(stat(paramHelper.serialPort.c_str(), &sta) == -1)
         status.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "device not found");
     else
         status.summary(diagnostic_msgs::DiagnosticStatus::OK, "device found");

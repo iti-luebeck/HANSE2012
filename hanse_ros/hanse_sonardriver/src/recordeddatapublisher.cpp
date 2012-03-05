@@ -60,19 +60,18 @@ const SonarReturnData getNextPacket(QDataStream& stream)
 
 int main( int argc, char** argv )
 {
-  ros::init(argc, argv, "recordeddatapublisher");
+  ros::init(argc, argv, "sonar_recordeddatapublisher");
   ros::NodeHandle nh;
   std::string filename;
 
-  //if (!nh.getParam("filename", filename)) {
-  //  ROS_ERROR("filename parameter missing");
-  //  return -1;
-  //}
-  //ROS_INFO("%s", filename.c_str());
+  if (!ros::param::get("~recording_filename", filename)) {
+    ROS_ERROR("recording_filename parameter missing");
+    return -1;
+  }
 
-  ros::Publisher publisher = nh.advertise<hanse_msgs::ScanningSonar>("/hanse/sonar/scan", 1000);
+  ros::Publisher publisher = nh.advertise<hanse_msgs::ScanningSonar>("sonar/scan", 1000);
 
-  QFile file("/home/jix/Projects/uni/HANSE/data/SonarData/recordings/2010-11-01 Wakenitz/wak20100929b.852");//QString::fromStdString(filename));
+  QFile file(QString::fromStdString(filename));
   if(!file.open(QFile::ReadOnly))
   {
     ROS_ERROR("could not open file %s", filename.c_str());

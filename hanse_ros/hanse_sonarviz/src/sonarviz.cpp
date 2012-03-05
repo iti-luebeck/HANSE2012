@@ -4,8 +4,8 @@
 
 SonarViz::SonarViz(ros::NodeHandle handle) :
     nh(handle),
-    publisher(handle.advertise<sensor_msgs::Image>("sonarviz", 1)),
-    subscriber(handle.subscribe("/hanse/sonar/scan", 1, &SonarViz::callback, this)),
+    publisher(handle.advertise<sensor_msgs::Image>("sonar/scan/viz", 1)),
+    subscriber(handle.subscribe("sonar/scan", 1, &SonarViz::callback, this)),
     lastHeadPosition(0)
 {
 }
@@ -49,8 +49,8 @@ sensor_msgs::Image SonarViz::cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> 
 
     unsigned char* data = surface->get_data();
     int stride = surface->get_stride();
-    for (int y=0; y<img.height; y++) {
-        for (int x=0; x<img.width; x++) {
+    for (unsigned y=0; y<img.height; y++) {
+        for (unsigned x=0; x<img.width; x++) {
             unsigned char* p = data + 4*x + stride*y;
             img.data.push_back(p[2]);
             img.data.push_back(p[1]);
@@ -139,16 +139,13 @@ void SonarViz::tick()
 
     cr->restore();
 
-    ROS_INFO("tick");
-
-
     sensor_msgs::Image img = cairoToRosImage(surface);
     publisher.publish(img);
 }
 
 int main(int argc, char *argv[])
 {
-    ros::init(argc, argv, "sonarviz");
+    ros::init(argc, argv, "sonar_viz");
     ros::NodeHandle n;
     //ros::Rate r(1);
 

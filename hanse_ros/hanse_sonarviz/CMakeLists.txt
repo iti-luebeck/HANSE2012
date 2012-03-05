@@ -36,10 +36,10 @@ add_definitions(-std=c++0x)
 pkg_check_modules(CAIRO "cairomm-1.0")
 include_directories(${CAIRO_INCLUDE_DIRS})
 
-rosbuild_add_executable(${PROJECT_NAME}
+rosbuild_add_executable(sonar_viz
   src/sonarviz.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(sonar_viz
   ${CAIRO_LIBRARIES}
 )

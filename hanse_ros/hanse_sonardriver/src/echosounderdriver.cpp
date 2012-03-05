@@ -1,7 +1,7 @@
 #include "echosounderdriver.h"
 
 EchoSounderDriver::EchoSounderDriver(ros::NodeHandle handle) :
-    SonarDriver(handle, "scanningsonar")
+    SonarDriver(handle, "sonar/echo")
 {
 }
 
@@ -20,7 +20,7 @@ void EchoSounderDriver::completeMessage(hanse_msgs::EchoSounder &msg,
 
 int main(int argc, char * argv[])
 {
-    ros::init(argc, argv, "scanningsonardriver");
+    ros::init(argc, argv, "sonar_driver_echo");
     ros::NodeHandle n;
 
     EchoSounderDriver sonarDriver(n);
