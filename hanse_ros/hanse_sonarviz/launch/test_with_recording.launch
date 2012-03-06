@@ -1,0 +1,4 @@
+<launch>
+  <include ns="test" file="$(find hanse_sonardriver)/launch/playback_recording.launch" />
+  <include ns="test" file="$(find hanse_sonarviz)/launch/sonarviz.launch" />
+</launch>

@@ -1,0 +1,3 @@
+<launch>
+  <node name="hanse_sonar_viz" type="sonar_viz" pkg="hanse_sonarviz" />
+</launch>

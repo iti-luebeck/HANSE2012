@@ -1,0 +1,6 @@
+<launch>
+  <arg name="recording" default="$(find hanse_sonardriver)/sample_recordings/scanningsonar.852" />
+  <node name="hanse_sonar_recordeddatapublisher" type="sonar_recordeddatapublisher" pkg="hanse_sonardriver">
+    <param name="recording_filename" value="$(arg recording)" />
+  </node>
+</launch>

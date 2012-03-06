@@ -1,0 +1,8 @@
+<launch>
+  <node name="hanse_sonar_driver_scan" type="sonar_driver_scan" pkg="hanse_sonardriver">
+    <param name="serial_port" value="/dev/ttyUSB_scan" />
+  </node>
+  <node name="hanse_sonar_driver_echo" type="sonar_driver_echo" pkg="hanse_sonardriver">
+    <param name="serial_port" value="/dev/ttyUSB_echo" />
+  </node>
+</launch>
