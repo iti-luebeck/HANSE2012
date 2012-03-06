@@ -1,0 +1,26 @@
+--- boards.txt.distrib	2012-03-06 11:35:21.282444341 +0100
++++ boards.txt	2012-03-05 16:22:32.895367267 +0100
+@@ -336,3 +336,23 @@
+ atmega8.build.f_cpu=16000000L
+ atmega8.build.core=arduino
+ 
++###############################################################
++
++at_m644.name=HANSE ATMEGA2
++
++at_m644.upload.protocol=arduino
++at_m644.upload.maximum_size=63488
++at_m644.upload.speed=38400
++
++#at_m644.bootloader.low_fuses=0xff
++#at_m644.bootloader.high_fuses=0xdd
++#at_m644.bootloader.extended_fuses=0x00
++#at_m644.bootloader.path=atmega
++#at_m644.bootloader.file=ATmegaBOOT_168_diecimila.hex
++#at_m644.bootloader.unlock_bits=0x3F
++#at_m644.bootloader.lock_bits=0x0F
++
++at_m644.build.mcu=atmega644p
++at_m644.build.f_cpu=16000000L
++at_m644.build.core=arduino
++

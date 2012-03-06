@@ -1,0 +1,12 @@
+--- make_library.py.distrib	2012-03-06 11:23:44.322988317 +0100
++++ make_library.py	2012-03-06 10:53:27.937981586 +0100
+@@ -268,7 +268,9 @@
+ 
+ ros_to_arduino_types = {
+     'bool'    :   ('bool',              1, PrimitiveDataType, []),
++    'byte'    :   ('int8_t',            1, PrimitiveDataType, []),
+     'int8'    :   ('int8_t',            1, PrimitiveDataType, []),
++    'char'    :   ('uint8_t',           1, PrimitiveDataType, []),
+     'uint8'   :   ('uint8_t',           1, PrimitiveDataType, []),
+     'int16'   :   ('int16_t',           2, PrimitiveDataType, []),
+     'uint16'  :   ('uint16_t',          2, PrimitiveDataType, []),

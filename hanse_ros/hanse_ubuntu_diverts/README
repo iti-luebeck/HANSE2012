@@ -1,0 +1,6 @@
+This directory contains changes to files installed by ubuntu binary packages.
+Use "./update_divert.sh" to patch the files using dpkg-divert (this makes sure
+that updating of the ubuntu packages doesn't break stuff).
+Use "./update_divert.sh remove" to undo all changes. Both commands can safely
+be run multiple times.
+
