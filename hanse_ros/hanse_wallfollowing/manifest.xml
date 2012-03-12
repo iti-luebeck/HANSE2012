@@ -1,0 +1,26 @@
+<package>
+  <description brief="hanse_wallfollowing">
+
+     hanse_wallfollowing
+
+  </description>
+  <author>Jan Fechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_wallfollowing</url>
+
+  <depend package="rospy" />
+  <depend package="smach"/>
+  <depend package="smach_ros"/>
+  <depend package="dynamic_reconfigure" />
+  <rosdep name="python-numpy" />
+  <depend package="geometry_msgs" />
+  <depend package="tf" />
+  <depend package="python_orocos_kdl" />
+  <depend package="sensor_msgs" />
+  <depend package="hanse_msgs"/>
+  <depend package="hanse_pidcontrol"/>
+
+</package>
+
+
