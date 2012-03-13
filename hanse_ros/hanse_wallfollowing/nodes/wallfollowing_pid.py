@@ -11,19 +11,20 @@ from dynamic_reconfigure.server import Server
 from hanse_wallfollowing.cfg import WallFollowingConfig
 from std_msgs.msg import Float64
 from sensor_msgs.msg import Imu
-from hanse_msgs.msg import EchoSounder, sollSpeed
+from hanse_msgs.msg import EchoSounder, ScanningSonar, sollSpeed
 from hanse_pidcontrol.srv import *
 
 class Config:
 	desiredDistance = 1.5
-	forwardSpeed = 0.5
-	angularSpeed = 0.4
+	maxSpeed = 0.7
+	echoSounderAngle = 0.0
 
 class Global:
 	imuCallbackCalled = False
-	currentDistance = 0
-	currentHeading = 0
-	angularSpeed = 0
+	currentDistance = 0.0
+	currentHeading = 0.0
+	scanningSonarDistance = 0.0
+	angularSpeedOutput = 0.0
 
 class States:
 	Init = 'Init'
@@ -72,7 +73,7 @@ class Align(smach.State):
 		initHeading = Global.currentHeading
 		lastHeading = initHeading
 		rotated = 0.0
-		smallestDistanceHeading = 0
+		smallestDistanceHeading = 0.0
 		smallestDistance = sys.maxint
 		setMotorSpeed(0, 1)
 		rospy.loginfo('initHeading: ' + repr(initHeading))
@@ -101,13 +102,18 @@ class Align(smach.State):
 		
 		return Transitions.AlignFinished
 
-
+ 
 class NoWall(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[])
+		smach.State.__init__(self, outcomes=[Transitions.Wall])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state NoWall')
+		setMotorSpeed(0, 1)
+		while Global.currentDistance==0:
+			rospy.sleep(0.1)
+		setMotorSpeed(0, 0)
+		return Transitions.Wall
 		
 
 # In diesem Zustand wird der Wand gefolgt
@@ -121,10 +127,11 @@ class FollowWall(smach.State):
 		# pid geregelten angular wert benutzen
 		rospy.loginfo('diff = ' + repr(Global.currentDistance-Config.desiredDistance))
 		while Global.currentDistance != 0.0 and not rospy.is_shutdown():
-			setMotorSpeed(0.6-0.5*math.fabs(Global.angularSpeed), Global.angularSpeed)
+			linearSpeed = -(Config.maxSpeed-0.1) * math.pow(Global.angularSpeedOutput,4) + Config.maxSpeed
+			setMotorSpeed(linearSpeed, Global.angularSpeedOutput) # Config.maxSpeed-(Config.maxSpeed-0.1)*math.fabs(Global.angularSpeedOutput)
 			rospy.sleep(0.1)
 
-		if rospy.is_shutdown():			
+		if rospy.is_shutdown():
 			return Transitions.Ended
 		return Transitions.NoWall
 
@@ -145,10 +152,18 @@ def setMotorSpeed(linear, angular):
 
 def echoSounderCallback(msg):
 	# compute wall distance
-	einheit = len(msg.echoData) / float(msg.range)
-	Global.currentDistance = msg.echoData.index(max(msg.echoData)) / einheit
+	unit = len(msg.echoData) / float(msg.range)
+	dist = msg.echoData.index(max(msg.echoData)) / unit
+	# abstand zur wand berechnen unter beachtung des drehwinkels des echosounders
+	Global.currentDistance = dist * math.cos(Config.echoSounderAngle)
 	#rospy.loginfo('Received echosounder message, computed distance = %s'%repr(Global.currentDistance))
-	
+
+def scanningSonarCallback(msg):
+	unit = len(msg.echoData) / float(msg.range)
+	if math.fabs(msg.headPosition) < 0.1:
+		dist = msg.echoData.index(max(msg.echoData)) / unit
+		rospy.loginfo('SCANNING SONAR DISTANCE: ' + repr(dist))
+
 def imuCallback(msg):
 	Global.imuCallbackCalled = True
 	quater = msg.orientation
@@ -158,16 +173,17 @@ def imuCallback(msg):
 def configCallback(config, level):
 	rospy.loginfo('Reconfiugre Request: ' + repr(config['desiredDistance']))
 	Config.desiredDistance = config['desiredDistance']
+	Config.maxSpeed = config['maxSpeed']
 	return config
-	
+
 def timerCallback(event):
     #print 'Timer called at ' + str(event.current_real)
     pub_angular_target.publish(Float64(data = Config.desiredDistance))
     pub_angular_input.publish(Float64(data = Global.currentDistance))
-    
+
 def angularPidOutputCallback(msg):
 	#rospy.loginfo('angular pid output: ' + repr(msg.data))
-	Global.angularSpeed = -msg.data
+	Global.angularSpeedOutput = -msg.data
 
 # Gibt RPY fuer ein Quaternion zurueck
 def quatToAngles(x,y,z,w):
@@ -210,6 +226,7 @@ if __name__ == '__main__':
 
 	# Subscriber/Publisher
 	rospy.Subscriber('/hanse/sonar/echo', numpy_msg(EchoSounder), echoSounderCallback)
+	rospy.Subscriber('/hanse/sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
 	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
 	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
@@ -227,12 +244,12 @@ if __name__ == '__main__':
 	with sm:
 		# Add states to the container
 		smach.StateMachine.add(States.Init, Init(),
-								transitions={Transitions.InitFinished : States.Align})
+								transitions={Transitions.InitFinished : States.NoWall})
 		smach.StateMachine.add(States.Align, Align(),
 								transitions={Transitions.AlignFinished : States.FollowWall,
 											Transitions.NoWall : States.NoWall})
 		smach.StateMachine.add(States.NoWall, NoWall(),
-								transitions={})
+								transitions={Transitions.Wall : States.FollowWall})
 		smach.StateMachine.add(States.FollowWall, FollowWall(),
 								transitions={Transitions.NoWall : States.NoWall})							
 
@@ -242,6 +259,10 @@ if __name__ == '__main__':
 
     # Execute SMACH plan
 	outcome = sm.execute()
+	rospy.loginfo('state machine stopped')
+	
+	# auv stoppen
+	setMotorSpeed(0, 0)
 
 	#rospy.spin()
 	sis.stop()
