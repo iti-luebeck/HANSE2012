@@ -43,3 +43,11 @@ rosbuild_add_executable(sonar_viz
 target_link_libraries(sonar_viz
   ${CAIRO_LIBRARIES}
 )
+
+rosbuild_add_executable(echosounder_viz
+  src/echosounderviz.cpp
+)
+
+target_link_libraries(echosounder_viz
+  ${CAIRO_LIBRARIES}
+)
