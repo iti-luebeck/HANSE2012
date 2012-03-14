@@ -9,7 +9,7 @@ import sys
 from rospy.numpy_msg import numpy_msg
 from dynamic_reconfigure.server import Server
 from hanse_wallfollowing.cfg import WallFollowingConfig
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float32
 from sensor_msgs.msg import Imu
 from hanse_msgs.msg import EchoSounder, ScanningSonar, sollSpeed
 from hanse_pidcontrol.srv import *
@@ -127,7 +127,7 @@ class FollowWall(smach.State):
 		# pid geregelten angular wert benutzen
 		rospy.loginfo('diff = ' + repr(Global.currentDistance-Config.desiredDistance))
 		while Global.currentDistance != 0.0 and not rospy.is_shutdown():
-			linearSpeed = -(Config.maxSpeed-0.1) * math.pow(Global.angularSpeedOutput,4) + Config.maxSpeed
+			linearSpeed = -(Config.maxSpeed-0.1) * math.pow(Global.angularSpeedOutput,6) + Config.maxSpeed
 			setMotorSpeed(linearSpeed, Global.angularSpeedOutput) # Config.maxSpeed-(Config.maxSpeed-0.1)*math.fabs(Global.angularSpeedOutput)
 			rospy.sleep(0.1)
 
@@ -150,20 +150,23 @@ def setMotorSpeed(linear, angular):
 	rospy.is_shutdown()
 	rospy.is_shutdown()
 
-def echoSounderCallback(msg):
-	# compute wall distance
-	unit = len(msg.echoData) / float(msg.range)
-	dist = msg.echoData.index(max(msg.echoData)) / unit
-	# abstand zur wand berechnen unter beachtung des drehwinkels des echosounders
-	Global.currentDistance = dist * math.cos(Config.echoSounderAngle)
-	#rospy.loginfo('Received echosounder message, computed distance = %s'%repr(Global.currentDistance))
+#def echoSounderCallback(msg):
+#	# compute wall distance
+#	unit = len(msg.echoData) / float(msg.range)
+#	dist = msg.echoData.index(max(msg.echoData)) / unit
+#	# abstand zur wand berechnen unter beachtung des drehwinkels des echosounders
+#	Global.currentDistance = dist * math.cos(Config.echoSounderAngle)
+#	rospy.loginfo('Received echosounder message, computed distance = %s'%repr(Global.currentDistance))
+	
+def echoSounderAvgCallback(msg):
+	Global.currentDistance = msg.data
 
 def scanningSonarCallback(msg):
 	unit = len(msg.echoData) / float(msg.range)
 	if math.fabs(msg.headPosition) < 0.1:
 		dist = msg.echoData.index(max(msg.echoData)) / unit
 		rospy.loginfo('SCANNING SONAR DISTANCE: ' + repr(dist))
-
+		
 def imuCallback(msg):
 	Global.imuCallbackCalled = True
 	quater = msg.orientation
@@ -218,6 +221,7 @@ def calcRadiansDiff(a, b):
 			b += 2*math.pi
 	return math.fabs(a-b)
 
+
 if __name__ == '__main__':
 	rospy.init_node('wallfollowing')	
 	
@@ -225,7 +229,8 @@ if __name__ == '__main__':
 	configSrv = Server(WallFollowingConfig, configCallback)
 
 	# Subscriber/Publisher
-	rospy.Subscriber('/hanse/sonar/echo', numpy_msg(EchoSounder), echoSounderCallback)
+	#rospy.Subscriber('/hanse/sonar/echo', numpy_msg(EchoSounder), echoSounderCallback)
+	rospy.Subscriber('/echosounderaveragedistance', Float32, echoSounderAvgCallback)
 	rospy.Subscriber('/hanse/sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
 	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
