@@ -1,13 +1,25 @@
-#include "sonarviz.h"
+#include <ros/callback_queue.h>
 #include "angles/angles.h"
+#include "sonarviz.h"
 
 
 SonarViz::SonarViz(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<sensor_msgs::Image>("sonar/scan/viz", 1)),
-    subscriber(handle.subscribe("sonar/scan", 1, &SonarViz::callback, this)),
-    lastHeadPosition(0)
+    subscriber(handle.subscribe("sonar/scan", 10, &SonarViz::callback, this)),
+    lastHeadPosition(0),
+    newData(false)
 {
+    dataImage = Cairo::ImageSurface::create(Cairo::FORMAT_RGB24, imageSize, imageSize);
+
+    Cairo::RefPtr<Cairo::Context> c = Cairo::Context::create(dataImage);
+
+    c->save(); // save the state of the context
+    c->set_source_rgb(1.0, 1.0, 1.0);
+    c->paint(); // fill image with the color
+    c->restore(); // color is back to black now
+    lastImageTime = ros::Time::now();
+
 }
 
 void SonarViz::callback(const hanse_msgs::ScanningSonar &msg)
@@ -35,7 +47,7 @@ void SonarViz::callback(const hanse_msgs::ScanningSonar &msg)
 
 
     lastMsgTime = msg.header.stamp;
-    tick();
+    newData = true;
 }
 
 sensor_msgs::Image SonarViz::cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> surface)
@@ -62,82 +74,121 @@ sensor_msgs::Image SonarViz::cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> 
 
 void SonarViz::tick()
 {
+    if (!newData) {
+	return;
+    }
+
+    // update data image
+
     Cairo::RefPtr<Cairo::ImageSurface> surface =
-        Cairo::ImageSurface::create(Cairo::FORMAT_RGB24, 400, 400);
-    Cairo::RefPtr<Cairo::Context> cr = Cairo::Context::create(surface);
+        Cairo::ImageSurface::create(Cairo::FORMAT_RGB24, imageSize, imageSize);
+
+    Cairo::RefPtr<Cairo::Context> c = Cairo::Context::create(dataImage);
+    Cairo::RefPtr<Cairo::Context> cs = Cairo::Context::create(surface);
+
+    cs->save();
+    cs->set_source_rgb(0,0,0);
+    cs->paint();
+    cs->restore();
+
+    c->save();
+    c->scale(imageSize / 2.0, imageSize / 2.0);
+    c->translate(1, 1);
+
+    cs->save();
+    cs->scale(imageSize / 2.0, imageSize / 2.0);
+    cs->translate(1, 1);
 
 
-    cr->save(); // save the state of the context
-    cr->set_source_rgb(1.0, 1.0, 1.0);
-    cr->paint(); // fill image with the color
-    cr->restore(); // color is back to black now
-
-    cr->save();
-
-    cr->scale(surface->get_width() / 2.0, surface->get_height() / 2.0);
-    cr->translate(1, 1);
-
-
-    cr->save();
-    cr->set_source_rgb(0, 0, 0);
-    cr->begin_new_path();
-    cr->arc(0, 0, 1, 0, 2 * M_PI);
-    cr->fill();
-    cr->restore();
-    
     auto endIterator = sonarDataMap.end();
     endIterator--;
-    double lastPos = endIterator->first - 2 * M_PI;
+    ros::Time lastTime = endIterator->second.header.stamp;// - 2 * M_PI;
+    float lastPos = endIterator->first - 2 * M_PI;
 
-    cr->set_antialias(Cairo::ANTIALIAS_NONE);
+    cs->set_antialias(Cairo::ANTIALIAS_NONE);
+    c->set_antialias(Cairo::ANTIALIAS_NONE);
+
+    const int decimate = 1;
+
+    ros::Time newImageTime;
 
     for (auto msg : sonarDataMap) {
-        cr->save();
 
         int dataPoints = msg.second.echoData.size();
 
-        double x1 = cos(msg.first);
-        double x2 = cos(lastPos);
-        double y1 = sin(msg.first);
-        double y2 = sin(lastPos);
+        float x1 = cos(msg.first);
+        float x2 = cos(lastPos);
+        float y1 = sin(msg.first);
+        float y2 = sin(lastPos);
 
-        if (msg.first - lastPos < M_PI / 2) {
-            for (int i = 0; i < dataPoints; i++) {
-		ros::Time msgTime = msg.second.header.stamp;
-		double d = (lastMsgTime - msgTime).toSec();
-		double f = 0.5 * exp(-2 * d);
-                cr->set_source_rgb(0, msg.second.echoData[i] / 255.0, f);
-                cr->begin_new_path();
-                double r1 = (double)i / dataPoints;
-                double r2 = (double)(i + 1) / dataPoints;
+	ros::Time msgTime = msg.second.header.stamp;
 
-                cr->move_to(r1 * x1, r1 * y1);
-                cr->line_to(r1 * x2, r1 * y2);
-                cr->line_to(r2 * x2, r2 * y2);
-                cr->line_to(r2 * x1, r2 * y1);
-                cr->fill();
+	bool draw = lastTime > msgTime;
+	lastPos = msg.first;
+	lastTime = msgTime;
+
+        if (draw) {
+	    float d = (lastMsgTime - msgTime).toSec();
+	    float f = 0.5 * exp(-2 * d);
+	    cs->save();
+	    cs->set_source_rgb(0, 0, f);
+	    cs->begin_new_path();
+	    cs->move_to(0, 0);
+	    cs->line_to(x1, y1);
+	    cs->line_to(x2, y2);
+	    cs->fill();
+	    cs->restore();
+
+	    if (msgTime < lastImageTime)
+		continue;
+	    if (msgTime > newImageTime)
+		newImageTime = msgTime;
+	    c->save();
+	    for (int i = 0; i < dataPoints; i += decimate) {
+		int k;
+		unsigned char data = 0;
+		for (k = 0; i + k < dataPoints && k < decimate; k++) {
+		    data = std::max(data, msg.second.echoData[i+k]);
+		}
+                c->set_source_rgb(0, data / 255.0, 0);
+                c->begin_new_path();
+                float r1 = (float)i / dataPoints;
+                float r2 = (float)(i+k) / dataPoints;
+
+                c->move_to(r1 * x1, r1 * y1);
+                c->line_to(r1 * x2, r1 * y2);
+                c->line_to(r2 * x2, r2 * y2);
+                c->line_to(r2 * x1, r2 * y1);
+                c->fill();
             }
+	    c->restore();
         }
-
-        lastPos = msg.first;
-        cr->restore();
     }
 
-    cr->set_antialias(Cairo::ANTIALIAS_DEFAULT);
+    lastImageTime = newImageTime;
 
-    cr->set_source_rgba(1, 1, 1, 0.5);
-    cr->set_line_width(1);
-    cr->begin_new_path();
-    cr->move_to(-1, 0);
-    cr->line_to(1, 0);
-    cr->move_to(0, -1);
-    cr->line_to(0, 1);
 
-    cr->scale(2.0 / surface->get_width(), 2.0 / surface->get_height());
+    cs->set_antialias(Cairo::ANTIALIAS_DEFAULT);
 
-    cr->stroke();
+    cs->set_source_rgba(1, 1, 1, 0.5);
+    cs->set_line_width(2);
+    cs->begin_new_path();
+    cs->move_to(-1, 0);
+    cs->line_to(1, 0);
+    cs->move_to(0, -1);
+    cs->line_to(0, 1);
 
-    cr->restore();
+    cs->scale(2.0 / imageSize, 2.0 / imageSize);
+
+    cs->stroke();
+
+    cs->restore();
+
+    cs->save();
+    cs->set_source(dataImage, 0, 0);
+    cs->set_operator(Cairo::OPERATOR_ADD);
+    cs->paint();
+
 
     sensor_msgs::Image img = cairoToRosImage(surface);
     publisher.publish(img);
@@ -152,8 +203,7 @@ int main(int argc, char *argv[])
     SonarViz sonarViz(n);
 
     while (ros::ok()) {
-        //sonarViz.tick();
-        //r.sleep();
-        ros::spinOnce();
+	ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(1));
+	sonarViz.tick();
     }
 }
