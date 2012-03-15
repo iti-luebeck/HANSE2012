@@ -21,6 +21,8 @@ class Config:
 
 class Global:
 	imuCallbackCalled = False
+	noWallCounter = 0
+	noWall = False
 	currentDistance = 0.0
 	currentHeading = 0.0
 	scanningSonarDistance = 0.0
@@ -110,7 +112,7 @@ class NoWall(smach.State):
 	def execute(self, userdata):
 		rospy.loginfo('Executing state NoWall')
 		setMotorSpeed(0, 1)
-		while Global.currentDistance==0:
+		while Global.noWall:
 			rospy.sleep(0.1)
 		setMotorSpeed(0, 0)
 		return Transitions.Wall
@@ -126,7 +128,7 @@ class FollowWall(smach.State):
 		
 		# pid geregelten angular wert benutzen
 		rospy.loginfo('diff = ' + repr(Global.currentDistance-Config.desiredDistance))
-		while Global.currentDistance != 0.0 and not rospy.is_shutdown():
+		while not Global.noWall and not rospy.is_shutdown():
 			linearSpeed = -(Config.maxSpeed-0.1) * math.pow(Global.angularSpeedOutput,6) + Config.maxSpeed
 			setMotorSpeed(linearSpeed, Global.angularSpeedOutput) # Config.maxSpeed-(Config.maxSpeed-0.1)*math.fabs(Global.angularSpeedOutput)
 			rospy.sleep(0.1)
@@ -159,7 +161,15 @@ def setMotorSpeed(linear, angular):
 #	rospy.loginfo('Received echosounder message, computed distance = %s'%repr(Global.currentDistance))
 	
 def echoSounderAvgCallback(msg):
-	Global.currentDistance = msg.data
+	if msg.data == 0.0:
+		Global.noWallCounter = Global.noWallCounter + 1
+		if Global.noWallCounter > 3:
+			Global.noWall = True
+			rospy.loginfo("NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL NOWALL ")
+	else:
+		Global.noWallCounter = 0
+		Global.noWall = False
+		Global.currentDistance = msg.data
 
 def scanningSonarCallback(msg):
 	unit = len(msg.echoData) / float(msg.range)
