@@ -11,20 +11,25 @@
 class SonarViz
 {
 public:
-  SonarViz(ros::NodeHandle handle);
+    SonarViz(ros::NodeHandle handle);
 
-  void tick();
+    void tick();
 
 private:
-  ros::NodeHandle nh;
-  ros::Publisher publisher;
-  ros::Subscriber subscriber;
-  std::map<double, hanse_msgs::ScanningSonar> sonarDataMap;
-  double lastHeadPosition;
-  ros::Time lastMsgTime;
+    ros::NodeHandle nh;
+    ros::Publisher publisher;
+    ros::Subscriber subscriber;
+    std::map<double, hanse_msgs::ScanningSonar> sonarDataMap;
+    double lastHeadPosition;
+    ros::Time lastMsgTime;
+    bool newData;
+    Cairo::RefPtr<Cairo::ImageSurface> dataImage;
+    ros::Time lastImageTime;
 
-  void callback(const hanse_msgs::ScanningSonar &msg);
-  sensor_msgs::Image cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> surface);
+    void callback(const hanse_msgs::ScanningSonar &msg);
+    sensor_msgs::Image cairoToRosImage(Cairo::RefPtr<Cairo::ImageSurface> surface);
+
+    static const unsigned imageSize = 500;
 };
 
 #endif
