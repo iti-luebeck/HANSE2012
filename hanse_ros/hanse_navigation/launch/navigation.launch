@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- NAVIGATION -->
+
+  <group ns="hanse">
+    <node name="navigation" pkg="hanse_navigation" type="navigation.py" output="screen" />
+  </group>
+
+</launch>
