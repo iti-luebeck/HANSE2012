@@ -143,7 +143,7 @@ class FollowWall(smach.State):
 			if Global.angularSpeedOutput==1.0 and Global.currentDistance > Config.desiredDistance and calcRadiansDiff(startHeadPostion, Global.currentHeadPosition) > math.pi/4:
 				rospy.loginfo('nicht weiter drehen')
 				setMotorSpeed(Config.maxSpeed, 0)
-				while Global.currentDistance > Config.desiredDistance and not noWall:
+				while Global.currentDistance > Config.desiredDistance+0.1 and not Global.noWall:
 					rospy.sleep(0.1)
 				angularSpeed = numpy.clip(angularSpeed, -1.0, 0)
 				linearSpeed = Config.maxSpeed				

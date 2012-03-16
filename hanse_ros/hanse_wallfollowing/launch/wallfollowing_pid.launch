@@ -3,7 +3,8 @@
   <!-- WALLFOLLOWING -->
 
   <group ns="hanse">
-     <node name="wallfollowing_pid" pkg="hanse_wallfollowing" type="wallfollowing_pid.py" output="screen" />
+    <node name="wallfollowing_pid" pkg="hanse_wallfollowing" type="wallfollowing_pid.py" output="screen" />
+    <node name="echosounderwalldetection" pkg="hanse_wallfollowing" type="echosounderwalldetection" output="screen" />
   </group>
 
 
