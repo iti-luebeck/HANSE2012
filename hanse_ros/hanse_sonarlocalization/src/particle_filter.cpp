@@ -1,16 +1,16 @@
 #include <algorithm>
 #include "particle_filter.h"
 
-ParticleFilter::ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config) :
+ParticleFilter::ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config, Params params) :
     config(config),
-    worldMap("/tmp/map.jpg", 1 / 0.15625)
+    worldMap(params.map_image, params.map_pixel_size, params.map_threshold)
 {
 }
 
 void ParticleFilter::reconfigure(hanse_sonarlocalization::ParticleFilterConfig config)
 {
     this->config = config;
-    if (particles.size() != config.particle_count) {
+    if (particles.size() != (unsigned)config.particle_count) {
 	resetPosition();
     }
 }
@@ -72,6 +72,7 @@ void ParticleFilter::weightParticles(sensor_msgs::LaserScan const &laserScan)
     for (auto &particle : particles) {
 	weightParticle(particle, laserScan);
     }
+    ROS_INFO("best particle weight %f", bestParticle.weight);
 }
 
 void ParticleFilter::resample()
@@ -126,16 +127,39 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
 {
     float sigma = config.weight_sigma;
     float weight = 1;
-    for (unsigned int i = 0; i < laserScan.ranges.size(); i++) {
-	if (laserScan.ranges[i] < laserScan.range_min || laserScan.ranges[i] > laserScan.range_max)
-	    continue;
-	float angle = laserScan.angle_min + i * laserScan.angle_increment;
-	Eigen::Rotation2D<float> rotation(angle);
-	Eigen::Translation<float, 2> translation(laserScan.ranges[i], 0);
-	Eigen::Affine2f wallPosition = particle.position * rotation * translation;
-	float distance = worldMap.wallDistance(wallPosition.translation());
-	//	ROS_INFO("distance %f", distance);
-	weight *= expf(-0.5 * powf(distance / sigma, 2));
+    float auvDistance = worldMap.wallDistance(particle.position.translation());
+
+    if (auvDistance < 0) {
+	weight = 0;
+    } else {
+	for (unsigned int i = 0; i < laserScan.ranges.size(); i++) {
+	    if (laserScan.ranges[i] < laserScan.range_min || laserScan.ranges[i] > laserScan.range_max)
+		continue;
+	    float angle = laserScan.angle_min + i * laserScan.angle_increment;
+	    Eigen::Rotation2D<float> rotation(angle);
+
+	    float range = laserScan.ranges[i];
+	    /* // nearest wall point
+	    Eigen::Translation<float, 2> translation(range, 0);
+
+	    Eigen::Affine2f wallPosition = particle.position * rotation * translation;
+	    float distance = fabs(worldMap.wallDistance(wallPosition.translation()));
+	    */
+	    Eigen::Translation<float, 2> translation(1, 0);
+	    Eigen::Affine2f wallPosition = particle.position.rotation() * rotation * translation;
+
+	    // expected wall distance
+	    float expectedDistance = worldMap.directedWallDistance(particle.position.translation(), wallPosition.translation(), laserScan.range_max);
+
+	    float distance = fabsf(expectedDistance - range);
+	    distance -= 0.5;
+	    if (distance < 0)
+		distance /= 10;
+	    distance += 0.05;
+	    
+	    //	ROS_INFO("distance %f", distance);
+	    weight *= expf( - 0.5 * powf(distance / sigma, 2));
+	}
     }
     particle.weight = weight;
     if (particle.weight > bestParticle.weight) {

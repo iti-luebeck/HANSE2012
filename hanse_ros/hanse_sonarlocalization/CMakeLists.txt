@@ -35,10 +35,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 add_definitions(-std=c++0x)
 
-rosbuild_add_executable(wall_detection
+rosbuild_add_executable(sonar_wall_detection
   src/wall_detection.cpp
 )
-rosbuild_add_executable(localization
+rosbuild_add_executable(sonar_localization
   src/localization.cpp
   src/world_map.cpp
   src/particle_filter.cpp
@@ -46,4 +46,4 @@ rosbuild_add_executable(localization
 
 find_package(OpenCV REQUIRED)
 
-target_link_libraries(localization ${OpenCV_LIBS})
+target_link_libraries(sonar_localization ${OpenCV_LIBS})

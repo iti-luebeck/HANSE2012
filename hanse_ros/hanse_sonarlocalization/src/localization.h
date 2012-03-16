@@ -16,6 +16,14 @@ public:
 private:
     hanse_sonarlocalization::ParticleFilterConfig config;
     dynamic_reconfigure::Server<hanse_sonarlocalization::ParticleFilterConfig> reconfigServer;
+
+
+    struct ParamHelper {
+	ParticleFilter::Params params;
+	ParamHelper();
+    };
+    ParamHelper paramHelper;
+
     ParticleFilter particleFilter;
 
     ros::NodeHandle nh;

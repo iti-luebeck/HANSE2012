@@ -12,7 +12,13 @@ class ParticleFilter {
 public:
     typedef std::vector<Particle, Eigen::aligned_allocator<Particle> > ParticleVector;
 
-    ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config);
+    struct Params {
+	std::string map_image;
+	double map_pixel_size;
+	double map_threshold;
+    };
+
+    ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config, Params params);
 
 
     void reconfigure(hanse_sonarlocalization::ParticleFilterConfig config);

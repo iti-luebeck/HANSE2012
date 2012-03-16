@@ -5,8 +5,8 @@
 
 WallDetection::WallDetection(ros::NodeHandle handle) :
     nh(handle),
-    publisher(handle.advertise<sensor_msgs::LaserScan>("/hanse/sonar/laser_scan", 1)),
-    subscriber(handle.subscribe("/hanse/sonar/scan", 1, &WallDetection::callback, this)),
+    publisher(handle.advertise<sensor_msgs::LaserScan>("sonar/laser_scan", 1)),
+    subscriber(handle.subscribe("sonar/scan", 1, &WallDetection::callback, this)),
     lastHeadPosition(0),
     movedSincePublish(0),
     isInitialized(false)
@@ -100,10 +100,6 @@ void WallDetection::publishLaserScan(ros::Time stamp)
 	auto i = dPos > dNeg ? iNeg : iPos;
 
 	laserScan.ranges.push_back(i->second.distance);
-    }
-
-    for (auto i : laserScan.ranges) {
-	ROS_INFO("d = %f", (float)i);
     }
 
     ROS_INFO("tick");

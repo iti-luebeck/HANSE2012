@@ -3,12 +3,23 @@
 #include "geometry_msgs/PoseArray.h"
 #include "geometry_msgs/PoseStamped.h"
 
+Localization::ParamHelper::ParamHelper()
+{
+    bool ok = true;
+    ok &= ros::param::get("~map_image", params.map_image);
+    ok &= ros::param::get("~map_pixel_size", params.map_pixel_size);
+    ok &= ros::param::get("~map_threshold", params.map_threshold);
+    if (!ok) {
+	ROS_ERROR("Missing parameters");
+    }
+}
+
 Localization::Localization(ros::NodeHandle handle) :
-    particleFilter(config),
+    particleFilter(config, paramHelper.params),
     nh(handle),
-    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("/hanse/particle_markers", 1)),
-    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("/hanse/estimated_position", 1)),
-    sonarSubscriber(handle.subscribe("/hanse/sonar/laser_scan", 1, &Localization::sonarCallback, this))
+    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
+    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
+    sonarSubscriber(handle.subscribe("sonar/laser_scan", 1, &Localization::sonarCallback, this))
 {
     reconfigServer.setCallback(boost::bind(&Localization::reconfigure, this, _1, _2));
     particleFilter.resetPosition();
@@ -35,8 +46,12 @@ void Localization::sonarCallback(const sensor_msgs::LaserScan &msg)
 
     particles.header.frame_id = "/map";
 
+    int count = 0;
     for (auto &particle : particleFilter.getParticles()) {
 	particles.poses.push_back(poseFrom2DPosition(particle.position));
+	count++;
+	if (count > 1000)
+	    break;
     }
     particlePublisher.publish(particles);
 }

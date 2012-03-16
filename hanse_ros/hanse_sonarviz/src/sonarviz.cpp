@@ -123,7 +123,7 @@ void SonarViz::tick()
 
 	ros::Time msgTime = msg.second.header.stamp;
 
-	bool draw = lastTime > msgTime;
+	bool draw = msg.first - lastPos < M_PI / 4;
 	lastPos = msg.first;
 	lastTime = msgTime;
 

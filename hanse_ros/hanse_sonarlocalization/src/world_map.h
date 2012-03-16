@@ -7,12 +7,14 @@
 
 class WorldMap {
 public:
-    WorldMap(const std::string &mapFile, float resolution);
+    WorldMap(const std::string &mapFile, float pixelSize, float threshold);
     float wallDistance(Eigen::Vector2f point);
+
+    float directedWallDistance(Eigen::Vector2f point, Eigen::Vector2f direction, float maximum);
 
     Eigen::Vector2f mapSize();
 private:
-    float resolution;
+    float pixelSize;
     Eigen::ArrayXXf distanceMap;
 };
 
