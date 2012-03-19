@@ -1,0 +1,25 @@
+list:
+    - 'one'
+    - 'two'
+    - 'three'
+
+
+goals:
+    one:
+        frame_id: '/map'
+        x: 2
+        y: 0
+        theta: 0.0
+
+    two:
+        frame_id: '/map'
+        x: 0
+        y: 2
+        theta: 0.0
+
+    three:
+        frame_id: '/map'
+        x: 0
+        y: 0
+        theta: 0.0
+

@@ -1,0 +1,5 @@
+<launch>
+  <node name="goal_reader" pkg="hanse_navigation" type="goal_reader.py" output="screen">
+    <param name="filename" value="$(find hanse_navigation)/goals/test_goals.yaml" />
+  </node>
+</launch>
