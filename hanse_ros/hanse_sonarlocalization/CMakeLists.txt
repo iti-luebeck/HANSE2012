@@ -38,6 +38,11 @@ add_definitions(-std=c++0x)
 rosbuild_add_executable(sonar_wall_detection
   src/wall_detection.cpp
 )
+
+rosbuild_add_executable(sonar_online_wall_detection
+  src/online_wall_detection.cpp
+)
+
 rosbuild_add_executable(sonar_localization
   src/localization.cpp
   src/world_map.cpp

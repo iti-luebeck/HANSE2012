@@ -5,6 +5,8 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "dynamic_reconfigure/server.h"
 #include "hanse_sonarlocalization/ParticleFilterConfig.h"
 #include "particle_filter.h"
@@ -31,10 +33,13 @@ private:
     ros::Publisher particlePublisher;
     ros::Publisher positionPublisher;
     ros::Subscriber sonarSubscriber;
+    ros::Subscriber positionSubscriber;
 
-    geometry_msgs::Pose poseFrom2DPosition(Eigen::Affine2f position);
+    geometry_msgs::Pose poseFrom2DPosition(Eigen::Affine2f position, float z = 0.0);
+    Eigen::Affine2f positionFromPose(const geometry_msgs::Pose &pose);
 
     void reconfigure(hanse_sonarlocalization::ParticleFilterConfig &newConfig, uint32_t level);
+    void positionCallback(const geometry_msgs::PoseWithCovarianceStamped &pose);
     void sonarCallback(const sensor_msgs::LaserScan &msg);
 };
 

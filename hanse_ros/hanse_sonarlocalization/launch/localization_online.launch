@@ -1,0 +1,11 @@
+<launch>
+  <arg name="map_image" />
+  <arg name="map_threshold" default="127" />
+  <arg name="map_pixel_size" />
+  <node name="hanse_sonar_online_wall_detection" type="sonar_online_wall_detection" pkg="hanse_sonarlocalization" />
+  <node name="hanse_sonar_localization" type="sonar_localization" pkg="hanse_sonarlocalization">
+    <param name="map_image" value="$(arg map_image)" />
+    <param name="map_threshold" value="$(arg map_threshold)" />
+    <param name="map_pixel_size" value="$(arg map_pixel_size)" />
+  </node>
+</launch>

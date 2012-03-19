@@ -17,8 +17,8 @@ void ParticleFilter::reconfigure(hanse_sonarlocalization::ParticleFilterConfig c
 
 Eigen::ArrayXXf ParticleFilter::randNormal(int m, int n, double sigma, double mu) {
     Eigen::ArrayXXf X(m,n);
-    Eigen::ArrayXXf U1 = (Eigen::ArrayXXf::Random(m, n) + 1) / 2;
-    Eigen::ArrayXXf U2 = (Eigen::ArrayXXf::Random(m, n) + 1) / 2;
+    Eigen::ArrayXXf U1 = (Eigen::ArrayXXf::Random(m, n) + 1.0000001192092896f) / 2;
+    Eigen::ArrayXXf U2 = (Eigen::ArrayXXf::Random(m, n) + 1.0000001192092896f) / 2;
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -42,6 +42,7 @@ void ParticleFilter::resetPosition()
 
     for (int i = 0; i < config.particle_count; i++) {
 	Particle particle;
+	particle.weight = 1.0;
 	particle.position = Eigen::Translation<float, 2>(randomPositions.col(i) * mapSize) * Eigen::Rotation2D<float>(randomRotations(0, i));
 	particles.push_back(particle);
     }
@@ -50,6 +51,7 @@ void ParticleFilter::resetPosition()
 void ParticleFilter::setPosition(Eigen::Affine2f position)
 {
     Particle p;
+    p.weight = 1.0;
     p.position = position;
     particles.clear();
     particles.resize(config.particle_count, p);
@@ -120,7 +122,16 @@ void ParticleFilter::resample()
 
 Eigen::Affine2f ParticleFilter::estimatedPosition()
 {
-    return bestParticle.position;
+    Eigen::Vector2f meanPosition(0, 0);
+    Eigen::Vector2f meanDirection(0, 0);
+    for (auto &particle : particles) {
+	meanPosition += particle.position.translation();
+	meanDirection += particle.position.rotation() * Eigen::Vector2f(1, 0);
+    }
+    meanPosition /= particles.size();
+    double meanAngle = atan2f(meanDirection.y(), meanDirection.x());
+
+    return Eigen::Translation2f(meanPosition) * Eigen::Rotation2D<float>(meanAngle);
 }
 
 void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan const &laserScan)
@@ -139,12 +150,7 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
 	    Eigen::Rotation2D<float> rotation(angle);
 
 	    float range = laserScan.ranges[i];
-	    /* // nearest wall point
-	    Eigen::Translation<float, 2> translation(range, 0);
 
-	    Eigen::Affine2f wallPosition = particle.position * rotation * translation;
-	    float distance = fabs(worldMap.wallDistance(wallPosition.translation()));
-	    */
 	    Eigen::Translation<float, 2> translation(1, 0);
 	    Eigen::Affine2f wallPosition = particle.position.rotation() * rotation * translation;
 
@@ -152,12 +158,12 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
 	    float expectedDistance = worldMap.directedWallDistance(particle.position.translation(), wallPosition.translation(), laserScan.range_max);
 
 	    float distance = fabsf(expectedDistance - range);
-	    distance -= 0.5;
+
+	    distance -= config.bend_distance;
 	    if (distance < 0)
-		distance /= 10;
-	    distance += 0.05;
-	    
-	    //	ROS_INFO("distance %f", distance);
+		distance /= config.bend_factor;
+	    distance += config.bend_distance / config.bend_factor;
+
 	    weight *= expf( - 0.5 * powf(distance / sigma, 2));
 	}
     }

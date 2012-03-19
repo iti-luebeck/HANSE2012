@@ -32,7 +32,7 @@ public:
 
     const ParticleVector &getParticles() const { return particles; }
 private:
-    void weightParticle(Particle &particle, sensor_msgs::LaserScan const &laserScan);;
+    void weightParticle(Particle &particle, sensor_msgs::LaserScan const &laserScan);
 
     Particle bestParticle;
 

@@ -16,6 +16,7 @@
   <depend package="dynamic_reconfigure"/>
   <depend package="angles" />
   <depend package="eigen" />
+  <depend package="eigen_conversions" />
 
   <rosdep name="opencv2.3"/>
 </package>
