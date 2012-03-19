@@ -25,6 +25,7 @@ public:
 
     void resetPosition();
     void setPosition(Eigen::Affine2f position);
+    void move(float seconds);
     void perturb();
     void weightParticles(sensor_msgs::LaserScan const &laserScan);
     void resample();

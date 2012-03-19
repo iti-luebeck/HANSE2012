@@ -22,10 +22,10 @@ Eigen::ArrayXXf ParticleFilter::randNormal(int m, int n, double sigma, double mu
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            double r = sqrt(-2 * log(U1(i,j)) / log(2));
-            assert(!isinf(r));
-            double phi = 2 * M_PI * U2(i,j);
-            r = sigma * r * cos(phi) + mu;
+            float r = sqrtf(-2 * logf(U1(i,j)) / logf(2));
+            //assert(!isinf(r));
+            float phi = 2 * M_PI * U2(i,j);
+            r = sigma * r * cosf(phi) + mu;
             X(i,j) = r;
         }
     }
@@ -43,6 +43,7 @@ void ParticleFilter::resetPosition()
     for (int i = 0; i < config.particle_count; i++) {
 	Particle particle;
 	particle.weight = 1.0;
+	particle.velocity = Eigen::Vector2f(0, 0);
 	particle.position = Eigen::Translation<float, 2>(randomPositions.col(i) * mapSize) * Eigen::Rotation2D<float>(randomRotations(0, i));
 	particles.push_back(particle);
     }
@@ -53,18 +54,27 @@ void ParticleFilter::setPosition(Eigen::Affine2f position)
     Particle p;
     p.weight = 1.0;
     p.position = position;
+    p.velocity = Eigen::Vector2f(0, 0);
     particles.clear();
     particles.resize(config.particle_count, p);
 }
 
+void ParticleFilter::move(float seconds)
+{
+    for (auto &particle : particles) {
+	particle.position.pretranslate(particle.velocity * seconds);
+    }
+}
+
 void ParticleFilter::perturb()
 {
-    Eigen::MatrixXf distance = randNormal(2, config.particle_count, config.perturb_position, 0);
+    Eigen::MatrixXf distance = randNormal(2, config.particle_count, 1.0, 0);
     Eigen::MatrixXf rotation = randNormal(1, config.particle_count, config.perturb_rotation, 0);
     for (int i = 0; i < config.particle_count; i++) {
-	Eigen::Affine2f position = particles[i].position;
-	position = Eigen::Translation<float, 2>(distance.col(i)) * position * Eigen::Rotation2D<float>(rotation(0, i));
-	particles[i].position = position;
+	Eigen::Vector2f offset = distance.col(i);
+	particles[i].velocity += offset * config.perturb_velocity;
+	particles[i].position.pretranslate(offset * config.perturb_position);
+	particles[i].position.rotate(rotation(0, i));
     }
 }
 
@@ -141,7 +151,7 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
     float auvDistance = worldMap.wallDistance(particle.position.translation());
 
     if (auvDistance < 0) {
-	weight = 0;
+	weight = 1e-10;
     } else {
 	for (unsigned int i = 0; i < laserScan.ranges.size(); i++) {
 	    if (laserScan.ranges[i] < laserScan.range_min || laserScan.ranges[i] > laserScan.range_max)

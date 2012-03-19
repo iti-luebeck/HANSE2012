@@ -35,6 +35,8 @@ private:
     ros::Subscriber sonarSubscriber;
     ros::Subscriber positionSubscriber;
 
+    ros::Time lastMsgTime;
+
     geometry_msgs::Pose poseFrom2DPosition(Eigen::Affine2f position, float z = 0.0);
     Eigen::Affine2f positionFromPose(const geometry_msgs::Pose &pose);
 

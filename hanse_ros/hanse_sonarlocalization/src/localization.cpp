@@ -40,6 +40,11 @@ void Localization::positionCallback(const geometry_msgs::PoseWithCovarianceStamp
 void Localization::sonarCallback(const sensor_msgs::LaserScan &msg)
 {
     particleFilter.perturb();
+    if (!lastMsgTime.isZero()) {
+	ros::Duration timePassed = msg.header.stamp - lastMsgTime;
+	particleFilter.move(timePassed.toSec());
+    }
+    lastMsgTime = msg.header.stamp;
     particleFilter.weightParticles(msg);
     particleFilter.resample();
 
