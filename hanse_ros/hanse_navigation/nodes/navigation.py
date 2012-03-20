@@ -6,6 +6,8 @@ import smach_ros
 import math
 import numpy
 import collections
+import actionlib
+from hanse_navigation.msg import NavigateAction, NavigateFeedback, NavigateResult
 from hanse_navigation.cfg import NavigationConfig
 from dynamic_reconfigure.server import Server
 from hanse_msgs.msg import sollSpeed
@@ -27,7 +29,8 @@ class Global:
 	abortFlag = False
 	currentHeading = 0.0
 	currentPosition = Point()
-	hasActiveGoal = False
+#	hasActiveGoal = False
+	reachedGoal = False
 	# goalzeug
 	path = collections.deque() # enthaelt PoseStamped
 	currentGoal = None
@@ -57,9 +60,12 @@ class Idle(smach.State):
 		smach.State.__init__(self, outcomes=[Transitions.HasGoal])
 
 	def execute(self, userdata):
-		rospy.loginfo('Executing state Idle')	
+		rospy.loginfo('Executing state Idle')
 		
-		# warten bis ein pfad vorgegeben wird 
+		# beim idlen soll das auv sich nicht bewegen
+		setMotorSpeed(0,0)
+		
+		# warten bis ein pfad vorgegeben wird
 		while not rospy.is_shutdown():
 			Global.abortFlag = False
 			if len(Global.path) > 0:
@@ -154,7 +160,7 @@ class ReachedGoal(smach.State):
 
 		setMotorSpeed(0,0)
 		Global.currentGoal = None
-		rospy.sleep(1)
+		Global.actionServer.set_succeeded()
 		
 		return Transitions.Idle
 
@@ -168,8 +174,8 @@ def closeEnoughToGoal():
 
 def imuCallback(msg):
 	Global.imuCallbackCalled = True
-	quater = msg.orientation
-	roll, Global.currentHeading, yaw = quatToAngles(quater.x, quater.y, quater.z, quater.w)
+	q = msg.orientation
+	Global.currentHeading = quatToAngles(q.x, q.y, q.z, q.w)[1]
 	#rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
 	
 def posemeterCallback(msg):	
@@ -181,16 +187,16 @@ def posemeterCallback(msg):
 		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy);
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
 	
-def goalCallback(msg):
-	Global.abortFlag = True
-	Global.path = collections.deque()
-	Global.path.append(msg)
+#def goalCallback(msg):
+#	Global.abortFlag = True
+#	Global.path = collections.deque()
+#	Global.path.append(msg)
 	
-def pathCallback(msg):
-	Global.abortFlag = True
-	Global.path = collections.deque()
-	for pose in msg.poses:
-		Global.path.append(pose)	
+#def pathCallback(msg):
+#	Global.abortFlag = True
+#	Global.path = collections.deque()
+#	for pose in msg.poses:
+#		Global.path.append(pose)	
 		
 def timerCallback(event):
 	p = Path()
@@ -265,8 +271,56 @@ def calcRadiansDiff(a, b):
  		diff = 2*math.pi+diff
 	return diff
 
+class NavigateActionServer(object):
+	# create messages that are used to publish feedback/result
+	_feedback = NavigateFeedback()
+	_result   = NavigateResult()
+
+	def __init__(self, name):
+		self._action_name = name
+		self._as = actionlib.SimpleActionServer(self._action_name, NavigateAction, execute_cb=self.execute_cb)
+		self._as.start()
+		
+	def set_succeeded(self):
+		rospy.loginfo('NavigateActionServer.set_succeeded')
+		self._result.successful = True
+		self._as.set_succeeded(self._result)
+
+	def set_aborted(self):
+		rospy.loginfo('NavigateActionServer.set_aborted')
+		Global.abortFlag = True
+		self._as.set_aborted()
+		Global.path = collections.deque()
+		Global.currentGoal = None
+    
+	def execute_cb(self, goal):
+		rospy.loginfo('NavigateActionServer.execute_cb' + repr(goal))
+		
+		Global.path = collections.deque()
+		Global.path.append(goal.goal)
+		
+		# schleife wird erst verlassen, wenn der actionserver nicht mehr aktiv ist oder das aktuelle goal gewechselt hat
+		rospy.loginfo('is_active='+repr(self._as.is_active()) + ' ### ' + repr(self._as.current_goal.get_goal()==goal))
+		while self._as.is_active() and self._as.current_goal.get_goal()==goal:
+			rospy.loginfo('is_active='+repr(self._as.is_active()) + ' ### ' + repr(self._as.current_goal.get_goal()==goal))
+			# bei preempt das aktuelle goal abbrechen
+			if self._as.is_preempt_requested():
+				self.set_aborted()
+				return
+			# publish aktuelle position als feedback
+			pose = PoseStamped()
+			pose.pose.position = Global.currentPosition
+			self._feedback.current_position = pose
+			self._as.publish_feedback(self._feedback)
+			rospy.sleep(0.2)
+			
+		return ''
+
 if __name__ == '__main__':
 	rospy.init_node('navigation')	
+	
+	# actionserver starten
+	Global.actionServer = NavigateActionServer(rospy.get_name())
 	
 	# Config server
 	configSrv = Server(NavigationConfig, configCallback)
@@ -274,8 +328,8 @@ if __name__ == '__main__':
 	# Subscriber/Publisher
 	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
 	rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
-	rospy.Subscriber('/goal', PoseStamped, goalCallback)
-	rospy.Subscriber('/waypoints', Path, pathCallback)
+#	rospy.Subscriber('/goal', PoseStamped, goalCallback)
+#	rospy.Subscriber('/waypoints', Path, pathCallback)
 	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
 	pub_motor_right = rospy.Publisher('motors/right', sollSpeed)
 	
