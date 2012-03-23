@@ -1,10 +1,14 @@
 #include <algorithm>
+#include "util.h"
 #include "particle_filter.h"
 
 ParticleFilter::ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config, Params params) :
     config(config),
     worldMap(params.map_image, params.map_pixel_size, params.map_threshold)
 {
+    lastImuOrientation = Eigen::Quaternion<float>::Identity();
+    imuPosition = Eigen::Affine3f::Identity();
+    imuVelocity = Eigen::Vector3f(0, 0, 0);
 }
 
 void ParticleFilter::reconfigure(hanse_sonarlocalization::ParticleFilterConfig config)
@@ -68,12 +72,12 @@ void ParticleFilter::move(float seconds)
 
 void ParticleFilter::perturb()
 {
-    Eigen::MatrixXf distance = randNormal(2, config.particle_count, 1.0, 0);
+    Eigen::MatrixXf distance = randNormal(2, config.particle_count, config.perturb_position, 0);
+    Eigen::MatrixXf acceleration = randNormal(2, config.particle_count, config.perturb_velocity, 0);
     Eigen::MatrixXf rotation = randNormal(1, config.particle_count, config.perturb_rotation, 0);
     for (int i = 0; i < config.particle_count; i++) {
-	Eigen::Vector2f offset = distance.col(i);
-	particles[i].velocity += offset * config.perturb_velocity;
-	particles[i].position.pretranslate(offset * config.perturb_position);
+	particles[i].velocity = (particles[i].velocity * 0.99) + Eigen::Vector2f(acceleration.col(i));
+	particles[i].position.pretranslate(Eigen::Vector2f(distance.col(i)));
 	particles[i].position.rotate(rotation(0, i));
     }
 }
@@ -89,6 +93,8 @@ void ParticleFilter::weightParticles(sensor_msgs::LaserScan const &laserScan)
 
 void ParticleFilter::resample()
 {
+    unsigned particle_count = particles.size();
+
     float sum = 0;
     for (auto &particle : particles) {
 	sum += particle.weight;
@@ -102,13 +108,13 @@ void ParticleFilter::resample()
 	eff += (particle.weight * particle.weight) / (sum * sum);
     }
 
-    if (2 * eff >= config.particle_count) {
+    if (2 * eff >= particle_count) {
 	ROS_INFO("efficient enough");
 	return;
     }
 
     std::vector<float> commulativeWeights;
-    commulativeWeights.reserve(config.particle_count);
+    commulativeWeights.reserve(particle_count);
 
     float last = 0;
     for (auto &particle : particles) {
@@ -124,6 +130,8 @@ void ParticleFilter::resample()
     for (int i = 0; i < config.particle_count; i++) {
 	auto iterator = std::lower_bound(commulativeWeights.begin(), commulativeWeights.end(), rand(0, i));
 	int position = iterator - commulativeWeights.begin();
+	if (position >= particle_count)
+	    position = particle_count - 1;
 	newParticles.push_back(particles[position]);
     }
 
@@ -149,6 +157,7 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
     float sigma = config.weight_sigma;
     float weight = 1;
     float auvDistance = worldMap.wallDistance(particle.position.translation());
+    float weight_scaling = config.weight_scaling;
 
     if (auvDistance < 0) {
 	weight = 1e-10;
@@ -165,7 +174,7 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
 	    Eigen::Affine2f wallPosition = particle.position.rotation() * rotation * translation;
 
 	    // expected wall distance
-	    float expectedDistance = worldMap.directedWallDistance(particle.position.translation(), wallPosition.translation(), laserScan.range_max);
+	    float expectedDistance = worldMap.directedWallDistance(particle.position.translation(), wallPosition.translation(), 2 * laserScan.range_max);
 
 	    float distance = fabsf(expectedDistance - range);
 
@@ -174,11 +183,54 @@ void ParticleFilter::weightParticle(Particle &particle, sensor_msgs::LaserScan c
 		distance /= config.bend_factor;
 	    distance += config.bend_distance / config.bend_factor;
 
-	    weight *= expf( - 0.5 * powf(distance / sigma, 2));
+	    weight *= weight_scaling + (1 - weight_scaling) * expf( - 0.5 * powf(distance / sigma, 2));
 	}
     }
     particle.weight = weight;
     if (particle.weight > bestParticle.weight) {
 	bestParticle = particle;
     }
+}
+
+void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
+{
+    Eigen::Vector3f acceleration(imu.linear_acceleration.x,
+				 imu.linear_acceleration.y,
+				 imu.linear_acceleration.z);
+    Eigen::Quaternionf orientation(imu.orientation.w,
+				   imu.orientation.x,
+				   imu.orientation.y,
+				   imu.orientation.z);
+
+    float interval = (imu.header.stamp - lastImuMsgTime).toSec();
+
+    Eigen::Vector3f worldAcceleration = orientation * acceleration;
+    worldAcceleration.z() = 0;
+    float absoluteAcceleration = worldAcceleration.norm();
+    if (absoluteAcceleration > 0.1) {
+      worldAcceleration *= 0.9*(absoluteAcceleration-0.1) / absoluteAcceleration;
+      imuVelocity +=  interval * (orientation * acceleration);
+    }
+    imuPosition = Eigen::Translation3f(imuPosition.translation() + imuVelocity * interval) * orientation;
+
+    lastImuMsgTime = imu.header.stamp;
+}
+
+void ParticleFilter::imuUpdate()
+{
+    // TODO: handle initialization
+    Eigen::Affine3f imuRelativePosition = lastImuOrientation.inverse() * imuPosition;
+    Eigen::Affine2f relativePosition2d = localization::positionFromAffine3(imuRelativePosition);
+    Eigen::Vector2f relativeVelocity2d(imuVelocity.x(), imuVelocity.y());
+    Eigen::Rotation2D<float> rot(0);
+    rot.fromRotationMatrix(relativePosition2d.rotation());
+    ROS_INFO("FOO dx=%f dy=%f dtheta=%f", relativePosition2d.translation().x(), relativePosition2d.translation().y(), rot.angle());
+    ROS_INFO("FOO ddx=%f ddy=%f", relativeVelocity2d.x(), relativeVelocity2d.y());
+    for (auto &particle : particles) {
+		particle.position = particle.position * relativePosition2d;
+		particle.velocity += relativeVelocity2d; // TODO handle rotation offset
+    }
+    imuVelocity = Eigen::Vector3f(0, 0, 0);
+    lastImuOrientation = imuPosition.rotation();
+    imuPosition = imuRelativePosition.rotation();
 }

@@ -1,8 +1,8 @@
 #include <Eigen/Geometry>
 #include <Eigen/Core>
+#include "util.h"
 #include "localization.h"
 #include "geometry_msgs/PoseArray.h"
-#include "eigen_conversions/eigen_msg.h"
 
 Localization::ParamHelper::ParamHelper()
 {
@@ -21,7 +21,8 @@ Localization::Localization(ros::NodeHandle handle) :
     particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
     positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
     sonarSubscriber(handle.subscribe("sonar/laser_scan", 1, &Localization::sonarCallback, this)),
-    positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this))
+    positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
+    imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
 {
     reconfigServer.setCallback(boost::bind(&Localization::reconfigure, this, _1, _2));
     particleFilter.resetPosition();
@@ -34,11 +35,21 @@ void Localization::reconfigure(hanse_sonarlocalization::ParticleFilterConfig &ne
 
 void Localization::positionCallback(const geometry_msgs::PoseWithCovarianceStamped &pose)
 {
-    particleFilter.setPosition(positionFromPose(pose.pose.pose));
+    particleFilter.setPosition(localization::positionFromPose(pose.pose.pose));
 }
 
 void Localization::sonarCallback(const sensor_msgs::LaserScan &msg)
 {
+    bool update = false;
+    while ((!imuQueue.empty()) && imuQueue.front().header.stamp < msg.header.stamp) {
+	particleFilter.addImuMessage(imuQueue.front());
+	imuQueue.pop_front();
+	update = true;
+    }
+    if (update) {
+	particleFilter.imuUpdate();
+    }
+
     particleFilter.perturb();
     if (!lastMsgTime.isZero()) {
 	ros::Duration timePassed = msg.header.stamp - lastMsgTime;
@@ -68,6 +79,11 @@ void Localization::sonarCallback(const sensor_msgs::LaserScan &msg)
     particlePublisher.publish(particles);
 }
 
+void Localization::imuCallback(const sensor_msgs::Imu &msg)
+{
+    imuQueue.push_back(msg);
+}
+
 geometry_msgs::Pose Localization::poseFrom2DPosition(Eigen::Affine2f position2D, float z)
 {
     geometry_msgs::Pose pose;
@@ -84,18 +100,6 @@ geometry_msgs::Pose Localization::poseFrom2DPosition(Eigen::Affine2f position2D,
     pose.orientation.z = rotation3D.z();
     pose.orientation.w = rotation3D.w();
     return pose;
-}
-
-Eigen::Affine2f Localization::positionFromPose(const geometry_msgs::Pose &pose)
-{
-    Eigen::Affine3d poseEigen;
-    tf::poseMsgToEigen(pose, poseEigen);
-    Eigen::Vector3d translation3d = poseEigen.translation();
-    Eigen::Vector2f translation((float)translation3d.x(), (float)translation3d.y());
-    Eigen::Vector3d direction = poseEigen.rotation() * Eigen::Vector3d(1,0,0);
-    float angle = atan2f(direction.y(), direction.x());
-    Eigen::Affine2f position = Eigen::Translation2f(translation) * Eigen::Rotation2D<float>(angle);
-    return position;
 }
 
 int main(int argc, char *argv[])

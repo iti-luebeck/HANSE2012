@@ -1,9 +1,11 @@
 #ifndef LOCALIZATION_H
 #define LOCALIZATION_H
 
+#include <deque>
 #include <Eigen/Geometry>
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
+#include "sensor_msgs/Imu.h"
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
@@ -34,15 +36,18 @@ private:
     ros::Publisher positionPublisher;
     ros::Subscriber sonarSubscriber;
     ros::Subscriber positionSubscriber;
+    ros::Subscriber imuSubscriber;
 
     ros::Time lastMsgTime;
 
+    std::deque<sensor_msgs::Imu> imuQueue;
+
     geometry_msgs::Pose poseFrom2DPosition(Eigen::Affine2f position, float z = 0.0);
-    Eigen::Affine2f positionFromPose(const geometry_msgs::Pose &pose);
 
     void reconfigure(hanse_sonarlocalization::ParticleFilterConfig &newConfig, uint32_t level);
     void positionCallback(const geometry_msgs::PoseWithCovarianceStamped &pose);
     void sonarCallback(const sensor_msgs::LaserScan &msg);
+    void imuCallback(const sensor_msgs::Imu &msg);
 };
 
 #endif

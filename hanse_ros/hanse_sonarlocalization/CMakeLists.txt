@@ -47,6 +47,7 @@ rosbuild_add_executable(sonar_localization
   src/localization.cpp
   src/world_map.cpp
   src/particle_filter.cpp
+  src/util.cpp
 )
 
 find_package(OpenCV REQUIRED)
