@@ -192,6 +192,8 @@ void ParticleFilter::weightParticle(Particle &particle, const hanse_msgs::WallDe
 
 void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
 {
+    // TODO: all the acceleration based code needs
+    // some rework with real world test data
     Eigen::Vector3f acceleration(imu.linear_acceleration.x,
 				 imu.linear_acceleration.y,
 				 imu.linear_acceleration.z);
@@ -224,9 +226,16 @@ void ParticleFilter::imuUpdate()
     rot.fromRotationMatrix(relativePosition2d.rotation());
     ROS_INFO("FOO dx=%f dy=%f dtheta=%f", relativePosition2d.translation().x(), relativePosition2d.translation().y(), rot.angle());
     ROS_INFO("FOO ddx=%f ddy=%f", relativeVelocity2d.x(), relativeVelocity2d.y());
-    for (auto &particle : particles) {
-		particle.position = particle.position * relativePosition2d;
-		particle.velocity += relativeVelocity2d; // TODO handle rotation offset
+
+    if (config.imu_motion) {
+	for (auto &particle : particles) {
+	    particle.position = particle.position * relativePosition2d;
+	    particle.velocity += relativeVelocity2d; // TODO handle rotation offset
+	}
+    } else {
+	for (auto &particle : particles) {
+	    particle.position = particle.position * rot;
+	}
     }
     imuVelocity = Eigen::Vector3f(0, 0, 0);
     lastImuOrientation = imuPosition.rotation();
