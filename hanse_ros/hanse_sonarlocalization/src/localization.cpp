@@ -20,7 +20,7 @@ Localization::Localization(ros::NodeHandle handle) :
     nh(handle),
     particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
     positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
-    sonarSubscriber(handle.subscribe("sonar/laser_scan", 1, &Localization::sonarCallback, this)),
+    sonarSubscriber(handle.subscribe("sonar/scan/walls", 1, &Localization::sonarCallback, this)),
     positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
     imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
 {
@@ -38,7 +38,7 @@ void Localization::positionCallback(const geometry_msgs::PoseWithCovarianceStamp
     particleFilter.setPosition(localization::positionFromPose(pose.pose.pose));
 }
 
-void Localization::sonarCallback(const sensor_msgs::LaserScan &msg)
+void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 {
     bool update = false;
     while ((!imuQueue.empty()) && imuQueue.front().header.stamp < msg.header.stamp) {

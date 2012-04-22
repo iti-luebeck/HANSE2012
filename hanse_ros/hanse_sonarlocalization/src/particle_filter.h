@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <Eigen/Geometry>
-#include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Imu.h>
+#include "hanse_msgs/WallDetection.h"
 #include "hanse_sonarlocalization/ParticleFilterConfig.h"
 #include "particle.h"
 #include "world_map.h"
@@ -27,7 +27,7 @@ public:
     void setPosition(Eigen::Affine2f position);
     void move(float seconds);
     void perturb();
-    void weightParticles(sensor_msgs::LaserScan const &laserScan);
+    void weightParticles(const hanse_msgs::WallDetection &msg);
     void resample();
     void addImuMessage(sensor_msgs::Imu const &imu);
     void imuUpdate();
@@ -35,7 +35,7 @@ public:
 
     const ParticleVector &getParticles() const { return particles; }
 private:
-    void weightParticle(Particle &particle, sensor_msgs::LaserScan const &laserScan);
+    void weightParticle(Particle &particle, const hanse_msgs::WallDetection &msg);
 
     Particle bestParticle;
 

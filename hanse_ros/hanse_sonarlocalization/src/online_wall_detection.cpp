@@ -1,11 +1,11 @@
 #include <cfloat>
 #include "angles/angles.h"
-#include "sensor_msgs/LaserScan.h"
+#include "hanse_msgs/WallDetection.h"
 #include "online_wall_detection.h"
 
 OnlineWallDetection::OnlineWallDetection(ros::NodeHandle handle) :
     nh(handle),
-    publisher(handle.advertise<sensor_msgs::LaserScan>("sonar/laser_scan", 1)),
+    publisher(handle.advertise<hanse_msgs::WallDetection>("sonar/scan/walls", 1)),
     debugPublisher(handle.advertise<hanse_msgs::ScanningSonar>("sonar/scan/wall_detection", 1)),
     subscriber(handle.subscribe("sonar/scan", 1, &OnlineWallDetection::callback, this))
 {
@@ -61,8 +61,11 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 
 	Eigen::ArrayXf midFiltered = mid * between;
 
+	hanse_msgs::WallDetection wall;
+
 	for (int i = 0; i < dataPoints; i++) {
 	    if (midFiltered(i) > config.threshold) {
+		wall.distances.push_back(((double)i / (dataPoints-1)) * (midMsg.range - 0.15) + 0.15);
 		midFiltered(i) = 1.0;
 	    } else {
 		midFiltered(i) = 0.0;
@@ -71,30 +74,15 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 
 	debugPublisher.publish(debugMessage(midFiltered, 1));
 
-	double distance = 0.0;
-
-	for (int i = 0; i < dataPoints; i++) {
-	    if (midFiltered(i) > 0.5) {
-		distance = ((double)i / (dataPoints-1)) * (midMsg.range - 0.15) + 0.15;
-		break;
-	    }
-	}
-
 
 	double headPosition = angles::normalize_angle(msg.headPosition);
 
-	sensor_msgs::LaserScan laserScan;
-	laserScan.header.stamp = midMsg.header.stamp;
-	laserScan.header.frame_id = "/map";
-	laserScan.angle_min = headPosition;
-	laserScan.angle_max = headPosition;
-	laserScan.angle_increment = 0;
-	laserScan.time_increment = 0;
-	laserScan.scan_time = 0;
-	laserScan.range_min = 0.15;
-	laserScan.range_max = msg.range;
-	laserScan.ranges.push_back(distance);
-	publisher.publish(laserScan);
+	wall.header.stamp = midMsg.header.stamp;
+	wall.header.frame_id = "/map";
+	wall.headPosition = headPosition;
+	wall.range = midMsg.range;
+	wall.wallDetected = !wall.distances.empty();
+	publisher.publish(wall);
 
     }
 }

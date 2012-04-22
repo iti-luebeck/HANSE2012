@@ -46,7 +46,7 @@ private:
 
     void reconfigure(hanse_sonarlocalization::ParticleFilterConfig &newConfig, uint32_t level);
     void positionCallback(const geometry_msgs::PoseWithCovarianceStamped &pose);
-    void sonarCallback(const sensor_msgs::LaserScan &msg);
+    void sonarCallback(const hanse_msgs::WallDetection &msg);
     void imuCallback(const sensor_msgs::Imu &msg);
 };
 
