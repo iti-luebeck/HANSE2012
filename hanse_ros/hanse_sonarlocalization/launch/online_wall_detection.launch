@@ -1,0 +1,3 @@
+<launch>
+  <node name="hanse_sonar_online_wall_detection" type="sonar_online_wall_detection" pkg="hanse_sonarlocalization" />
+</launch>
