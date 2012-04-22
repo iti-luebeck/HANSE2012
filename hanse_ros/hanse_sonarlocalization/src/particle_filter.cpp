@@ -1,6 +1,8 @@
 #include <algorithm>
 #include "util.h"
 #include "particle_filter.h"
+#include <trng/mt19937.hpp>
+#include <trng/normal_dist.hpp>
 
 ParticleFilter::ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig config, Params params) :
     config(config),
@@ -19,19 +21,15 @@ void ParticleFilter::reconfigure(hanse_sonarlocalization::ParticleFilterConfig c
     }
 }
 
-Eigen::ArrayXXf ParticleFilter::randNormal(int m, int n, double sigma, double mu) {
-    Eigen::ArrayXXf X(m,n);
-    Eigen::ArrayXXf U1 = (Eigen::ArrayXXf::Random(m, n) + 1.0000001192092896f) / 2;
-    Eigen::ArrayXXf U2 = (Eigen::ArrayXXf::Random(m, n) + 1.0000001192092896f) / 2;
+Eigen::ArrayXXf ParticleFilter::randNormal(int m, int n, float sigma, float mu) {
+    static trng::mt19937 R;
+    trng::normal_dist<float> normal(mu, sigma);
 
+    Eigen::ArrayXXf X(m,n);
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            float r = sqrtf(-2 * logf(U1(i,j)) / logf(2));
-            //assert(!isinf(r));
-            float phi = 2 * M_PI * U2(i,j);
-            r = sigma * r * cosf(phi) + mu;
-            X(i,j) = r;
-        }
+	    X(i, j) = normal(R);
+	}
     }
     return X;
 }
@@ -88,7 +86,7 @@ void ParticleFilter::weightParticles(const hanse_msgs::WallDetection &msg)
     for (auto &particle : particles) {
 	weightParticle(particle, msg);
     }
-    ROS_INFO("best particle weight %f", bestParticle.weight);
+    //ROS_INFO("best particle weight %f", bestParticle.weight);
 }
 
 void ParticleFilter::resample()
@@ -224,8 +222,8 @@ void ParticleFilter::imuUpdate()
     Eigen::Vector2f relativeVelocity2d(imuVelocity.x(), imuVelocity.y());
     Eigen::Rotation2D<float> rot(0);
     rot.fromRotationMatrix(relativePosition2d.rotation());
-    ROS_INFO("FOO dx=%f dy=%f dtheta=%f", relativePosition2d.translation().x(), relativePosition2d.translation().y(), rot.angle());
-    ROS_INFO("FOO ddx=%f ddy=%f", relativeVelocity2d.x(), relativeVelocity2d.y());
+    //ROS_INFO("FOO dx=%f dy=%f dtheta=%f", relativePosition2d.translation().x(), relativePosition2d.translation().y(), rot.angle());
+    //ROS_INFO("FOO ddx=%f ddy=%f", relativeVelocity2d.x(), relativeVelocity2d.y());
 
     if (config.imu_motion) {
 	for (auto &particle : particles) {

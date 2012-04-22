@@ -39,7 +39,7 @@ private:
 
     Particle bestParticle;
 
-    Eigen::ArrayXXf randNormal(int m, int n, double sigma, double mu);
+    Eigen::ArrayXXf randNormal(int m, int n, float sigma, float mu);
 
     hanse_sonarlocalization::ParticleFilterConfig config;
     ParticleVector particles;

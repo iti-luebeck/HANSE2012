@@ -4,6 +4,13 @@
 #include "localization.h"
 #include "geometry_msgs/PoseArray.h"
 
+ros::Time p_start, p_end,
+    p_weight_start, p_weight_end,
+    p_resample_start, p_resample_end,
+    p_perturb_start, p_perturb_end,
+    p_move_start, p_move_end
+    ;
+
 Localization::ParamHelper::ParamHelper()
 {
     bool ok = true;
@@ -40,6 +47,7 @@ void Localization::positionCallback(const geometry_msgs::PoseWithCovarianceStamp
 
 void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 {
+    p_start = ros::Time::now();
     bool update = false;
     while ((!imuQueue.empty()) && imuQueue.front().header.stamp < msg.header.stamp) {
 	particleFilter.addImuMessage(imuQueue.front());
@@ -50,14 +58,23 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	particleFilter.imuUpdate();
     }
 
+    p_perturb_start = ros::Time::now();
     particleFilter.perturb();
+    p_perturb_end = ros::Time::now();
+    p_move_start = ros::Time::now();
     if (!lastMsgTime.isZero()) {
 	ros::Duration timePassed = msg.header.stamp - lastMsgTime;
 	particleFilter.move(timePassed.toSec());
     }
+    p_move_end = ros::Time::now();
     lastMsgTime = msg.header.stamp;
+
+    p_weight_start = ros::Time::now();
     particleFilter.weightParticles(msg);
+    p_weight_end = ros::Time::now();
+    p_resample_start = ros::Time::now();
     particleFilter.resample();
+    p_resample_end = ros::Time::now();
 
     geometry_msgs::PoseStamped position;
     position.header.frame_id = "/map";
@@ -77,6 +94,14 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	    break;
     }
     particlePublisher.publish(particles);
+    p_end = ros::Time::now();
+    ROS_INFO("Duration %f (w: %f, r: %f, p: %f, m: %f)",
+	     (p_end-p_start).toSec(),
+	     (p_weight_end-p_weight_start).toSec(),
+	     (p_resample_end-p_resample_start).toSec(),
+	     (p_perturb_end-p_perturb_start).toSec(),
+	     (p_move_end-p_move_start).toSec()
+	     );
 }
 
 void Localization::imuCallback(const sensor_msgs::Imu &msg)
