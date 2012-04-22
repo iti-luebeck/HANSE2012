@@ -64,16 +64,26 @@ float WorldMap::wallDistance(Eigen::Vector2f point)
 float WorldMap::directedWallDistance(Eigen::Vector2f point, Eigen::Vector2f direction, float maximum)
 {
     const float eps = 1.5 * pixelSize;
-    float min = 0;
-    const float max = maximum;
 
-    while (true) {
-	float d = wallDistance(point + direction * min);
-	if (d < 0)
-	    return min;
-	min += wallDistance(point + direction * min) + eps;
-	if (min >= max)
-	    return max;
+    if (maximum < eps)
+	return maximum;
+    float mid = maximum / 2;
+    float mid_d = wallDistance(point + direction * mid);
+    if (mid_d < 0) {
+	float seg_max = mid + mid_d;
+	return directedWallDistance(point, direction, seg_max);
+    } else {
+	float seg_a_max = mid - mid_d;
+	float seg_a_d = directedWallDistance(point, direction, seg_a_max);
+	if (seg_a_d < seg_a_max)
+	    return seg_a_d;
+	float seg_b_start = mid + mid_d;
+	float seg_b_max = maximum - seg_b_start;
+	float seg_b_d = directedWallDistance(point + direction * seg_b_start, direction, seg_b_max);
+	if (seg_b_d == seg_b_max)
+	    return maximum;
+	else
+	    return seg_b_d + seg_b_start;
     }
 }
 

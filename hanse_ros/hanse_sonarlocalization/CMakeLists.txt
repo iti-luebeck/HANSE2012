@@ -33,7 +33,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
-add_definitions(-std=c++0x -isystem ${PROJECT_SOURCE_DIR}/src/trng)
+add_definitions(-std=c++0x -isystem ${PROJECT_SOURCE_DIR}/src/trng -O3 -ffast-math -mfpmath=sse)
 
 rosbuild_add_executable(sonar_wall_detection
   src/wall_detection.cpp
