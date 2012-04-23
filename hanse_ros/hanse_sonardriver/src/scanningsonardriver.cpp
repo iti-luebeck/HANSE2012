@@ -2,7 +2,7 @@
 #include "scanningsonardriver.h"
 
 ScanningSonarDriver::ScanningSonarDriver(ros::NodeHandle handle) :
-    SonarDriver(handle, "scanningsonar")
+    SonarDriver(handle, "sonar/scan")
 {
 }
 
