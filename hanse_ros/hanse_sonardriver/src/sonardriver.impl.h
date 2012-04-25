@@ -2,6 +2,7 @@
 
 template <class C, class M, class SC>
 SonarDriver<C, M, SC>::SonarDriver(ros::NodeHandle handle, const std::string &topicName) :
+    isInitialized(false),
     nh(handle),
     paramHelper(),
     publisher(handle.advertise<M>(topicName, 1000)),
