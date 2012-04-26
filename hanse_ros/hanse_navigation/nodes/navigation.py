@@ -16,6 +16,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Path
 
+# konfigurierbare werte, werden durch dynamic_reconfigure gesetzt  
 class Config:
 	hysteresis_goal = 0
 	hysteresis_heading = 0
@@ -25,12 +26,11 @@ class Config:
 	angular_max_speed = 0
 	p_heading = 0
 
+# variablen, die in mehreren zustaenden verwendet werden
 class Global:
 	abortFlag = False
 	currentHeading = 0.0
 	currentPosition = Point()
-#	hasActiveGoal = False
-	reachedGoal = False
 	# goalzeug
 	path = collections.deque() # enthaelt PoseStamped
 	currentGoal = None
@@ -103,14 +103,9 @@ class AdjustHeading(smach.State):
 			
 			#diffHeading = Global.headingToGoal - Global.currentHeading
 			diffHeading = calcRadiansDiff(Global.headingToGoal, Global.currentHeading)			
-			# in bereich [-pi,pi) bringen
-#			while diffHeading < -math.pi:
-#				diffHeading += math.pi
-#			while diffHeading >= math.pi:
-#				diffHeading -= math.pi
-			rospy.loginfo('diffHeading = ' + repr(diffHeading))
+#			rospy.loginfo('diffHeading = ' + repr(diffHeading))
 
-			# pruefen ob heading in akzeptablem bereich
+			# pruefen ob heading in akzeptablem bereich ist
 			if math.fabs(diffHeading) < Config.hysteresis_heading: 
 				return Transitions.HeadingAdjusted
 			
@@ -136,12 +131,12 @@ class MoveForward(smach.State):
 			if Global.abortFlag:
 				return Transitions.Aborted
 			
-			# pruefen ob auv nah genug am 
+			# pruefen ob auv nah genug am ziel ist
 			if closeEnoughToGoal():
 				return Transitions.CloseEnoughToGoal
 			
 			# pruefen, ob heading korrigiert werden muss
-			if calcRadiansDiff(Global.headingToGoal, Global.currentHeading) > Config.hysteresis_heading:
+			if math.fabs(calcRadiansDiff(Global.headingToGoal, Global.currentHeading)) > Config.hysteresis_heading:
 				return Transitions.HeadingAdjustmentNeeded
 			
 			forwardspeed = Config.forward_max_speed
@@ -159,8 +154,8 @@ class ReachedGoal(smach.State):
 		rospy.loginfo('Executing state ReachedGoal')
 
 		setMotorSpeed(0,0)
-		Global.currentGoal = None
-		Global.actionServer.set_succeeded()
+		Global.currentGoal = None		
+		Global.actionServer.set_succeeded() # action als erfolgreich abgeschlossen markieren
 		
 		return Transitions.Idle
 
@@ -172,14 +167,16 @@ def closeEnoughToGoal():
 	rospy.loginfo('distance to goal: ' + repr(distanceToGoal))
 	return distanceToGoal < Config.hysteresis_goal
 
+# die orientierung wird aus der imu ermittelt
 def imuCallback(msg):
-	Global.imuCallbackCalled = True
 	q = msg.orientation
 	Global.currentHeading = quatToAngles(q.x, q.y, q.z, q.w)[1]
 	#rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
-	
+
+# die aktuelle position wird aus posemeter ausgelesen
 def posemeterCallback(msg):	
 	Global.currentPosition = msg.pose.position
+	# wenn zur zeit zu einem ziel navigiert wird, relevante werte aktualisieren
 	if Global.currentGoal!=None:
 		dx = Global.currentGoal.pose.position.x - Global.currentPosition.x
 		dy = Global.currentGoal.pose.position.y - Global.currentPosition.y
@@ -187,17 +184,19 @@ def posemeterCallback(msg):
 		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy);
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
 	
-#def goalCallback(msg):
-#	Global.abortFlag = True
-#	Global.path = collections.deque()
-#	Global.path.append(msg)
+def goalCallback(msg):
+	Global.actionServer.set_aborted()
+	Global.abortFlag = True
+	Global.path = collections.deque()
+	Global.path.append(msg)
 	
 #def pathCallback(msg):
 #	Global.abortFlag = True
 #	Global.path = collections.deque()
 #	for pose in msg.poses:
 #		Global.path.append(pose)	
-		
+
+# publisht das aktuelle ziel
 def timerCallback(event):
 	p = Path()
 	p.header.frame_id = '/map'
@@ -328,7 +327,7 @@ if __name__ == '__main__':
 	# Subscriber/Publisher
 	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
 	rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
-#	rospy.Subscriber('/goal', PoseStamped, goalCallback)
+	rospy.Subscriber('/goal', PoseStamped, goalCallback)
 #	rospy.Subscriber('/waypoints', Path, pathCallback)
 	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
 	pub_motor_right = rospy.Publisher('motors/right', sollSpeed)

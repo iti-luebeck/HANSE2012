@@ -64,45 +64,45 @@ class Init(smach.State):
 
 
 # In diesem Zustand wird das auv parallel zur nahsten Wand ausgerichtet
-class Align(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.AlignFinished,Transitions.NoWall])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state Align')
-
-		# 360 grad drehen und nahste wand suchen
-		initHeading = Global.currentHeadPosition
-		lastHeading = initHeading
-		rotated = 0.0
-		smallestDistanceHeading = 0.0
-		smallestDistance = sys.maxint
-		setMotorSpeed(0, 1)
-		rospy.loginfo('initHeading: ' + repr(initHeading))
-
-		#rospy.loginfo('math.fabs(initHeading - currentHeadPosition))
-		while math.fabs(initHeading - Global.currentHeadPosition) > 0.15 or rotated < 2*math.pi:
-			#rospy.loginfo('rotated: ' + repr(rotated))
-			#rospy.loginfo('distance: ' + repr(Global.currentDistance))			
-			rotated += calcRadiansDiff(lastHeading, Global.currentHeadPosition)
-			lastHeading = Global.currentHeadPosition
-			if Global.currentDistance > 0.0 and Global.currentDistance < smallestDistance:
-				rospy.loginfo('new smallestDistanceHeading: ' + repr(smallestDistanceHeading))
-				smallestDistance = Global.currentDistance
-				smallestDistanceHeading = Global.currentHeadPosition
-			rospy.sleep(0.1)
-
-		if smallestDistance==sys.maxint:
-			rospy.logwarn('keine wand in sicht')
-			return Transitions.NoWall
-		else:
-			while math.fabs(smallestDistanceHeading - Global.currentHeadPosition) > 0.15:
-				rospy.loginfo(repr(smallestDistanceHeading) + '  -  ' + repr(Global.currentHeadPosition))
-				rospy.sleep(0.1)
-			
-		setMotorSpeed(0, 0)
-		
-		return Transitions.AlignFinished
+#class Align(smach.State):
+#	def __init__(self):
+#		smach.State.__init__(self, outcomes=[Transitions.AlignFinished,Transitions.NoWall])
+#
+#	def execute(self, userdata):
+#		rospy.loginfo('Executing state Align')
+#
+#		# 360 grad drehen und nahste wand suchen
+#		initHeading = Global.currentHeadPosition
+#		lastHeading = initHeadingxsensUpdate
+#		rotated = 0.0
+#		smallestDistanceHeading = 0.0
+#		smallestDistance = sys.maxint
+#		setMotorSpeed(0, 1)
+#		rospy.loginfo('initHeading: ' + repr(initHeading))
+#
+#		#rospy.loginfo('math.fabs(initHeading - currentHeadPosition))
+#		while math.fabs(initHeading - Global.currentHeadPosition) > 0.15 or rotated < 2*math.pi:
+#			#rospy.loginfo('rotated: ' + repr(rotated))
+#			#rospy.loginfo('distance: ' + repr(Global.currentDistance))			
+#			rotated += calcRadiansDiff(lastHeading, Global.currentHeadPosition)
+#			lastHeading = Global.currentHeadPosition
+#			if Global.currentDistance > 0.0 and Global.currentDistance < smallestDistance:
+#				rospy.loginfo('new smallestDistanceHeading: ' + repr(smallestDistanceHeading))
+#				smallestDistance = Global.currentDistance
+#				smallestDistanceHeading = Global.currentHeadPosition
+#			rospy.sleep(0.1)
+#
+#		if smallestDistance==sys.maxint:
+#			rospy.logwarn('keine wand in sicht')
+#			return Transitions.NoWall
+#		else:
+#			while math.fabs(smallestDistanceHeading - Global.currentHeadPosition) > 0.15:
+#				rospy.loginfo(repr(smallestDistanceHeading) + '  -  ' + repr(Global.currentHeadPosition))
+#				rospy.sleep(0.1)
+#			
+#		setMotorSpeed(0, 0)
+#		
+#		return Transitions.AlignFinished
 
  
 class NoWall(smach.State):
@@ -140,7 +140,7 @@ class FollowWall(smach.State):
 			if abweichung < 0.5:
 				startHeadPostion = Global.currentHeadPosition
 			
-			if Global.angularSpeedOutput==1.0 and Global.currentDistance > Config.desiredDistance and calcRadiansDiff(startHeadPostion, Global.currentHeadPosition) > math.pi/4:
+			if Global.angularSpeedOutput==1.0 and Global.currentDistance > Config.desiredDistance and calcRadiansDiff(startHeadPostion, Global.currentHeadPosition) > math.pi/8:
 				rospy.loginfo('nicht weiter drehen')
 				setMotorSpeed(Config.maxSpeed, 0)
 				while Global.currentDistance > Config.desiredDistance+0.1 and not Global.noWall:
@@ -260,16 +260,16 @@ if __name__ == '__main__':
 		# Add states to the container
 		smach.StateMachine.add(States.Init, Init(),
 								transitions={Transitions.InitFinished : States.NoWall})
-		smach.StateMachine.add(States.Align, Align(),
-								transitions={Transitions.AlignFinished : States.FollowWall,
-											Transitions.NoWall : States.NoWall})
+#		smach.StateMachine.add(States.Align, Align(),
+#								transitions={Transitions.AlignFinished : States.FollowWall,
+#											Transitions.NoWall : States.NoWall})
 		smach.StateMachine.add(States.NoWall, NoWall(),
 								transitions={Transitions.Wall : States.FollowWall})
 		smach.StateMachine.add(States.FollowWall, FollowWall(),
 								transitions={Transitions.NoWall : States.NoWall})							
 								
 	# Create and start the introspection server
-	sis = smach_ros.IntrospectionServer('server_name', sm, '/SM_ROOT')
+	sis = smach_ros.IntrospectionServer('server_name', sm, '/WALLFOLLOWING')
 	sis.start()
 
     # Execute SMACH plan

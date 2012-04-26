@@ -11,6 +11,7 @@ SUCCEEDED = 'succeeded'
 ABORTED = 'aborted'
 PREEMPTED = 'preempted'
 
+# erstellt ein NavigationGoal aus koordinaten
 def create_nav_goal(x, y, z):
 	ps = PoseStamped()
 	ps.pose.position = Point(x=x, y=y, z=z)
@@ -23,27 +24,28 @@ def create_nav_state(point, timeout=None):
 	if timeout != None:
 		timeout = rospy.Duration(timeout)
 	return SimpleActionState(NAV_ACTION_NS, NavigateAction,
-	                            goal=goal, exec_timeout=timeout)
+							goal=goal, exec_timeout=timeout)
 
 if __name__ == '__main__':
 	rospy.init_node('task_example')	
 	sm = StateMachine([SUCCEEDED, ABORTED, PREEMPTED])
 	with sm:
-		####################################################
+		# Zwei Navigations-Zustaende erstellen und zum Automaten hinzufuegen.
+		# Es wird nur zum zweiten Punkt navigiert, wenn die Navigation zum ersten Punkt erfolgreich war.
+		# In beiden Faellen gibt es ein Timeout von 60 Sekunden, nach dessen Ablauf die jeweilige Navigation abgebrochen wird.
 		StateMachine.add('navigate_to_2_1',
-		              		create_nav_state(Point(x=2.0,y=1.0,z=0.0), timeout=60),
-		              		transitions={SUCCEEDED:'navigate_to_0_0'})
-
-		####################################################  
- 		StateMachine.add('navigate_to_0_0',
-							create_nav_state(Point(x=0.0,y=0.0,z=0.0), timeout=60),
-							transitions={})
+						create_nav_state(Point(x=2.0,y=1.0,z=0.0), timeout=60),
+						transitions={SUCCEEDED:'navigate_to_0_0'})
+		
+		StateMachine.add('navigate_to_0_0',
+						create_nav_state(Point(x=0.0,y=0.0,z=0.0), timeout=60),
+						transitions={})
 
 	# Create and start the introspection servers
 	sis = IntrospectionServer('task_example', sm, '/TASK_EXAMPLE')
 	sis.start()
 
-    # Execute SMACH plan
+	# Execute SMACH plan
 	outcome = sm.execute()
 	rospy.loginfo('state machine stopped')
 
