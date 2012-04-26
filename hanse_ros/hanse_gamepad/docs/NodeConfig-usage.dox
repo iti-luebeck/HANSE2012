@@ -1,0 +1,23 @@
+\subsubsection usage Usage
+\verbatim
+<node name="gamepad_node" pkg="hanse_gamepad" type="gamepad_node">
+  <param name="server_hosts" type="str" value="" />
+  <param name="server_port" type="int" value="8080" />
+  <param name="frequency" type="int" value="1" />
+  <param name="joy_gate" type="double" value="1.0" />
+  <param name="scale_linear" type="double" value="1.0" />
+  <param name="scale_angular" type="double" value="1.0" />
+  <param name="scale_depth" type="double" value="1.0" />
+  <param name="axis_linear" type="int" value="1" />
+  <param name="axis_angular" type="int" value="1" />
+  <param name="axis_depth" type="int" value="1" />
+  <param name="use_throttle" type="bool" value="False" />
+  <param name="depth_delta" type="int" value="1" />
+  <param name="button_down" type="int" value="1" />
+  <param name="button_up" type="int" value="1" />
+  <param name="button_emegency_stop" type="int" value="1" />
+  <param name="button_hand_control_enable" type="int" value="1" />
+  <param name="button_hand_control_disable" type="int" value="1" />
+</node>
+\endverbatim
+

@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/137/trunk/unstable/lse_imu_drivers/lse_xsens_mti
+END
+manifest.xml
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/112/trunk/unstable/lse_imu_drivers/lse_xsens_mti/manifest.xml
+END
+mainpage.dox
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/57/trunk/unstable/lse_imu_drivers/lse_xsens_mti/mainpage.dox
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/57/trunk/unstable/lse_imu_drivers/lse_xsens_mti/CMakeLists.txt
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/57/trunk/unstable/lse_imu_drivers/lse_xsens_mti/Makefile
+END

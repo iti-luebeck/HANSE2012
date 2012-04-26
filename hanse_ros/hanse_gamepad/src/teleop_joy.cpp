@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Bool.h>
 #include <geometry_msgs/Twist.h>
 #include <dynamic_reconfigure/server.h>
 
@@ -22,6 +23,7 @@ private:
   ros::Timer control_loop_timer;
 
   ros::Publisher pub_cmd_vel;
+  ros::Publisher pub_switchPid;
   ros::Subscriber sub_joy;
 
   double value_linear;
@@ -55,8 +57,9 @@ TeleopHanse::TeleopHanse() {
   button_up = false;
   button_down = false;
 
-  pub_cmd_vel = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
-  sub_joy = node.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopHanse::joyCallback, this);
+  pub_cmd_vel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 1);
+  pub_switchPid = node.advertise<std_msgs::Bool>("/hanse/commands/switchPid", 1);
+  sub_joy = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
 
   // will be set to actual value once config is loaded
   control_loop_timer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
@@ -142,8 +145,23 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     if (joy->buttons[config.button_emegency_stop])
 	emergency_stop = true;
 
-    if (joy->buttons[config.button_hand_control])
+    if (joy->buttons[config.button_hand_control_enable]) {
         enable_handcontrol = true;
+
+	std_msgs::Bool boolMessage;
+    	boolMessage.data = true;
+
+	pub_switchPid.publish(boolMessage);
+    }
+
+    if (joy->buttons[config.button_hand_control_disable]) {
+        enable_handcontrol = false;
+
+	std_msgs::Bool boolMessage;
+    	boolMessage.data = false;
+
+	pub_switchPid.publish(boolMessage);
+    }
 }
 
 int main(int argc, char** argv)

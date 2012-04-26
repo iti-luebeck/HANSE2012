@@ -1,0 +1,10 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~topic_thrusterDown1_publication" : \b [str] thruster down 1 min: , default: , max: 
+- \b "~topic_thrusterDown2_publication" : \b [str] thruster down 2 min: , default: , max: 
+- \b "~topic_thrusterLeft_publication" : \b [str] thruster left min: , default: , max: 
+- \b "~topic_thrusterRight_publication" : \b [str] thruster right min: , default: , max: 
+- \b "~topic_pressure_subscription" : \b [str] pressure min: , default: , max: 
+

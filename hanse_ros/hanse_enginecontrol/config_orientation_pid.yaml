@@ -1,0 +1,11 @@
+{
+k_p: 200.0,
+k_i: 0.0,
+k_d: 0.0,
+bias: 0.0,
+i_max: 100,
+frequency: 10.0,
+output_min: -127,
+output_max: 127,
+angular: false
+}
