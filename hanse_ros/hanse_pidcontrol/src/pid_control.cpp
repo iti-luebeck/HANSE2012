@@ -230,6 +230,10 @@ bool PIDControl::enable(hanse_pidcontrol::Enable::Request &req,
 	boost::mutex::scoped_lock(mutex_);
 	if (req.enable) {
 		ROS_INFO("Enabling hanse_pidcontrol");
+		target_ = 0.0;
+		i_ = 0.0;
+		received_input_ = false;
+		prev_error_ = 0.0;
 		enabled_ = true;
 	} else {
 		ROS_INFO("Disabling hanse_pidcontrol");
