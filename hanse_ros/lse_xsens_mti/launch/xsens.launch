@@ -1,0 +1,6 @@
+<launch>
+  <node name="xsens_driver" type="mti_node" pkg="lse_xsens_mti">
+    <param name="port" value="/dev/ttyUSB_imu" />
+    <param name="baudrate" value="921600" />
+  </node>
+</launch>

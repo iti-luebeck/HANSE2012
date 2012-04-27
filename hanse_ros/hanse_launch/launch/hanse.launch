@@ -1,0 +1,10 @@
+<launch>
+  <!-- alles starten was auf hanse selber laufen soll -->
+  <!-- sonar treiber -->
+  <include ns="hanse" file="$(find hanse_sonardriver)/launch/sonardriver.launch" />
+  <!-- xsens treiber -->
+  <group>
+    <remap from="/hanse/imu/data" to="/hanse/imu" />
+    <include ns="hanse" file="$(find lse_xsens_mti)/launch/xsens.launch" />
+  </group>
+</launch>
