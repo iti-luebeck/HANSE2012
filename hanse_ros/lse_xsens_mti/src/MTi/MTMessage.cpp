@@ -40,7 +40,7 @@
 Xsens::MTMessage::MTMessage(MTMessageIdentifier newMessageID, std::vector<unsigned char> * newData, MTMessageIdentifier ack) : data()
 {
 	messageID = newMessageID;
-	if(newData!=NULL) data = *newData;
+	if(newData) data = *newData;
 	messageAck = ack;
 }
 
