@@ -55,6 +55,12 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	imuQueue.pop_front();
 	update = true;
     }
+
+    ROS_INFO("queue length %i", (int) imuQueue.size());
+    ROS_INFO("sonar time %i", msg.header.stamp.sec);
+    if (!imuQueue.empty())
+	ROS_INFO("imu time %i", imuQueue.front().header.stamp.sec);
+
     if (update) {
 	particleFilter.imuUpdate();
     }
@@ -115,6 +121,8 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 
 void Localization::imuCallback(const sensor_msgs::Imu &msg)
 {
+    if (!imuQueue.empty() && imuQueue.front().header.stamp > msg.header.stamp)
+	imuQueue.clear();
     imuQueue.push_back(msg);
 }
 
