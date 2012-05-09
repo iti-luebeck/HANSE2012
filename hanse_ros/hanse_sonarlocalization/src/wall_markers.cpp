@@ -25,7 +25,7 @@ void WallMarkers::wallCallback(const hanse_msgs::WallDetection &wall)
 	visualization_msgs::Marker m;
 	m.header.stamp = ros::Time::now();
 	m.header.frame_id = "/map";
-	m.ns = "wall_points";
+	m.ns = "scan_lines";
 	m.id = frameID;
 	m.type = visualization_msgs::Marker::LINE_STRIP;
 	m.action = visualization_msgs::Marker::ADD;
@@ -51,20 +51,44 @@ void WallMarkers::wallCallback(const hanse_msgs::WallDetection &wall)
 	m.points.push_back(start);
 	m.points.push_back(end);
 
-	markers.push_back(m);
+	lineMarkers.push_back(m);
+
+	m.ns = "wall_points";
+	m.type = visualization_msgs::Marker::SPHERE_LIST;
+	m.points.clear();
+	m.scale.x = 0.5;
+	m.scale.y = 0.5;
+	m.scale.z = 0.5;
+	m.color.r = 1;
+	for (float d : wall.distances) {
+	    geometry_msgs::Point p;
+	    p.x = d * cos(wall.headPosition);
+	    p.y = d * sin(wall.headPosition);
+	    m.points.push_back(p);
+	}
+	wallMarkers.push_back(m);
+
     }
 
     frameID++;
 
-    if (!markers.empty() && markers.front().id < frameID - 60) {
-	visualization_msgs::Marker &m = markers.front();
+    if (!lineMarkers.empty() && lineMarkers.front().id < frameID - 60) {
+	visualization_msgs::Marker &m = lineMarkers.front();
 	m.action = visualization_msgs::Marker::DELETE;
 	markerPublisher.publish(m);
-	markers.pop_front();
+	lineMarkers.pop_front();
+
+	visualization_msgs::Marker &m2 = wallMarkers.front();
+	m2.action = visualization_msgs::Marker::DELETE;
+	markerPublisher.publish(m2);
+	wallMarkers.pop_front();
     }
-    for (auto &m : markers) {
+    for (auto &m : lineMarkers) {
 	if (m.id < frameID - 10)
 	    m.color.b = 0.5;
+	markerPublisher.publish(m);
+    }
+    for (auto &m : wallMarkers) {
 	markerPublisher.publish(m);
     }
 }

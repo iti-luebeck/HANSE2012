@@ -27,7 +27,8 @@ private:
     geometry_msgs::Pose position;
     int frameID;
 
-    std::deque<visualization_msgs::Marker> markers;
+    std::deque<visualization_msgs::Marker> lineMarkers;
+    std::deque<visualization_msgs::Marker> wallMarkers;
 };
 
 #endif
