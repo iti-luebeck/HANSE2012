@@ -36,14 +36,30 @@ WorldMap::WorldMap(const std::string &mapFile, float pixelSize, float threshold)
     //cv::waitKey(0);
     distanceMap = Eigen::ArrayXXf(image.rows, image.cols);
 
+    ogMap.header.stamp = ros::Time::now();
+    ogMap.header.frame_id = "/map";
+    ogMap.info.map_load_time = ogMap.header.stamp;
+    ogMap.info.resolution = pixelSize;
+    ogMap.info.width = image.cols;
+    ogMap.info.height = image.rows;
+    ogMap.info.origin.position.x = 0;
+    ogMap.info.origin.position.y = 0;
+    ogMap.info.origin.position.z = 0;
+    ogMap.info.origin.orientation.x = 0;
+    ogMap.info.origin.orientation.y = 0;
+    ogMap.info.origin.orientation.z = 0;
+    ogMap.info.origin.orientation.w = 1;
+    ogMap.data.resize(image.cols * image.rows);
     for (int y = 0; y < image.rows; y++) {
 	for (int x = 0; x < image.cols; x++) {
-	    distanceMap(y, x) = signedDistance.at<float>(y, x);
+	    float val = signedDistance.at<float>(y, x);
+	    distanceMap(y, x) = val;
+	    ogMap.data[y * image.cols + x] = val < 0 ? 0 : 100;
 	}
     }
 }
 
-float WorldMap::wallDistance(Eigen::Vector2f point)
+float WorldMap::wallDistance(Eigen::Vector2f point) const
 {
     Eigen::Vector2f pixelPoint = point / pixelSize;
 
@@ -61,7 +77,7 @@ float WorldMap::wallDistance(Eigen::Vector2f point)
     return distanceMap(y, x);
 }
 
-float WorldMap::directedWallDistance(Eigen::Vector2f point, Eigen::Vector2f direction, float maximum)
+float WorldMap::directedWallDistance(Eigen::Vector2f point, Eigen::Vector2f direction, float maximum) const
 {
     const float eps = 1.5 * pixelSize;
 
@@ -87,7 +103,7 @@ float WorldMap::directedWallDistance(Eigen::Vector2f point, Eigen::Vector2f dire
     }
 }
 
-Eigen::Vector2f WorldMap::mapSize()
+Eigen::Vector2f WorldMap::mapSize() const
 {
   return Eigen::Vector2f(distanceMap.cols() * pixelSize, distanceMap.rows() * pixelSize);
 }

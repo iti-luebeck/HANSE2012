@@ -27,6 +27,7 @@ Localization::Localization(ros::NodeHandle handle) :
     nh(handle),
     particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
     positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
+    mapPublisher(handle.advertise<nav_msgs::OccupancyGrid>("localization/map", 1)),
     sonarSubscriber(handle.subscribe("sonar/scan/walls", 1, &Localization::sonarCallback, this)),
     positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
     imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
@@ -102,6 +103,14 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	     (p_perturb_end-p_perturb_start).toSec(),
 	     (p_move_end-p_move_start).toSec()
 	     );
+
+
+    ros::Time now = ros::Time::now();
+
+    if (lastMapTime == ros::Time() || (now - lastMapTime).toSec() > 5) {
+	mapPublisher.publish(particleFilter.map().occupancyGrid());
+	lastMapTime = now;
+    }
 }
 
 void Localization::imuCallback(const sensor_msgs::Imu &msg)

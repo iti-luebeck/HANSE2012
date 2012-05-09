@@ -34,6 +34,9 @@ public:
     Eigen::Affine2f estimatedPosition();
 
     const ParticleVector &getParticles() const { return particles; }
+
+    const WorldMap &map() const { return worldMap; }
+
 private:
     void weightParticle(Particle &particle, const hanse_msgs::WallDetection &msg);
 
