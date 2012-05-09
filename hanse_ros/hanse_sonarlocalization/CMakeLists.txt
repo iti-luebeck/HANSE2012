@@ -56,3 +56,8 @@ rosbuild_add_executable(sonar_localization
 find_package(OpenCV REQUIRED)
 
 target_link_libraries(sonar_localization ${OpenCV_LIBS})
+
+rosbuild_add_executable(sonar_wall_markers
+  src/wall_markers.cpp
+  src/util.cpp
+)

@@ -195,10 +195,25 @@ void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
     Eigen::Vector3f acceleration(imu.linear_acceleration.x,
 				 imu.linear_acceleration.y,
 				 imu.linear_acceleration.z);
-    Eigen::Quaternionf orientation(imu.orientation.w,
-				   imu.orientation.x,
+
+    // WARNING: yes the parameter order for eigen is the much saner
+    // w x y z _BUT_ the xsens driver writers were too stupid to read the
+    // xsens docs which clearly state that it also uses the w x y z order and
+    // just assumed it would be x y z w, passing in the incorrect data, 
+    Eigen::Quaternionf orientation(imu.orientation.x,
 				   imu.orientation.y,
-				   imu.orientation.z);
+				   imu.orientation.z,
+				   imu.orientation.w);
+
+    orientation = Eigen::AngleAxis<float>(M_PI, Eigen::Vector3f(0, 1, 0)) * orientation;
+
+    Eigen::Matrix3f rotation = orientation.toRotationMatrix();
+
+    Eigen::AngleAxis<float> tmp;
+    tmp.fromRotationMatrix(rotation);
+    
+    ROS_INFO("%f %f %f [%f]", tmp.axis().x(), tmp.axis().y(), tmp.axis().z(), tmp.angle());
+
 
     float interval = (imu.header.stamp - lastImuMsgTime).toSec();
 

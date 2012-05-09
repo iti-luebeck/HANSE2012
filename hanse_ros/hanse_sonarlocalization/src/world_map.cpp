@@ -52,7 +52,9 @@ WorldMap::WorldMap(const std::string &mapFile, float pixelSize, float threshold)
     ogMap.data.resize(image.cols * image.rows);
     for (int y = 0; y < image.rows; y++) {
 	for (int x = 0; x < image.cols; x++) {
-	    float val = signedDistance.at<float>(y, x);
+	    // We convert from computer gfx coordinate space into
+	    // real coordinate space here
+	    float val = signedDistance.at<float>(image.cols - y - 1, x);
 	    distanceMap(y, x) = val;
 	    ogMap.data[y * image.cols + x] = val < 0 ? 0 : 100;
 	}

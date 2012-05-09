@@ -25,9 +25,9 @@ Localization::ParamHelper::ParamHelper()
 Localization::Localization(ros::NodeHandle handle) :
     particleFilter(config, paramHelper.params),
     nh(handle),
-    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
-    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
-    mapPublisher(handle.advertise<nav_msgs::OccupancyGrid>("localization/map", 1)),
+    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("localization/viz/particles", 1)),
+    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("position/estimate", 1)),
+    mapPublisher(handle.advertise<nav_msgs::OccupancyGrid>("localization/viz/map", 1)),
     sonarSubscriber(handle.subscribe("sonar/scan/walls", 1, &Localization::sonarCallback, this)),
     positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
     imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
