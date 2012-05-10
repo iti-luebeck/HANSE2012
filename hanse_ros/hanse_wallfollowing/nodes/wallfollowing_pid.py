@@ -56,9 +56,9 @@ class Init(smach.State):
 		enable(True)
 
 		# Warten bis es eine Imu-Message gab (damit Orientierung des AUV bekannt ist)
-		rospy.loginfo('Waiting for imu message...')
-		while not Global.imuCallbackCalled:
-			rospy.sleep(0.2)
+#IMUTMP		rospy.loginfo('Waiting for imu message...')
+#IMUTMP		while not Global.imuCallbackCalled:
+#IMUTMP			rospy.sleep(0.2)
 
 		return Transitions.InitFinished
 
@@ -126,7 +126,7 @@ class FollowWall(smach.State):
 	def execute(self, userdata):
 		rospy.loginfo('Executing state NoTurn')
 		
-		startHeadPostion = Global.currentHeadPosition
+#IMUTMP		startHeadPostion = Global.currentHeadPosition
 		
 		# pid geregelten angular wert benutzen
 		rospy.loginfo('diff = ' + repr(Global.currentDistance-Config.desiredDistance))
@@ -137,16 +137,16 @@ class FollowWall(smach.State):
 			linearSpeed = numpy.clip(linearSpeed, 0.0, Config.maxSpeed)
 			angularSpeed = Global.angularSpeedOutput
 			
-			if abweichung < 0.5:
-				startHeadPostion = Global.currentHeadPosition
+#IMUTMP			if abweichung < 0.5:
+#IMUTMP				startHeadPostion = Global.currentHeadPosition
 			
-			if Global.angularSpeedOutput==1.0 and Global.currentDistance > Config.desiredDistance and calcRadiansDiff(startHeadPostion, Global.currentHeadPosition) > math.pi/8:
-				rospy.loginfo('nicht weiter drehen')
-				setMotorSpeed(Config.maxSpeed, 0)
-				while Global.currentDistance > Config.desiredDistance+0.1 and not Global.noWall:
-					rospy.sleep(0.1)
-				angularSpeed = numpy.clip(angularSpeed, -1.0, 0)
-				linearSpeed = Config.maxSpeed				
+#IMUTMP			if Global.angularSpeedOutput==1.0 and Global.currentDistance > Config.desiredDistance and calcRadiansDiff(startHeadPostion, Global.currentHeadPosition) > math.pi/8:
+#IMUTMP				rospy.loginfo('nicht weiter drehen')
+#IMUTMP				setMotorSpeed(Config.maxSpeed, 0)
+#IMUTMP				while Global.currentDistance > Config.desiredDistance+0.1 and not Global.noWall:
+#IMUTMP					rospy.sleep(0.1)
+#IMUTMP				angularSpeed = numpy.clip(angularSpeed, -1.0, 0)
+#IMUTMP				linearSpeed = Config.maxSpeed				
 				
 			setMotorSpeed(linearSpeed, angularSpeed) # Config.maxSpeed-(Config.maxSpeed-0.1)*math.fabs(Global.angularSpeedOutput)
 			rospy.sleep(0.1)
@@ -220,7 +220,7 @@ def quatToAngles(x,y,z,w):
 		angles[2] = 0.5*math.pi
 		angles[0] = 0
 	elif test < -0.499 * unit: # singularity at south pole
-		angles[1] = -2 * FastMath.atan2(x, w)
+		angles[1] = -2 * math.atan2(x, w)
 		angles[2] = -0.5*math.pi
 		angles[0] = 0
 	else:
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 	# Subscriber/Publisher
 	rospy.Subscriber('/echosounderaveragedistance', Float32, echoSounderAvgCallback)
 	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
-	rospy.Subscriber('imu', Imu, imuCallback)
+#IMUTMP	rospy.Subscriber('imu', Imu, imuCallback)
 	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
 	pub_motor_right = rospy.Publisher('motors/right', sollSpeed)
 	pub_angular_target = rospy.Publisher('/wallfollowing_angular_pid/target', Float64)
@@ -274,10 +274,8 @@ if __name__ == '__main__':
 
     # Execute SMACH plan
 	outcome = sm.execute()
+
 	rospy.loginfo('state machine stopped')
-	
-	# auv stoppen
-	setMotorSpeed(0, 0)
 
 	#rospy.spin()
 	sis.stop()
