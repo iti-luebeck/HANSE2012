@@ -8,9 +8,8 @@ ParticleFilter::ParticleFilter(hanse_sonarlocalization::ParticleFilterConfig con
     config(config),
     worldMap(params.map_image, params.map_pixel_size, params.map_threshold)
 {
-    lastImuOrientation = Eigen::Quaternion<float>::Identity();
-    //    imuPosition = Eigen::Affine3f::Identity();
-    //    imuVelocity = Eigen::Vector3f(0, 0, 0);
+    imuInitialized = false;
+    accelerationMean = Eigen::Vector2f(0, 0);
 }
 
 void ParticleFilter::reconfigure(hanse_sonarlocalization::ParticleFilterConfig config)
@@ -74,7 +73,7 @@ void ParticleFilter::perturb()
     Eigen::MatrixXf acceleration = randNormal(2, config.particle_count, config.perturb_velocity, 0);
     Eigen::MatrixXf rotation = randNormal(1, config.particle_count, config.perturb_rotation, 0);
     for (int i = 0; i < config.particle_count; i++) {
-	particles[i].velocity = (particles[i].velocity * 0.99) + Eigen::Vector2f(acceleration.col(i));
+	particles[i].velocity = particles[i].velocity + Eigen::Vector2f(acceleration.col(i));
 	particles[i].position.pretranslate(Eigen::Vector2f(distance.col(i)));
 	particles[i].position.rotate(rotation(0, i));
     }
@@ -190,38 +189,60 @@ void ParticleFilter::weightParticle(Particle &particle, const hanse_msgs::WallDe
 
 void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
 {
-    // TODO: all the acceleration based code needs
-    // some rework with real world test data
-
-    /*
-    Eigen::Vector3f acceleration(imu.linear_acceleration.x,
-				 imu.linear_acceleration.y,
-				 imu.linear_acceleration.z);
-    */
-
     // WARNING: yes the parameter order for eigen is the much saner
     // w x y z _BUT_ the xsens driver writers were too stupid to read the
     // xsens docs which clearly state that it also uses the w x y z order and
     // just assumed it would be x y z w, passing in the incorrect data.
-    Eigen::Quaternionf orientation(imu.orientation.x,
-				   imu.orientation.y,
-				   imu.orientation.z,
-				   imu.orientation.w);
-
-    // This orientation rotates a vector of the AUV coordinate system
-    // into the global coordinate system (I doubt that this is what
-    // ROS expects in a imu message, but it is what the xsens delivers
-    // and the driver passes through), the particle filter works with
-    // transforms that transform the global coordinate system into the
-    // AUV, thus we need to invert this as a first step.
-    orientation = orientation.inverse();
+    Eigen::Quaternionf orientationFlipped(imu.orientation.x,
+					  imu.orientation.y,
+					  imu.orientation.z,
+					  imu.orientation.w);
 
     // This undos the rotation of the xsens (180 deg around the y
     // axis) this is why: we first (right side) put the xsens into hanse the
     // wrong way around and _then_ move hanse around (left side) so
     // the inverse of the xsens orientation has to be at the right
     // side too for them to cancle
-    orientation = orientation * Eigen::AngleAxis<float>(M_PI, Eigen::Vector3f(0, 1, 0));
+    Eigen::Quaternionf orientation = orientationFlipped * Eigen::AngleAxis<float>(M_PI, Eigen::Vector3f(0, 1, 0));
+
+    // We assume that all particles have this orientation (i. e. the
+    // last orientation we used to update them, projected onto the
+    // xy-plane)
+    float lastTheta = localization::thetaFromQuaternion(lastImuOrientation);
+    Eigen::Quaternionf particleBase;
+    particleBase = Eigen::AngleAxis<float>(lastTheta, Eigen::Vector3f(0, 0, 1));
+
+    Eigen::Vector3f accelerationAUV(imu.linear_acceleration.x,
+				    imu.linear_acceleration.y,
+				    imu.linear_acceleration.z);
+
+
+    // the acceleration is in AUV space, so we transform it into world
+    // space first and then into particle space
+    Eigen::Vector3f accelerationParticle = particleBase.inverse() * orientationFlipped * accelerationAUV;
+
+    // When we arrived in particle space we can discard the z
+    // component (this will only be rotated around the z axis, and the
+    // z component itself won't be used again)
+    Eigen::Vector2f accelerationParticle2D = Eigen::Vector2f(accelerationParticle.x(),
+							     accelerationParticle.y());
+
+
+    ROS_INFO("particle acceleration: %8.5f %8.5f", accelerationParticle2D.x(), accelerationParticle2D.y());
+
+    ROS_INFO("particle acceleration mean: %8.5f %8.5f", accelerationMean.x(), accelerationMean.y());
+
+
+    // To do anything usefull with the acceleration we need to know the time step
+    float dt = (imu.header.stamp - lastImuMsgTime).toSec();
+
+    // TODO: better results might be obtained below by using the midpoint
+    // method or similar if applicable (check this)
+
+    // We integrate the velocity once and the acceleration twice to obtain the offset
+    offsetParticle += dt * velocityParticle + 0.5 * dt * dt * accelerationParticle2D;
+    // We integrate the acceleration to obtain the velocity
+    velocityParticle += dt * accelerationParticle2D;
 
     imuOrientation = orientation;
 
@@ -230,19 +251,36 @@ void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
 
 void ParticleFilter::imuUpdate()
 {
-    // TODO: handle initialization
-    Eigen::Quaternionf imuRelativeOrientation = imuOrientation * lastImuOrientation.inverse();
-    Eigen::Vector3f direction = imuRelativeOrientation * Eigen::Vector3f(1, 0, 0);
+    if (imuInitialized) {
+	// Doing the projection onto the 2d plane first should be more
+	// accurate when pitch and roll are nonzero
+	float lastTheta = localization::thetaFromQuaternion(lastImuOrientation);
+	float theta = localization::thetaFromQuaternion(imuOrientation);
 
-    float deltaTheta = atan2f(direction.y(), direction.x());
+	float deltaTheta = theta - lastTheta;
 
-    if (config.imu_motion) {
-	// TODO, rewrite
-	ROS_ERROR("imu motion not implemented yet");
-    } else {
-	for (auto &particle : particles) {
-	    particle.position = particle.position * Eigen::Rotation2D<float>(deltaTheta);
+	ROS_INFO("particle velocity: %8.5f %8.5f", velocityParticle.x(), velocityParticle.y());
+	ROS_INFO("particle offset: %8.5f %8.5f", offsetParticle.x(), offsetParticle.y());
+
+
+	if (config.imu_motion) {
+	    for (auto &particle : particles) {
+		// velocity delta is relative to our current orientation
+		particle.velocity += particle.position.rotation() * velocityParticle;
+		// we have our current position and orientation, add the
+		// offset to that and _then_ turn the particle
+		particle.position = particle.position *
+		    Eigen::Translation2f(offsetParticle) * Eigen::Rotation2D<float>(deltaTheta);
+	    }
+	} else {
+	    for (auto &particle : particles) {
+		particle.position = particle.position * Eigen::Rotation2D<float>(deltaTheta);
+	    }
 	}
     }
+
     lastImuOrientation = imuOrientation;
+    velocityParticle = Eigen::Vector2f(0, 0);
+    offsetParticle = Eigen::Vector2f(0, 0);
+    imuInitialized = true;
 }

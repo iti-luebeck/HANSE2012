@@ -7,6 +7,7 @@
 namespace localization {
     Eigen::Affine2f positionFromPose(const geometry_msgs::Pose &pose);
     Eigen::Affine2f positionFromAffine3(Eigen::Affine3f affine);
+    float thetaFromQuaternion(Eigen::Quaternionf quat);
 }
 
 #endif

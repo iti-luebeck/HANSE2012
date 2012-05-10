@@ -56,14 +56,7 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	update = true;
     }
 
-    ROS_INFO("queue length %i", (int) imuQueue.size());
-    ROS_INFO("sonar time %i", msg.header.stamp.sec);
-    if (!imuQueue.empty())
-	ROS_INFO("imu time %i", imuQueue.front().header.stamp.sec);
-
-    if (update) {
-	particleFilter.imuUpdate();
-    }
+    
 
     p_perturb_start = ros::Time::now();
     particleFilter.perturb();
@@ -75,6 +68,11 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
     }
     p_move_end = ros::Time::now();
     lastMsgTime = msg.header.stamp;
+
+    if (update) {
+	particleFilter.imuUpdate();
+    }
+
 
     p_weight_start = ros::Time::now();
     particleFilter.weightParticles(msg);
@@ -102,6 +100,7 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
     }
     particlePublisher.publish(particles);
     p_end = ros::Time::now();
+    /*
     ROS_INFO("Duration %f (w: %f, r: %f, p: %f, m: %f)",
 	     (p_end-p_start).toSec(),
 	     (p_weight_end-p_weight_start).toSec(),
@@ -109,7 +108,7 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	     (p_perturb_end-p_perturb_start).toSec(),
 	     (p_move_end-p_move_start).toSec()
 	     );
-
+    */
 
     ros::Time now = ros::Time::now();
 

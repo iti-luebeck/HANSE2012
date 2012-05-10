@@ -49,8 +49,12 @@ private:
     WorldMap worldMap;
 
     // these are in particle coordinates (unlike the velocity of a particle which is in world coordinates)
+    bool imuInitialized;
     Eigen::Quaternionf imuOrientation; // coordinates of last particle update
     Eigen::Quaternionf lastImuOrientation;
+    Eigen::Vector2f velocityParticle;
+    Eigen::Vector2f offsetParticle;
+    Eigen::Vector2f accelerationMean;
 
     ros::Time lastImuMsgTime;
 };
