@@ -54,16 +54,19 @@ void WallMarkers::wallCallback(const hanse_msgs::WallDetection &wall)
 	lineMarkers.push_back(m);
 
 	m.ns = "wall_points";
-	m.type = visualization_msgs::Marker::SPHERE_LIST;
+	m.type = visualization_msgs::Marker::LINE_LIST;
 	m.points.clear();
-	m.scale.x = 0.5;
+	m.scale.x = 0.1;
 	m.scale.y = 0.5;
 	m.scale.z = 0.5;
 	m.color.r = 1;
 	for (float d : wall.distances) {
 	    geometry_msgs::Point p;
-	    p.x = d * cos(wall.headPosition);
-	    p.y = d * sin(wall.headPosition);
+	    p.x = d * cos(wall.headPosition+M_PI/50);
+	    p.y = d * sin(wall.headPosition+M_PI/50);
+	    m.points.push_back(p);
+	    p.x = d * cos(wall.headPosition-M_PI/50);
+	    p.y = d * sin(wall.headPosition-M_PI/50);
 	    m.points.push_back(p);
 	}
 	wallMarkers.push_back(m);
