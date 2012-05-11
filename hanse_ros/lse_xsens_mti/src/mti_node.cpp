@@ -91,6 +91,7 @@ int main(int argc, char** argv)
   	while(ros::ok())
 	{	
 	    if (mti->flag() != lastFlag && ! mti->busy()) {
+		lastFlag = ! lastFlag;
 		sensor_msgs::Imu mti_msg;
 		mti_msg.header.stamp = ros::Time::now();
 		mti_msg.header.frame_id = frame_id.c_str();
