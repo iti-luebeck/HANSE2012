@@ -32,3 +32,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 rosbuild_add_executable(mti_node src/mti_node.cpp src/MTi/MTi.cpp src/MTi/MTMessage.cpp)
 target_link_libraries(mti_node cereal_port)
 
+rosbuild_add_executable(component_fix src/component_fix.cpp)

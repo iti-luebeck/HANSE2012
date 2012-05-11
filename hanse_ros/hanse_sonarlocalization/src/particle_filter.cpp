@@ -189,14 +189,10 @@ void ParticleFilter::weightParticle(Particle &particle, const hanse_msgs::WallDe
 
 void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
 {
-    // WARNING: yes the parameter order for eigen is the much saner
-    // w x y z _BUT_ the xsens driver writers were too stupid to read the
-    // xsens docs which clearly state that it also uses the w x y z order and
-    // just assumed it would be x y z w, passing in the incorrect data.
-    Eigen::Quaternionf orientationFlipped(imu.orientation.x,
+    Eigen::Quaternionf orientationFlipped(imu.orientation.w,
+					  imu.orientation.x,
 					  imu.orientation.y,
-					  imu.orientation.z,
-					  imu.orientation.w);
+					  imu.orientation.z);
 
     // This undos the rotation of the xsens (180 deg around the y
     // axis) this is why: we first (right side) put the xsens into hanse the
