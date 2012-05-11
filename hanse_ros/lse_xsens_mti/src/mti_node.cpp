@@ -91,7 +91,6 @@ int main(int argc, char** argv)
   	while(ros::ok())
 	{	
 	    if (mti->flag() != lastFlag && ! mti->busy()) {
-		lastFlag = ! lastFlag;
 		sensor_msgs::Imu mti_msg;
 		mti_msg.header.stamp = ros::Time::now();
 		mti_msg.header.frame_id = frame_id.c_str();
@@ -108,9 +107,10 @@ int main(int argc, char** argv)
 		mti_msg.linear_acceleration.x = mti->accelerometer_x();
 		mti_msg.linear_acceleration.y = mti->accelerometer_y();
 		mti_msg.linear_acceleration.z = mti->accelerometer_z();
-		
-		mti_pub.publish(mti_msg);
-		
+		if (mti->flag() != lastFlag) {
+		    mti_pub.publish(mti_msg);
+		    lastFlag = !lastFlag;
+		}
 		r.sleep();
 	    }
 	}
