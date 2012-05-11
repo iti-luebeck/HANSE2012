@@ -4,6 +4,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Quaternion.h>
 #include <sensor_msgs/Imu.h>
+#include <hanse_msgs/EngineCommands.h>
 #include <hanse_msgs/pressure.h>
 #include <hanse_msgs/sollSpeed.h>
 #include <hanse_pidcontrol/GetOutput.h>
@@ -32,7 +33,7 @@ private:
 	ros::Subscriber subVelocity;
 	ros::Subscriber subXsens;
 
-	ros::Subscriber subSwitchPids;
+	ros::Subscriber subEngineCommands;
 
 	ros::Subscriber subDepthOutput;
 	ros::Subscriber subOrientationOutput;
@@ -72,6 +73,9 @@ private:
 	double rotationSpeedScale;
 	double rotationSpeedTarget;
 
+	bool emergencyStop;
+	bool depthPidEnabled;
+
 	// Ausgabewerte der PID-Regler.
 	int8_t depthOutput;
 	int8_t orientationOutput;
@@ -86,7 +90,7 @@ private:
 	void velocityCallback(const geometry_msgs::Twist::ConstPtr& twist);
 	void xsensCallback(const sensor_msgs::Imu::ConstPtr& xsensData);
 
-	void switchPids(const std_msgs::Bool::ConstPtr& enableRotationSpeedPid);
+	void engineCommandsCallback(const hanse_msgs::EngineCommands::ConstPtr& engineCommands);
 
 	void depthOutputCallback(const std_msgs::Float64::ConstPtr& depthOutput);
 	void orientationTargetCallback(const std_msgs::Float64::ConstPtr& orientationTarget);
@@ -106,6 +110,8 @@ EngineControl::EngineControl() :
             orientationTarget(0),
             rotationSpeedCurrent(0),
             rotationSpeedTarget(0),
+            emergencyStop(false),
+            depthPidEnabled(false),
             depthOutput(0),
             orientationOutput(0),
             rotationSpeedOutput(0)
@@ -144,8 +150,8 @@ EngineControl::EngineControl() :
 	subXsens = node.subscribe<sensor_msgs::Imu>(
 			"/hanse/imu", 10, &EngineControl::xsensCallback, this);
 
-	subSwitchPids = node.subscribe<std_msgs::Bool>("/hanse/commands/switchPid", 10,
-			&EngineControl::switchPids, this);
+	subEngineCommands = node.subscribe<hanse_msgs::EngineCommands>("/hanse/commands/engineCommands", 10,
+			&EngineControl::engineCommandsCallback, this);
 
 	subDepthOutput = node.subscribe<std_msgs::Float64>(
 			"/hanse/pid/depth/output", 10, &EngineControl::depthOutputCallback, this);
@@ -171,8 +177,9 @@ EngineControl::EngineControl() :
 	// Aktivierung der Standard-PID-Regler.
 	ros::Rate loopRate(10);
  	while(ros::ok()) {
-		if (depthPid.call(enableMsg) && orientationPid.call(enableMsg)) {
+		if (depthPid.call(enableMsg)) {
 			ROS_INFO("PIDs enabled.");
+                        depthPidEnabled = true;
 			break;
 		}
 		else {
@@ -229,35 +236,35 @@ void EngineControl::xsensCallback(
 
 // Wechseln zwischen den PID-Reglern für die Drehbewegung. Direkter Zusammenhang
 // mit der Handcontrol.
-void EngineControl::switchPids(
-		const std_msgs::Bool::ConstPtr& enableRotationSpeedPid) {
+void EngineControl::engineCommandsCallback(
+		const hanse_msgs::EngineCommands::ConstPtr& engineCommands) {
 
 	boost::mutex::scoped_lock(mutex);
 
 	// Nachrichten anlegen.
-	hanse_pidcontrol::Enable rotationSpeedPidMsg;
+
+	emergencyStop = engineCommands->emergencyStop;
+
+/*	hanse_pidcontrol::Enable rotationSpeedPidMsg;
 	rotationSpeedPidMsg.request.enable = enableRotationSpeedPid->data;
 	hanse_pidcontrol::Enable orientationPidMsg;
 	orientationPidMsg.request.enable = !(enableRotationSpeedPid->data);
 
 	ros::Rate loopRate(10);
 
-	while(ros::ok()) {
-		if (rotationSpeedPid.call(rotationSpeedPidMsg) && orientationPid.call(orientationPidMsg)) {
-			ROS_INFO("RotationSpeed-PID enabled, Orientation-PID disabled.");
-			break;
-		} else {
-			ROS_INFO("PIDs could not be switched.");	
-		}
-
-		loopRate.sleep();
+	while(ros::ok() && !(rotationSpeedPid.call(rotationSpeedPidMsg) && orientationPid.call(orientationPidMsg))) {
+	    ROS_INFO("PIDs could not be switched.");	
+	    loopRate.sleep();
 	}
 
     if (enableRotationSpeedPid->data) {
         orientationOutput = 0;
+	ROS_INFO("RotationSpeed-PID enabled, Orientation-PID disabled.");
     } else {
         rotationSpeedOutput = 0;
+	ROS_INFO("RotationSpeed-PID disabled, Orientation-PID enabled.");
     }
+*/
 }
 
 // Auswertung und Zwischenspeicherung der Ausgabedaten des Druck-PID-Reglers.
@@ -302,83 +309,143 @@ void EngineControl::publishTimerCallback(const ros::TimerEvent &e) {
 
 	boost::mutex::scoped_lock(mutex);
 
-	// Tiefensteuerung.
-	std_msgs::Float64 depthTargetMsg;
-	depthTargetMsg.data = depthTarget + pressureBias;
+	if(emergencyStop) {
+		if(depthPidEnabled) {
+			hanse_pidcontrol::Enable disableMsg;
+			disableMsg.request.enable = false;
 
-	pubDepthTarget.publish(depthTargetMsg);
+			// Aktivierung der Standard-PID-Regler.
+			ros::Rate loopRate(10);
+		 	while(ros::ok()) {
+				if (depthPid.call(disableMsg)) {
+					ROS_INFO(" Depth-PID disabled.");
+		                        depthPidEnabled = false;
+					break;
+				}
+				else {
+					ROS_INFO("Depth-PID could not be disabled.");	
+				}
 
-	std_msgs::Float64 depthCurrentMsg;
-	depthCurrentMsg.data = pressureCurrent;
-
-	pubDepthCurrent.publish(depthCurrentMsg);
-
-	// Drehgeschwindigkeitssteuerung.
-	std_msgs::Float64 rotationSpeedTargetMsg;
-	rotationSpeedTargetMsg.data = rotationSpeedTarget;
-
-	std_msgs::Float64 rotationSpeedCurrentMsg;
-	rotationSpeedCurrentMsg.data = rotationSpeedCurrent;
-
-	pubRotationSpeedTarget.publish(rotationSpeedTargetMsg);
-	pubRotationSpeedCurrent.publish(rotationSpeedCurrentMsg);
-
-	// Orientierungssteuerung.
-	std_msgs::Float64 orientationCurrentMsg;
-	double rotation;
-	double absoluteDistance = std::abs(orientationTarget) + std::abs(orientationCurrent);
-
-	if(absoluteDistance < M_PI || absoluteDistance == std::abs(orientationTarget + orientationCurrent)) {
-		rotation = -(orientationTarget - orientationCurrent);
-	} else {
-		absoluteDistance = orientationTarget - orientationCurrent;
-
-		if(absoluteDistance < 0.0) {
-			rotation = -(absoluteDistance + 2 * M_PI);
-		} else {
-			rotation = -(absoluteDistance - 2 * M_PI);
+				loopRate.sleep();
+			}			
 		}
-	}
+		// Tiefe auf 0 setzen
+		depthTarget = 0;
+		linearSpeedTarget = 0;
+                rotationSpeedTarget = 0;
+		
+		hanse_msgs::sollSpeed stopMsg;
+		stopMsg.data = 0;
 
-	orientationCurrentMsg.data = rotation;
-	pubOrientationCurrent.publish(orientationCurrentMsg);
+		hanse_msgs::sollSpeed fullUpMsg;
+		fullUpMsg.data = 127;
 
+		pubMotorLeft.publish(stopMsg);
+		pubMotorRight.publish(stopMsg);
 
-	// Motorsteuerung
-	int16_t motorLeft = 0;
-	int16_t motorRight = 0;
+		pubMotorFront.publish(fullUpMsg);
+		pubMotorRear.publish(fullUpMsg);
+	} else {
+            	if(!depthPidEnabled) {
+			hanse_pidcontrol::Enable enableMsg;
+			enableMsg.request.enable = true;
 
-	// Berechnung der Ansteuerungsstärke der seitlichen Motoren.
-	motorLeft = linearSpeedTarget * 127 - rotationSpeedOutput - orientationOutput;
-	motorRight = linearSpeedTarget * 127 + rotationSpeedOutput + orientationOutput;
+			// Aktivierung des Tiefen-PID-Reglers.
+			ros::Rate loopRate(10);
+	 		while(ros::ok()) {
+				if (depthPid.call(enableMsg)) {
+					ROS_INFO("Depth-PID enabled.");
+	        	                depthPidEnabled = true;
+					break;
+				}
+				else {
+					ROS_INFO("Depth-PID could not be enabled.");	
+				}
+
+				loopRate.sleep();
+			}
+            	}
+
+	  	// Tiefensteuerung.
+ 		std_msgs::Float64 depthTargetMsg;
+		depthTargetMsg.data = depthTarget + pressureBias;
+
+		pubDepthTarget.publish(depthTargetMsg);
+
+		std_msgs::Float64 depthCurrentMsg;
+		depthCurrentMsg.data = pressureCurrent;
+
+		pubDepthCurrent.publish(depthCurrentMsg);
+
+		// Drehgeschwindigkeitssteuerung.
+		std_msgs::Float64 rotationSpeedTargetMsg;
+		rotationSpeedTargetMsg.data = rotationSpeedTarget;
+
+		std_msgs::Float64 rotationSpeedCurrentMsg;
+		rotationSpeedCurrentMsg.data = rotationSpeedCurrent;
+
+		pubRotationSpeedTarget.publish(rotationSpeedTargetMsg);
+		pubRotationSpeedCurrent.publish(rotationSpeedCurrentMsg);
+
+		// Orientierungssteuerung.
+		std_msgs::Float64 orientationCurrentMsg;
+		double rotation;
+		double absoluteDistance = std::abs(orientationTarget) + std::abs(orientationCurrent);
+
+		if(absoluteDistance < M_PI || absoluteDistance == std::abs(orientationTarget + orientationCurrent)) {
+			rotation = -(orientationTarget - orientationCurrent);
+		} else {
+			absoluteDistance = orientationTarget - orientationCurrent;
+
+			if(absoluteDistance < 0.0) {
+				rotation = -(absoluteDistance + 2 * M_PI);
+			} else {
+				rotation = -(absoluteDistance - 2 * M_PI);
+			}
+		}
+
+		orientationCurrentMsg.data = rotation;
+		pubOrientationCurrent.publish(orientationCurrentMsg);
+
+		// Motorsteuerung
+		int16_t motorLeft = 0;
+		int16_t motorRight = 0;
+
+		// Berechnung der Ansteuerungsstärke der seitlichen Motoren.
+		//motorLeft = linearSpeedTarget * 127 - rotationSpeedOutput - orientationOutput;
+		//motorRight = linearSpeedTarget * 127 + rotationSpeedOutput + orientationOutput;
 	
-	// Beschränkung der Ansteuerungsstärke auf -127 bis 127.
-	if(motorLeft > 127) {
-		motorLeft = 127;
-	} else if(motorLeft < -127) {
-		motorLeft = -127;
+		motorLeft = linearSpeedTarget * 127 - rotationSpeedTarget * 127;
+		motorRight = linearSpeedTarget * 127 + rotationSpeedTarget * 127;
+
+		// Beschränkung der Ansteuerungsstärke auf -127 bis 127.
+		if(motorLeft > 127) {
+			motorLeft = 127;
+		} else if(motorLeft < -127) {
+			motorLeft = -127;
+		}
+
+		if(motorRight > 127) {
+			motorRight = 127;
+		} else if(motorRight < -127) {
+			motorRight = -127;
+		}
+
+		hanse_msgs::sollSpeed motorLeftMsg;
+		motorLeftMsg.data = motorLeft;
+
+		hanse_msgs::sollSpeed motorRightMsg;
+		motorRightMsg.data = motorRight;
+
+		pubMotorLeft.publish(motorLeftMsg);
+		pubMotorRight.publish(motorRightMsg);
+
+		hanse_msgs::sollSpeed motorHeightMsg;
+		motorHeightMsg.data = -depthOutput;
+
+		pubMotorFront.publish(motorHeightMsg);
+		pubMotorRear.publish(motorHeightMsg);
 	}
-
-	if(motorRight > 127) {
-		motorRight = 127;
-	} else if(motorRight < -127) {
-		motorRight = -127;
-	}
-
-	hanse_msgs::sollSpeed motorLeftMsg;
-	motorLeftMsg.data = motorLeft;
-
-	hanse_msgs::sollSpeed motorRightMsg;
-	motorRightMsg.data = motorRight;
-
-	pubMotorLeft.publish(motorLeftMsg);
-	pubMotorRight.publish(motorRightMsg);
-
-	hanse_msgs::sollSpeed motorHeightMsg;
-	motorHeightMsg.data = -depthOutput;
-
-	pubMotorFront.publish(motorHeightMsg);
-	pubMotorRear.publish(motorHeightMsg);
 }
 
 int main(int argc, char** argv) {

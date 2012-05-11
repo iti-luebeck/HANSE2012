@@ -2,21 +2,17 @@
 
 Reads and maintains the following parameters on the ROS server
 
-- \b "~server_hosts" : \b [str] comma separated search list of hostnames for server min: , default: , max: 
-- \b "~server_port" : \b [int] ip port of server min: -2147483648, default: 8080, max: 2147483647
 - \b "~frequency" : \b [int] how often to send data to server min: -2147483648, default: 1, max: 2147483647
 - \b "~joy_gate" : \b [double] min raw joystick value to be considered != 0 min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
 - \b "~scale_linear" : \b [double] scale factor for linear speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
 - \b "~scale_angular" : \b [double] scale factor for angular speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
-- \b "~scale_depth" : \b [double] scale factor for depth speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
 - \b "~axis_linear" : \b [int] js axis for linear speed min: -2147483648, default: 1, max: 2147483647
 - \b "~axis_angular" : \b [int] js axis for angular speed min: -2147483648, default: 1, max: 2147483647
 - \b "~axis_depth" : \b [int] js axis for depth speed min: -2147483648, default: 1, max: 2147483647
-- \b "~use_throttle" : \b [bool] use throttle instead of up/down buttons min: False, default: False, max: True
 - \b "~depth_delta" : \b [int] how to go up/down in each step min: -2147483648, default: 1, max: 2147483647
 - \b "~button_down" : \b [int] button to go down min: -2147483648, default: 1, max: 2147483647
 - \b "~button_up" : \b [int] button to go up min: -2147483648, default: 1, max: 2147483647
-- \b "~button_emegency_stop" : \b [int] js button for emergency stop min: -2147483648, default: 1, max: 2147483647
+- \b "~button_emergency_stop" : \b [int] js button for emergency stop min: -2147483648, default: 1, max: 2147483647
 - \b "~button_hand_control_enable" : \b [int] js button to enable hand control min: -2147483648, default: 1, max: 2147483647
 - \b "~button_hand_control_disable" : \b [int] js button to disable hand control min: -2147483648, default: 1, max: 2147483647
 

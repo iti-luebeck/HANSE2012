@@ -5,6 +5,7 @@
 #include <dynamic_reconfigure/server.h>
 
 #include <hanse_gamepad/NodeConfig.h>
+#include <hanse_msgs/EngineCommands.h>
 
 class TeleopHanse
 {
@@ -23,7 +24,7 @@ private:
   ros::Timer control_loop_timer;
 
   ros::Publisher pub_cmd_vel;
-  ros::Publisher pub_switchPid;
+  ros::Publisher pub_engineCommands;
   ros::Subscriber sub_joy;
 
   double value_linear;
@@ -58,7 +59,7 @@ TeleopHanse::TeleopHanse() {
   button_down = false;
 
   pub_cmd_vel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 1);
-  pub_switchPid = node.advertise<std_msgs::Bool>("/hanse/commands/switchPid", 1);
+  pub_engineCommands = node.advertise<hanse_msgs::EngineCommands>("/hanse/commands/engineCommands", 1);
   sub_joy = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
 
   // will be set to actual value once config is loaded
@@ -83,34 +84,38 @@ void TeleopHanse::dyn_reconfigure_callback(hanse_gamepad::NodeConfig &config, ui
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e)
 {
-    if (button_down) {
-        value_depth = value_depth + config.depth_delta;
-        button_down = false;
-    }
-    if (button_up) {
-	if (value_depth > 0)
-        	value_depth = value_depth - config.depth_delta;
-        button_up = false;
-    }
-
-    // publish data on topic. no use for this, yet
-    geometry_msgs::Twist vel;
-    vel.angular.z = value_angular;
-    vel.linear.x = value_linear;
-    vel.linear.z = value_depth;
-
-    ROS_INFO("Current target depth: %f cm - FF %f - ANG %f", value_depth, value_linear, value_angular);
-    std::cout << "Forward " << value_linear << " Angular " << value_angular << std::endl;
-
-    pub_cmd_vel.publish(vel);
+    hanse_msgs::EngineCommands engine;
+    engine.emergencyStop = emergency_stop;
+    pub_engineCommands.publish(engine);
 
     if (emergency_stop) {
         ROS_INFO("Pressed emergency_stop button");
-        emergency_stop = false;
 	value_depth = 0;
 	ROS_INFO("value_depth set to 0");
 	enable_handcontrol = false;
 	ROS_INFO("handcontrol disabled");
+    } else {
+    	if (button_down) {
+        	value_depth = value_depth + config.depth_delta;
+        	button_down = false;
+    	}
+
+	if (button_up) {
+		if (value_depth > 0)
+        		value_depth = value_depth - config.depth_delta;
+        	button_up = false;
+    	}
+
+        // publish data on topic. no use for this, yet
+    	geometry_msgs::Twist vel;
+    	vel.angular.z = value_angular;
+    	vel.linear.x = value_linear;
+    	vel.linear.z = value_depth;
+
+    	ROS_INFO("Current target depth: %f cm - FF %f - ANG %f", value_depth, value_linear, value_angular);
+        // std::cout << "Forward " << value_linear << " Angular " << value_angular << std::endl;
+
+    	pub_cmd_vel.publish(vel);
     }
 }
 
@@ -128,9 +133,6 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     	else
         	value_linear = config.scale_linear * joy->axes[config.axis_linear];
 
-    	//if (config.use_throttle)
-		//value_depth = config.scale_depth * (joy->axes[config.axis_depth]+1);
-
     	if (joy->buttons[config.button_down])
 	{
 		button_down = true;
@@ -142,25 +144,27 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	}
     }
 
-    if (joy->buttons[config.button_emegency_stop])
-	emergency_stop = true;
 
     if (joy->buttons[config.button_hand_control_enable]) {
         enable_handcontrol = true;
 
-	std_msgs::Bool boolMessage;
-    	boolMessage.data = true;
+//	std_msgs::Bool boolMessage;
+//    	boolMessage.data = true;
 
-	pub_switchPid.publish(boolMessage);
+//	pub_switchPid.publish(boolMessage);
+    }
+
+    if (joy->buttons[config.button_emergency_stop]) {
+	emergency_stop = !emergency_stop;
     }
 
     if (joy->buttons[config.button_hand_control_disable]) {
         enable_handcontrol = false;
 
-	std_msgs::Bool boolMessage;
-    	boolMessage.data = false;
+//	std_msgs::Bool boolMessage;
+//    	boolMessage.data = false;
 
-	pub_switchPid.publish(boolMessage);
+//	pub_switchPid.publish(boolMessage);
     }
 }
 

@@ -134,38 +134,30 @@ namespace hanse_gamepad
     };
 
 //#line 14 "../cfg/NodeParams.cfg"
-      std::string server_hosts;
-//#line 15 "../cfg/NodeParams.cfg"
-      int server_port;
-//#line 16 "../cfg/NodeParams.cfg"
       int frequency;
-//#line 17 "../cfg/NodeParams.cfg"
+//#line 15 "../cfg/NodeParams.cfg"
       double joy_gate;
-//#line 18 "../cfg/NodeParams.cfg"
+//#line 16 "../cfg/NodeParams.cfg"
       double scale_linear;
-//#line 19 "../cfg/NodeParams.cfg"
+//#line 17 "../cfg/NodeParams.cfg"
       double scale_angular;
-//#line 20 "../cfg/NodeParams.cfg"
-      double scale_depth;
-//#line 21 "../cfg/NodeParams.cfg"
+//#line 18 "../cfg/NodeParams.cfg"
       int axis_linear;
-//#line 22 "../cfg/NodeParams.cfg"
+//#line 19 "../cfg/NodeParams.cfg"
       int axis_angular;
-//#line 23 "../cfg/NodeParams.cfg"
+//#line 20 "../cfg/NodeParams.cfg"
       int axis_depth;
-//#line 24 "../cfg/NodeParams.cfg"
-      bool use_throttle;
-//#line 25 "../cfg/NodeParams.cfg"
+//#line 21 "../cfg/NodeParams.cfg"
       int depth_delta;
-//#line 26 "../cfg/NodeParams.cfg"
+//#line 22 "../cfg/NodeParams.cfg"
       int button_down;
-//#line 27 "../cfg/NodeParams.cfg"
+//#line 23 "../cfg/NodeParams.cfg"
       int button_up;
-//#line 28 "../cfg/NodeParams.cfg"
-      int button_emegency_stop;
-//#line 29 "../cfg/NodeParams.cfg"
+//#line 24 "../cfg/NodeParams.cfg"
+      int button_emergency_stop;
+//#line 25 "../cfg/NodeParams.cfg"
       int button_hand_control_enable;
-//#line 30 "../cfg/NodeParams.cfg"
+//#line 26 "../cfg/NodeParams.cfg"
       int button_hand_control_disable;
 //#line 138 "/opt/ros/electric/stacks/driver_common/dynamic_reconfigure/templates/ConfigType.h"
 
@@ -268,140 +260,108 @@ namespace hanse_gamepad
     NodeConfigStatics()
     {
 //#line 14 "../cfg/NodeParams.cfg"
-      __min__.server_hosts = "";
-//#line 14 "../cfg/NodeParams.cfg"
-      __max__.server_hosts = "";
-//#line 14 "../cfg/NodeParams.cfg"
-      __default__.server_hosts = "";
-//#line 14 "../cfg/NodeParams.cfg"
-      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<std::string>("server_hosts", "str", 0, "comma separated search list of hostnames for server", "", &NodeConfig::server_hosts)));
-//#line 15 "../cfg/NodeParams.cfg"
-      __min__.server_port = -2147483648;
-//#line 15 "../cfg/NodeParams.cfg"
-      __max__.server_port = 2147483647;
-//#line 15 "../cfg/NodeParams.cfg"
-      __default__.server_port = 8080;
-//#line 15 "../cfg/NodeParams.cfg"
-      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("server_port", "int", 0, "ip port of server", "", &NodeConfig::server_port)));
-//#line 16 "../cfg/NodeParams.cfg"
       __min__.frequency = -2147483648;
-//#line 16 "../cfg/NodeParams.cfg"
+//#line 14 "../cfg/NodeParams.cfg"
       __max__.frequency = 2147483647;
-//#line 16 "../cfg/NodeParams.cfg"
+//#line 14 "../cfg/NodeParams.cfg"
       __default__.frequency = 1;
-//#line 16 "../cfg/NodeParams.cfg"
+//#line 14 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("frequency", "int", 0, "how often to send data to server", "", &NodeConfig::frequency)));
-//#line 17 "../cfg/NodeParams.cfg"
+//#line 15 "../cfg/NodeParams.cfg"
       __min__.joy_gate = -std::numeric_limits<double>::infinity();
-//#line 17 "../cfg/NodeParams.cfg"
+//#line 15 "../cfg/NodeParams.cfg"
       __max__.joy_gate = std::numeric_limits<double>::infinity();
-//#line 17 "../cfg/NodeParams.cfg"
+//#line 15 "../cfg/NodeParams.cfg"
       __default__.joy_gate = 1.0;
-//#line 17 "../cfg/NodeParams.cfg"
+//#line 15 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<double>("joy_gate", "double", 0, "min raw joystick value to be considered != 0", "", &NodeConfig::joy_gate)));
-//#line 18 "../cfg/NodeParams.cfg"
+//#line 16 "../cfg/NodeParams.cfg"
       __min__.scale_linear = -std::numeric_limits<double>::infinity();
-//#line 18 "../cfg/NodeParams.cfg"
+//#line 16 "../cfg/NodeParams.cfg"
       __max__.scale_linear = std::numeric_limits<double>::infinity();
-//#line 18 "../cfg/NodeParams.cfg"
+//#line 16 "../cfg/NodeParams.cfg"
       __default__.scale_linear = 1.0;
-//#line 18 "../cfg/NodeParams.cfg"
+//#line 16 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<double>("scale_linear", "double", 0, "scale factor for linear speed", "", &NodeConfig::scale_linear)));
-//#line 19 "../cfg/NodeParams.cfg"
+//#line 17 "../cfg/NodeParams.cfg"
       __min__.scale_angular = -std::numeric_limits<double>::infinity();
-//#line 19 "../cfg/NodeParams.cfg"
+//#line 17 "../cfg/NodeParams.cfg"
       __max__.scale_angular = std::numeric_limits<double>::infinity();
-//#line 19 "../cfg/NodeParams.cfg"
+//#line 17 "../cfg/NodeParams.cfg"
       __default__.scale_angular = 1.0;
-//#line 19 "../cfg/NodeParams.cfg"
+//#line 17 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<double>("scale_angular", "double", 0, "scale factor for angular speed", "", &NodeConfig::scale_angular)));
-//#line 20 "../cfg/NodeParams.cfg"
-      __min__.scale_depth = -std::numeric_limits<double>::infinity();
-//#line 20 "../cfg/NodeParams.cfg"
-      __max__.scale_depth = std::numeric_limits<double>::infinity();
-//#line 20 "../cfg/NodeParams.cfg"
-      __default__.scale_depth = 1.0;
-//#line 20 "../cfg/NodeParams.cfg"
-      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<double>("scale_depth", "double", 0, "scale factor for depth speed", "", &NodeConfig::scale_depth)));
-//#line 21 "../cfg/NodeParams.cfg"
+//#line 18 "../cfg/NodeParams.cfg"
       __min__.axis_linear = -2147483648;
-//#line 21 "../cfg/NodeParams.cfg"
+//#line 18 "../cfg/NodeParams.cfg"
       __max__.axis_linear = 2147483647;
-//#line 21 "../cfg/NodeParams.cfg"
+//#line 18 "../cfg/NodeParams.cfg"
       __default__.axis_linear = 1;
-//#line 21 "../cfg/NodeParams.cfg"
+//#line 18 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("axis_linear", "int", 0, "js axis for linear speed", "", &NodeConfig::axis_linear)));
-//#line 22 "../cfg/NodeParams.cfg"
+//#line 19 "../cfg/NodeParams.cfg"
       __min__.axis_angular = -2147483648;
-//#line 22 "../cfg/NodeParams.cfg"
+//#line 19 "../cfg/NodeParams.cfg"
       __max__.axis_angular = 2147483647;
-//#line 22 "../cfg/NodeParams.cfg"
+//#line 19 "../cfg/NodeParams.cfg"
       __default__.axis_angular = 1;
-//#line 22 "../cfg/NodeParams.cfg"
+//#line 19 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("axis_angular", "int", 0, "js axis for angular speed", "", &NodeConfig::axis_angular)));
-//#line 23 "../cfg/NodeParams.cfg"
+//#line 20 "../cfg/NodeParams.cfg"
       __min__.axis_depth = -2147483648;
-//#line 23 "../cfg/NodeParams.cfg"
+//#line 20 "../cfg/NodeParams.cfg"
       __max__.axis_depth = 2147483647;
-//#line 23 "../cfg/NodeParams.cfg"
+//#line 20 "../cfg/NodeParams.cfg"
       __default__.axis_depth = 1;
-//#line 23 "../cfg/NodeParams.cfg"
+//#line 20 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("axis_depth", "int", 0, "js axis for depth speed", "", &NodeConfig::axis_depth)));
-//#line 24 "../cfg/NodeParams.cfg"
-      __min__.use_throttle = 0;
-//#line 24 "../cfg/NodeParams.cfg"
-      __max__.use_throttle = 1;
-//#line 24 "../cfg/NodeParams.cfg"
-      __default__.use_throttle = 0;
-//#line 24 "../cfg/NodeParams.cfg"
-      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<bool>("use_throttle", "bool", 0, "use throttle instead of up/down buttons", "", &NodeConfig::use_throttle)));
-//#line 25 "../cfg/NodeParams.cfg"
+//#line 21 "../cfg/NodeParams.cfg"
       __min__.depth_delta = -2147483648;
-//#line 25 "../cfg/NodeParams.cfg"
+//#line 21 "../cfg/NodeParams.cfg"
       __max__.depth_delta = 2147483647;
-//#line 25 "../cfg/NodeParams.cfg"
+//#line 21 "../cfg/NodeParams.cfg"
       __default__.depth_delta = 1;
-//#line 25 "../cfg/NodeParams.cfg"
+//#line 21 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("depth_delta", "int", 0, "how to go up/down in each step", "", &NodeConfig::depth_delta)));
-//#line 26 "../cfg/NodeParams.cfg"
+//#line 22 "../cfg/NodeParams.cfg"
       __min__.button_down = -2147483648;
-//#line 26 "../cfg/NodeParams.cfg"
+//#line 22 "../cfg/NodeParams.cfg"
       __max__.button_down = 2147483647;
-//#line 26 "../cfg/NodeParams.cfg"
+//#line 22 "../cfg/NodeParams.cfg"
       __default__.button_down = 1;
-//#line 26 "../cfg/NodeParams.cfg"
+//#line 22 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_down", "int", 0, "button to go down", "", &NodeConfig::button_down)));
-//#line 27 "../cfg/NodeParams.cfg"
+//#line 23 "../cfg/NodeParams.cfg"
       __min__.button_up = -2147483648;
-//#line 27 "../cfg/NodeParams.cfg"
+//#line 23 "../cfg/NodeParams.cfg"
       __max__.button_up = 2147483647;
-//#line 27 "../cfg/NodeParams.cfg"
+//#line 23 "../cfg/NodeParams.cfg"
       __default__.button_up = 1;
-//#line 27 "../cfg/NodeParams.cfg"
+//#line 23 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_up", "int", 0, "button to go up", "", &NodeConfig::button_up)));
-//#line 28 "../cfg/NodeParams.cfg"
-      __min__.button_emegency_stop = -2147483648;
-//#line 28 "../cfg/NodeParams.cfg"
-      __max__.button_emegency_stop = 2147483647;
-//#line 28 "../cfg/NodeParams.cfg"
-      __default__.button_emegency_stop = 1;
-//#line 28 "../cfg/NodeParams.cfg"
-      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_emegency_stop", "int", 0, "js button for emergency stop", "", &NodeConfig::button_emegency_stop)));
-//#line 29 "../cfg/NodeParams.cfg"
+//#line 24 "../cfg/NodeParams.cfg"
+      __min__.button_emergency_stop = -2147483648;
+//#line 24 "../cfg/NodeParams.cfg"
+      __max__.button_emergency_stop = 2147483647;
+//#line 24 "../cfg/NodeParams.cfg"
+      __default__.button_emergency_stop = 1;
+//#line 24 "../cfg/NodeParams.cfg"
+      __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_emergency_stop", "int", 0, "js button for emergency stop", "", &NodeConfig::button_emergency_stop)));
+//#line 25 "../cfg/NodeParams.cfg"
       __min__.button_hand_control_enable = -2147483648;
-//#line 29 "../cfg/NodeParams.cfg"
+//#line 25 "../cfg/NodeParams.cfg"
       __max__.button_hand_control_enable = 2147483647;
-//#line 29 "../cfg/NodeParams.cfg"
+//#line 25 "../cfg/NodeParams.cfg"
       __default__.button_hand_control_enable = 1;
-//#line 29 "../cfg/NodeParams.cfg"
+//#line 25 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_hand_control_enable", "int", 0, "js button to enable hand control", "", &NodeConfig::button_hand_control_enable)));
-//#line 30 "../cfg/NodeParams.cfg"
+//#line 26 "../cfg/NodeParams.cfg"
       __min__.button_hand_control_disable = -2147483648;
-//#line 30 "../cfg/NodeParams.cfg"
+//#line 26 "../cfg/NodeParams.cfg"
       __max__.button_hand_control_disable = 2147483647;
-//#line 30 "../cfg/NodeParams.cfg"
+//#line 26 "../cfg/NodeParams.cfg"
       __default__.button_hand_control_disable = 1;
-//#line 30 "../cfg/NodeParams.cfg"
+//#line 26 "../cfg/NodeParams.cfg"
       __param_descriptions__.push_back(NodeConfig::AbstractParamDescriptionConstPtr(new NodeConfig::ParamDescription<int>("button_hand_control_disable", "int", 0, "js button to disable hand control", "", &NodeConfig::button_hand_control_disable)));
 //#line 239 "/opt/ros/electric/stacks/driver_common/dynamic_reconfigure/templates/ConfigType.h"
     

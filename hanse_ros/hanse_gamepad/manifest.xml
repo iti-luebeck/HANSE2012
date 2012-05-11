@@ -13,7 +13,7 @@
   <depend package="geometry_msgs"/>
   <depend package="driver_base" />
   <depend package="dynamic_reconfigure"/>
-
+  <depend package="hanse_msgs"/>
 
 </package>
 
