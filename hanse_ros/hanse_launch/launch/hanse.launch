@@ -11,4 +11,10 @@
   <include file="$(find hanse_enginecontrol)/launch/enginecontrol.launch" />
   <!-- atmega, bereits im hanse namespace -->
   <include file="$(find hanse_atmega)/launch/atmega.launch" />
+  <!-- lokalisierung -->
+  <include ns="hanse" file="$(find hanse_sonarlocalization)/launch/localization_online.launch">
+    <arg name="map_image" value="$(find hanse_sonarlocalization)/maps/wakenitz_large.png" />
+    <arg name="map_pixel_size" value="0.078125" />
+    <arg name="map_threshold" value="32" />
+  </include>
 </launch>
