@@ -101,6 +101,8 @@ namespace Xsens
 		float roll() { return eroll; }
 		float pitch() { return epitch; }
 		float yaw() { return eyaw; }
+		float flag() { return flag_; }
+		float busy() { return busy_; }
 	
 		private:
 		// Serial Port variables
@@ -135,6 +137,9 @@ namespace Xsens
 		float q0, q1, q2, q3;
 		float eroll, epitch, eyaw;
 		unsigned int ts;
+
+		bool flag_;
+		bool busy_;
 		// ************************
 	
 		// Message queue

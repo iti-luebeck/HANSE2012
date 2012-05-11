@@ -86,9 +86,11 @@ int main(int argc, char** argv)
 
 	ros::Publisher mti_pub = n.advertise<sensor_msgs::Imu>("imu/data", 10);
 
-	ros::Rate r(20);
+	ros::Rate r(1000);
+	bool lastFlag = false;
   	while(ros::ok())
 	{	
+	    if (mti->flag() != lastFlag && ! mti->busy()) {
 		sensor_msgs::Imu mti_msg;
 		mti_msg.header.stamp = ros::Time::now();
 		mti_msg.header.frame_id = frame_id.c_str();
@@ -109,6 +111,7 @@ int main(int argc, char** argv)
 		mti_pub.publish(mti_msg);
 		
 		r.sleep();
+	    }
 	}
 	
   	return(0);

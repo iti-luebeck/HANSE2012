@@ -75,6 +75,8 @@ Xsens::MTi::MTi() : serial_port()
 	eroll = epitch = eyaw = 0.0;
 	temp = 0.0;
 	ts = 0;
+	flag_ = false;
+	busy_ = false;
 }
 
 Xsens::MTi::~MTi()
@@ -344,6 +346,8 @@ void Xsens::MTi::manageIncomingData(std::vector<unsigned char> * incomingData, b
 	unsigned char buffer;
 	unsigned char mask;
 	int index;
+
+	busy_ = true;
 	
 	// Switch case for managing the various MIDs that might arrive
 	switch(MID)
@@ -498,12 +502,14 @@ void Xsens::MTi::manageIncomingData(std::vector<unsigned char> * incomingData, b
 			{
 				index += 2*numOfBytes;
 			}
+			flag_ = !flag_;
 			break;
 		
 		case ResetOrientationAck:
 			// Reset ok.
 			break;
 	}
+	busy_ = false;
 }
 
 void Xsens::MTi::makeMessage(MTMessageIdentifier mid, std::vector<unsigned char> * data, std::vector<unsigned char> * message)
