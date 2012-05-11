@@ -34,11 +34,14 @@ private:
 
     ros::Publisher particlePublisher;
     ros::Publisher positionPublisher;
+    ros::Publisher mapPublisher;
     ros::Subscriber sonarSubscriber;
     ros::Subscriber positionSubscriber;
     ros::Subscriber imuSubscriber;
 
     ros::Time lastMsgTime;
+
+    ros::Time lastMapTime;
 
     std::deque<sensor_msgs::Imu> imuQueue;
 

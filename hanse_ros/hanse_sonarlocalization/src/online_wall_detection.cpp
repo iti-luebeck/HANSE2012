@@ -79,7 +79,9 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 
 	wall.header.stamp = midMsg.header.stamp;
 	wall.header.frame_id = "/map";
-	wall.headPosition = headPosition;
+	// the angles from sonar are cw/negative when viewing the map
+	// from the top, we only work with ccw/positive angles
+	wall.headPosition = -headPosition;
 	wall.range = midMsg.range;
 	wall.wallDetected = !wall.distances.empty();
 	publisher.publish(wall);

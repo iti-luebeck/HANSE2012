@@ -25,8 +25,9 @@ Localization::ParamHelper::ParamHelper()
 Localization::Localization(ros::NodeHandle handle) :
     particleFilter(config, paramHelper.params),
     nh(handle),
-    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("location/particle_markers", 1)),
-    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("location/estimated_position", 1)),
+    particlePublisher(handle.advertise<geometry_msgs::PoseArray>("localization/viz/particles", 1)),
+    positionPublisher(handle.advertise<geometry_msgs::PoseStamped>("position/estimate", 1)),
+    mapPublisher(handle.advertise<nav_msgs::OccupancyGrid>("localization/viz/map", 1)),
     sonarSubscriber(handle.subscribe("sonar/scan/walls", 1, &Localization::sonarCallback, this)),
     positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
     imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
@@ -54,9 +55,8 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	imuQueue.pop_front();
 	update = true;
     }
-    if (update) {
-	particleFilter.imuUpdate();
-    }
+
+    
 
     p_perturb_start = ros::Time::now();
     particleFilter.perturb();
@@ -68,6 +68,11 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
     }
     p_move_end = ros::Time::now();
     lastMsgTime = msg.header.stamp;
+
+    if (update) {
+	particleFilter.imuUpdate();
+    }
+
 
     p_weight_start = ros::Time::now();
     particleFilter.weightParticles(msg);
@@ -95,6 +100,7 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
     }
     particlePublisher.publish(particles);
     p_end = ros::Time::now();
+    /*
     ROS_INFO("Duration %f (w: %f, r: %f, p: %f, m: %f)",
 	     (p_end-p_start).toSec(),
 	     (p_weight_end-p_weight_start).toSec(),
@@ -102,10 +108,20 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
 	     (p_perturb_end-p_perturb_start).toSec(),
 	     (p_move_end-p_move_start).toSec()
 	     );
+    */
+
+    ros::Time now = ros::Time::now();
+
+    if (lastMapTime == ros::Time() || (now - lastMapTime).toSec() > 5) {
+	mapPublisher.publish(particleFilter.map().occupancyGrid());
+	lastMapTime = now;
+    }
 }
 
 void Localization::imuCallback(const sensor_msgs::Imu &msg)
 {
+    if (!imuQueue.empty() && imuQueue.front().header.stamp > msg.header.stamp)
+	imuQueue.clear();
     imuQueue.push_back(msg);
 }
 

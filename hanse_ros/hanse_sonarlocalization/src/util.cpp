@@ -25,4 +25,11 @@ Eigen::Affine2f positionFromAffine3(Eigen::Affine3f affine)
     return position;
 }
 
+float thetaFromQuaternion(Eigen::Quaternionf quat)
+{
+    Eigen::Vector3f direction = quat * Eigen::Vector3f(1, 0, 0);
+    return atan2f(direction.y(), direction.x());
+}
+
+
 }
