@@ -110,10 +110,10 @@ class NoWall(smach.State):
 		smach.State.__init__(self, outcomes=[Transitions.Wall])
 
 	def execute(self, userdata):
-		rospy.loginfo('Executing state NoWall')
-		setMotorSpeed(0, 1)
+		rospy.loginfo('Executing state NoWall')		
 		while Global.noWall:
-			rospy.sleep(0.1)
+			setMotorSpeed(0, 0.7)
+			rospy.sleep(0.2)
 		setMotorSpeed(0, 0)
 		return Transitions.Wall
 		
