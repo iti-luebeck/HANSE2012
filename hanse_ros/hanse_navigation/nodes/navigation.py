@@ -7,6 +7,8 @@ import math
 import numpy
 import collections
 import actionlib
+import tf 
+from tf.transformations import euler_from_quaternion
 from hanse_navigation.msg import NavigateAction, NavigateFeedback, NavigateResult
 from hanse_navigation.cfg import NavigationConfig
 from dynamic_reconfigure.server import Server
@@ -102,8 +104,8 @@ class AdjustHeading(smach.State):
 				return Transitions.Aborted
 			
 			#diffHeading = Global.headingToGoal - Global.currentHeading
-			diffHeading = calcRadiansDiff(Global.headingToGoal, Global.currentHeading)			
-#			rospy.loginfo('diffHeading = ' + repr(diffHeading))
+			diffHeading = shortest_angular_distance(Global.currentHeading, Global.headingToGoal)			
+			rospy.loginfo('diffHeading = ' + repr(diffHeading))
 
 			# pruefen ob heading in akzeptablem bereich ist
 			if math.fabs(diffHeading) < Config.hysteresis_heading: 
@@ -136,7 +138,7 @@ class MoveForward(smach.State):
 				return Transitions.CloseEnoughToGoal
 			
 			# pruefen, ob heading korrigiert werden muss
-			if math.fabs(calcRadiansDiff(Global.headingToGoal, Global.currentHeading)) > Config.hysteresis_heading:
+			if math.fabs(shortest_angular_distance(Global.headingToGoal, Global.currentHeading)) > Config.hysteresis_heading:
 				return Transitions.HeadingAdjustmentNeeded
 			
 			forwardspeed = Config.forward_max_speed
@@ -169,9 +171,11 @@ def closeEnoughToGoal():
 
 # die orientierung wird aus der imu ermittelt
 def imuCallback(msg):
-	q = msg.orientation
-	Global.currentHeading = quatToAngles(q.x, q.y, q.z, q.w)[1]
-	#rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
+	q = msg.orientation	
+	(roll,pitch,yaw) = euler_from_quaternion([q.w, q.x, q.y, q.z])
+#	Global.currentHeading = quatToAngles(q.x, q.y, q.z, q.w)[0]
+	Global.currentHeading = roll
+	rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
 
 # die aktuelle position wird aus posemeter ausgelesen
 def posemeterCallback(msg):	
@@ -180,8 +184,8 @@ def posemeterCallback(msg):
 	if Global.currentGoal!=None:
 		dx = Global.currentGoal.pose.position.x - Global.currentPosition.x
 		dy = Global.currentGoal.pose.position.y - Global.currentPosition.y
-		Global.headingToGoal = -math.atan2(dx, dy) + math.pi/2;
-		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy);
+		Global.headingToGoal = normalize_angle(math.atan2(dx, dy) + math.pi/2)
+		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy)
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
 	
 def goalCallback(msg):
@@ -237,38 +241,27 @@ def setMotorSpeed(linear, angular):
 	pub_motor_right.publish(sollSpeed(data = right))
 	#rospy.is_shutdown()
 	#rospy.is_shutdown()
-	
-# Gibt RPY fuer ein Quaternion zurueck
-def quatToAngles(x,y,z,w):
-	angles = [0,0,0]
-	sqw = w * w
-	sqx = x * x
-	sqy = y * y
-	sqz = z * z
-	unit = sqx + sqy + sqz + sqw # if normalized is one, otherwise is correction factor
-	test = x * y + z * w
-	if test > 0.499 * unit: # singularity at north pole
-		angles[1] = 2 * math.atan2(x, w)
-		angles[2] = 0.5*math.pi
-		angles[0] = 0
-	elif test < -0.499 * unit: # singularity at south pole
-		angles[1] = -2 * FastMath.atan2(x, w)
-		angles[2] = -0.5*math.pi
-		angles[0] = 0
-	else:
-		angles[1] = math.atan2(2 * y * w - 2 * x * z, sqx - sqy - sqz + sqw) #roll or heading
-		angles[2] = math.asin(2 * test / unit) # pitch or attitude
-		angles[0] = math.atan2(2 * x * w - 2 * y * z, -sqx + sqy - sqz + sqw) # yaw or bank	
-	return angles
 
-def calcRadiansDiff(a, b):
-	#return min(math.fabs(a-b), 2*math.pi - math.fabs(a-b))
-	diff = b-a
-	if diff > math.pi:
-		diff = -(360-diff)
-	elif diff < -math.pi:
- 		diff = 2*math.pi+diff
-	return diff
+# aus dem angles-package uebernommen
+def normalize_angle_positive(angle):
+	return math.fmod(math.fmod(angle, 2.0*math.pi) + 2.0*math.pi, 2.0*math.pi)
+
+# aus dem angles-package uebernommen
+def normalize_angle(angle):
+	a = normalize_angle_positive(angle)
+	if a > math.pi:
+		a -= 2.0 *math.pi
+	return a
+
+# aus dem angles-package uebernommen
+def shortest_angular_distance(fr, to):
+	result = normalize_angle_positive(normalize_angle_positive(to) - normalize_angle_positive(fr));
+	if result > math.pi:
+		# If the result > 180,
+		# It's shorter the other way.
+		result = -(2.0*math.pi - result);
+	return normalize_angle(result); 
+	
 
 class NavigateActionServer(object):
 	# create messages that are used to publish feedback/result
