@@ -1,19 +1,17 @@
+# A=0, B=1, X=2, Y=3, LB = 4, LR = 5, BACK=6, START=7, CENTER=8, DPAD_L=11, DPAD_R=12, DPAD_UP=13, DPAD_DOWN=14
+
 {
-axis_angular: 0,
+axis_angular: 3,
 axis_depth: 2,
 axis_linear: 1,
-button_emegency_stop: 7,
+button_emergency_stop: 7,
 button_hand_control_enable: 0,
 button_hand_control_disable: 1,
 button_up: 13,
 button_down: 14,
-use_throttle: false,
 depth_delta: 3,
 frequency: 10,
 joy_gate: 0.15,
-scale_angular: 10,
-scale_depth: 200.0,
+scale_angular: 1.0, # 10 fuer PID
 scale_linear: 1.0,
-server_hosts: '10.13.37.33,10.13.37.34,10.13.37.50,10.13.37.30,127.0.0.1,10.13.37.102',
-server_port: 1234
 }

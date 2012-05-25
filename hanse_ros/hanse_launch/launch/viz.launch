@@ -1,5 +1,6 @@
 <launch>
   <include ns="hanse" file="$(find hanse_sonarviz)/launch/sonarviz.launch" />
+  <node name="echosunderviz" type="echosounder_viz" pkg="hanse_sonarviz" />
   <group ns="/hanse">
     <node name="hanse_loc_wall_markers" type="sonar_wall_markers" pkg="hanse_sonarlocalization" />
   </group>

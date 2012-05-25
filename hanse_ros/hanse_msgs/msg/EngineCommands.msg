@@ -1,0 +1,9 @@
+Header header
+bool changePid
+bool enableDepthPid
+bool enableRotationSpeedPid
+bool enableOrientationPid
+bool changeMotors
+bool enableMotors
+bool resetZeroPressure
+bool emergencyStop
