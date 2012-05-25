@@ -319,7 +319,10 @@ if __name__ == '__main__':
 
 	# Subscriber/Publisher
 	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
-	rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
+	
+	#rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
+	rospy.Subscriber('position/estimate', PoseStamped, posemeterCallback)
+
 	rospy.Subscriber('/goal', PoseStamped, goalCallback)
 #	rospy.Subscriber('/waypoints', Path, pathCallback)
 	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
