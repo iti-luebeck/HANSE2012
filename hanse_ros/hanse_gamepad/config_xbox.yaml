@@ -1,7 +1,7 @@
 # A=0, B=1, X=2, Y=3, LB = 4, LR = 5, BACK=6, START=7, CENTER=8, DPAD_L=11, DPAD_R=12, DPAD_UP=13, DPAD_DOWN=14
 
 {
-axis_angular: 0,
+axis_angular: 3,
 axis_depth: 2,
 axis_linear: 1,
 button_emergency_stop: 7,
