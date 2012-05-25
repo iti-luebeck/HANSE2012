@@ -52,12 +52,27 @@ void ParticleFilter::resetPosition()
 
 void ParticleFilter::setPosition(Eigen::Affine2f position)
 {
+    /*
     Particle p;
     p.weight = 1.0;
     p.position = position;
     p.velocity = Eigen::Vector2f(0, 0);
     particles.clear();
     particles.resize(config.particle_count, p);
+    */
+
+    Eigen::ArrayXXf randomRotations = Eigen::ArrayXXf::Random(1, config.particle_count) * M_PI;
+
+    particles.clear();
+
+    for (int i = 0; i < config.particle_count; i++) {
+	Particle particle;
+	particle.weight = 1.0;
+	particle.velocity = Eigen::Vector2f(0, 0);
+	particle.position = Eigen::Translation<float, 2>(position.translation()) * Eigen::Rotation2D<float>(randomRotations(0, i));
+	particles.push_back(particle);
+    }
+
 }
 
 void ParticleFilter::move(float seconds)
@@ -224,10 +239,11 @@ void ParticleFilter::addImuMessage(sensor_msgs::Imu const &imu)
 							     accelerationParticle.y());
 
 
-    ROS_INFO("particle acceleration: %8.5f %8.5f", accelerationParticle2D.x(), accelerationParticle2D.y());
+    if (config.imu_motion) {
+        ROS_INFO("particle acceleration: %8.5f %8.5f", accelerationParticle2D.x(), accelerationParticle2D.y());
 
-    ROS_INFO("particle acceleration mean: %8.5f %8.5f", accelerationMean.x(), accelerationMean.y());
-
+        ROS_INFO("particle acceleration mean: %8.5f %8.5f", accelerationMean.x(), accelerationMean.y());
+    }
 
     // To do anything usefull with the acceleration we need to know the time step
     float dt = (imu.header.stamp - lastImuMsgTime).toSec();
@@ -255,9 +271,10 @@ void ParticleFilter::imuUpdate()
 
 	float deltaTheta = theta - lastTheta;
 
-	ROS_INFO("particle velocity: %8.5f %8.5f", velocityParticle.x(), velocityParticle.y());
-	ROS_INFO("particle offset: %8.5f %8.5f", offsetParticle.x(), offsetParticle.y());
-
+        if (config.imu_motion) {
+            ROS_INFO("particle velocity: %8.5f %8.5f", velocityParticle.x(), velocityParticle.y());
+            ROS_INFO("particle offset: %8.5f %8.5f", offsetParticle.x(), offsetParticle.y());
+        }
 
 	if (config.imu_motion) {
 	    for (auto &particle : particles) {
@@ -269,6 +286,7 @@ void ParticleFilter::imuUpdate()
 		    Eigen::Translation2f(offsetParticle) * Eigen::Rotation2D<float>(deltaTheta);
 	    }
 	} else {
+            ROS_INFO("delta theta: %f", deltaTheta);
 	    for (auto &particle : particles) {
 		particle.position = particle.position * Eigen::Rotation2D<float>(deltaTheta);
 	    }
