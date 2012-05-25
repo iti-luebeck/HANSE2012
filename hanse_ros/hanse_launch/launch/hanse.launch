@@ -4,9 +4,10 @@
   <include ns="hanse" file="$(find hanse_sonardriver)/launch/sonardriver.launch" />
   <!-- xsens treiber -->
   <group>
-    <remap from="/hanse/imu/data" to="/hanse/imu" />
-    <include ns="hanse" file="$(find lse_xsens_mti)/launch/xsens.launch" />
+    <remap from="/imu/data" to="/hanse/imu" />
+    <include ns="hanse" file="$(find hanse_launch)/launch/xsens.launch" />
   </group>
+
   <!-- engine control, bereits im hanse namespace -->
   <include file="$(find hanse_enginecontrol)/launch/enginecontrol.launch" />
   <!-- atmega, bereits im hanse namespace -->
