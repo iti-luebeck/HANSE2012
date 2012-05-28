@@ -30,7 +30,11 @@ Localization::Localization(ros::NodeHandle handle) :
     mapPublisher(handle.advertise<nav_msgs::OccupancyGrid>("localization/viz/map", 1)),
     sonarSubscriber(handle.subscribe("sonar/scan/walls", 1, &Localization::sonarCallback, this)),
     positionSubscriber(handle.subscribe("/initialpose", 1, &Localization::positionCallback, this)),
-    imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this))
+    imuSubscriber(handle.subscribe("imu", 10, &Localization::imuCallback, this)),
+    leftThrusterSubscriber(handle.subscribe("motors/left", 1, &Localization::leftThrusterCallback, this)),
+    rightThrusterSubscriber(handle.subscribe("motors/right", 1, &Localization::rightThrusterCallback, this)),
+    leftSpeed(0),
+    rightSpeed(0)
 {
     reconfigServer.setCallback(boost::bind(&Localization::reconfigure, this, _1, _2));
     particleFilter.resetPosition();
@@ -65,6 +69,7 @@ void Localization::sonarCallback(const hanse_msgs::WallDetection &msg)
     if (!lastMsgTime.isZero()) {
 	ros::Duration timePassed = msg.header.stamp - lastMsgTime;
 	particleFilter.move(timePassed.toSec());
+        particleFilter.thrusterUpdate(timePassed.toSec(), leftSpeed, rightSpeed);
     }
     p_move_end = ros::Time::now();
     lastMsgTime = msg.header.stamp;
@@ -141,6 +146,17 @@ geometry_msgs::Pose Localization::poseFrom2DPosition(Eigen::Affine2f position2D,
     pose.orientation.z = rotation3D.z();
     pose.orientation.w = rotation3D.w();
     return pose;
+}
+
+
+void Localization::leftThrusterCallback(const hanse_msgs::sollSpeed &msg)
+{
+    leftSpeed = msg.data;
+}
+
+void Localization::rightThrusterCallback(const hanse_msgs::sollSpeed &msg)
+{
+    rightSpeed = msg.data;
 }
 
 int main(int argc, char *argv[])

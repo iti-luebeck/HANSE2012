@@ -31,6 +31,8 @@ public:
     void resample();
     void addImuMessage(sensor_msgs::Imu const &imu);
     void imuUpdate();
+    void thrusterUpdate(double time, int leftSpeed, int rightSpeed);
+
     Eigen::Affine2f estimatedPosition();
 
     const ParticleVector &getParticles() const { return particles; }

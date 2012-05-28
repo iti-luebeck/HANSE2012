@@ -298,3 +298,25 @@ void ParticleFilter::imuUpdate()
     offsetParticle = Eigen::Vector2f(0, 0);
     imuInitialized = true;
 }
+
+void ParticleFilter::thrusterUpdate(double time, int leftSpeed, int rightSpeed)
+{
+    if (!config.thruster_motion)
+        return;
+    float left = leftSpeed / 127.f;
+    float right = rightSpeed / 127.f;
+
+    float mid = (left + right) / 2;
+
+    float speed = mid * config.thruster_speed;
+
+    float mu = expf(-time * config.thruster_rate);
+
+    float muC = 1 - mu;
+
+    float speedS = speed * muC;
+
+    for (auto &particle : particles) {
+        particle.velocity = (mu * particle.velocity + particle.position.rotation() * Eigen::Vector2f(speedS, 0.f));
+    }
+}
