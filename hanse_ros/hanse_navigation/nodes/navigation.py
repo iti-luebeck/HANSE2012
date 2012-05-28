@@ -14,9 +14,13 @@ from hanse_navigation.cfg import NavigationConfig
 from dynamic_reconfigure.server import Server
 from hanse_msgs.msg import sollSpeed
 from std_msgs.msg import Float64, Float32
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, Twist, Vector3
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Path
+
+#################
+SIMULATOR = False
+#################
 
 # konfigurierbare werte, werden durch dynamic_reconfigure gesetzt  
 class Config:
@@ -56,10 +60,11 @@ class Transitions:
 	HeadingAdjustmentNeeded = 'HeadingAdjustmentNeeded'
 	Idle = 'Idle'
 	Aborted = 'Aborted'
+	Exit = 'Exit'
 	
 class Idle(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.HasGoal])
+		smach.State.__init__(self, outcomes=[Transitions.HasGoal, Transitions.Exit])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state Idle')
@@ -73,8 +78,9 @@ class Idle(smach.State):
 			if len(Global.path) > 0:
 				Global.currentGoal = Global.path.popleft()
 				return Transitions.HasGoal
-			rospy.sleep(0.1)					
-	
+			rospy.sleep(0.1)			
+		
+		return Transitions.Exit
 
 class AdjustDepth(smach.State):
 	def __init__(self):
@@ -93,7 +99,7 @@ class AdjustDepth(smach.State):
 
 class AdjustHeading(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.HeadingAdjusted, Transitions.Aborted])
+		smach.State.__init__(self, outcomes=[Transitions.HeadingAdjusted, Transitions.Aborted, Transitions.Exit])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state AdjustHeading')
@@ -119,11 +125,13 @@ class AdjustHeading(smach.State):
 			if val < 0: val = numpy.clip(val, -maxAngSpeed, -minAngSpeed)
 			
 			setMotorSpeed(0, val)
-			rospy.sleep(0.1)	
+			rospy.sleep(0.1)
+
+		return Transitions.Exit
 		
 class MoveForward(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.CloseEnoughToGoal, Transitions.HeadingAdjustmentNeeded, Transitions.Aborted])
+		smach.State.__init__(self, outcomes=[Transitions.CloseEnoughToGoal, Transitions.HeadingAdjustmentNeeded, Transitions.Aborted, Transitions.Exit])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state MoveForward')
@@ -147,6 +155,8 @@ class MoveForward(smach.State):
 				forwardspeed -= 0.5 * Config.forward_max_speed * (1 - Global.distanceToGoal / Config.forward_max_dist)
 			setMotorSpeed(forwardspeed, 0)
 			rospy.sleep(0.1)
+
+		return Transitions.Exit
 
 class ReachedGoal(smach.State):
 	def __init__(self):
@@ -172,13 +182,12 @@ def closeEnoughToGoal():
 # die orientierung wird aus der imu ermittelt
 def imuCallback(msg):
 	q = msg.orientation	
-	(roll,pitch,yaw) = euler_from_quaternion([q.w, q.x, q.y, q.z])
-#	Global.currentHeading = quatToAngles(q.x, q.y, q.z, q.w)[0]
-	Global.currentHeading = roll
-	rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
+	(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
+	Global.currentHeading = yaw
+	#rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
 
 # die aktuelle position wird aus posemeter ausgelesen
-def posemeterCallback(msg):	
+def positionCallback(msg):	
 	Global.currentPosition = msg.pose.position
 	# wenn zur zeit zu einem ziel navigiert wird, relevante werte aktualisieren
 	if Global.currentGoal!=None:
@@ -187,6 +196,10 @@ def posemeterCallback(msg):
 		Global.headingToGoal = normalize_angle(math.atan2(dx, dy) + math.pi/2)
 		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy)
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
+	if not SIMULATOR:
+		q = msg.pose.orientation	
+		(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
+		Global.currentHeading = yaw
 	
 def goalCallback(msg):
 	Global.actionServer.set_aborted()
@@ -228,19 +241,10 @@ def configCallback(config, level):
 	return config
 
 # werte im bereich [-1, 1]
-def setMotorSpeed(linear, angular):
-	#rospy.loginfo('setMotorSpeed: ' + repr(linear) + ", " + repr(angular))
-	# geschwindigkeitswerte fuer thruster berechnen
-	left = linear*127 + angular*127
-	right = linear*127 - angular*127
-	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
-	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))
-	#rospy.is_shutdown()
-	#rospy.is_shutdown()
+def setMotorSpeed(lin, ang):
+	#rospy.loginfo("angularoutput: " + repr(-ang))
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	pub_cmd_vel.publish(twist)
 
 # aus dem angles-package uebernommen
 def normalize_angle_positive(angle):
@@ -318,15 +322,16 @@ if __name__ == '__main__':
 	configSrv = Server(NavigationConfig, configCallback)
 
 	# Subscriber/Publisher
-	rospy.Subscriber('/hanse/imu', Imu, imuCallback)
-	
-	#rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
-	rospy.Subscriber('position/estimate', PoseStamped, posemeterCallback)
+		
+	if SIMULATOR:
+		rospy.Subscriber('imu', Imu, imuCallback)
+		rospy.Subscriber('posemeter', PoseStamped, positionCallback)
+	else:
+		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
 
 	rospy.Subscriber('/goal', PoseStamped, goalCallback)
 #	rospy.Subscriber('/waypoints', Path, pathCallback)
-	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
-	pub_motor_right = rospy.Publisher('motors/right', sollSpeed)
+	pub_cmd_vel = rospy.Publisher('commands/cmd_vel', Twist)
 	
 	pub_path = rospy.Publisher('/path', Path)
 	
@@ -334,7 +339,7 @@ if __name__ == '__main__':
 	rospy.Timer(rospy.Duration(1.0), timerCallback)
 	
 	# Create a SMACH state machine
-	sm = smach.StateMachine(outcomes=[])
+	sm = smach.StateMachine(outcomes=[Transitions.Exit])
 
 	# Open the container
 	with sm:
@@ -344,7 +349,7 @@ if __name__ == '__main__':
 		smach.StateMachine.add(States.ReachedGoal, ReachedGoal(),
 								transitions={Transitions.Idle : States.Idle})								
 		# Create the sub SMACH state machine 
-		sm_sub = smach.StateMachine(outcomes=[Transitions.CloseEnoughToGoal, Transitions.Aborted])
+		sm_sub = smach.StateMachine(outcomes=[Transitions.CloseEnoughToGoal, Transitions.Aborted, Transitions.Exit])
         
 		# Open the container 
 		with sm_sub:
