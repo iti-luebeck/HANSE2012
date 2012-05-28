@@ -18,7 +18,8 @@ from hanse_pidcontrol.srv import *
 class Config:
 	desiredDistance = 1.5
 	maxSpeed = 0.7
-	echoSounderAngle = 0.0
+	linearSpeedScaleDownFactor = 0.75
+	#echoSounderAngle = 0.0
 
 class Global:
 	imuCallbackCalled = False
@@ -138,7 +139,7 @@ class FollowWall(smach.State):
 		while not Global.noWall and not rospy.is_shutdown():
 			# lineare geschwindigkeit in abhaengigkeit von der abweichung von desiredDistance			
 			abweichung = math.fabs(Global.currentDistance-Config.desiredDistance)
-			linearSpeed = Config.maxSpeed - abweichung / (Config.desiredDistance-0.2)
+			linearSpeed = Config.maxSpeed - Config.linearSpeedScaleDownFactor * (abweichung / (Config.desiredDistance-0.2))
 			linearSpeed = numpy.clip(linearSpeed, 0.0, Config.maxSpeed)
 			angularSpeed = Global.angularSpeedOutput
 			
@@ -195,6 +196,7 @@ def configCallback(config, level):
 	rospy.loginfo('Reconfiugre Request: ' + repr(config['desiredDistance']))
 	Config.desiredDistance = config['desiredDistance']
 	Config.maxSpeed = config['maxSpeed']
+	Config.linearSpeedScaleDownFactor = config['linearSpeedScaleDownFactor']
 	return config
 
 def timerCallback(event):
