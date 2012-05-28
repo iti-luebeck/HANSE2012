@@ -11,6 +11,7 @@ from dynamic_reconfigure.server import Server
 from hanse_wallfollowing.cfg import WallFollowingConfig
 from std_msgs.msg import Float64, Float32
 from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Twist, Vector3
 from hanse_msgs.msg import ScanningSonar, sollSpeed
 from hanse_pidcontrol.srv import *
 
@@ -161,18 +162,11 @@ class FollowWall(smach.State):
 			
 
 # werte im bereich [-1, 1]
-def setMotorSpeed(linear, angular):
-	# geschwindigkeitswerte fuer thruster berechnen
-	left = linear*127 + angular*127
-	right = linear*127 - angular*127
-	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
-	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))
-	#rospy.is_shutdown()
-	#rospy.is_shutdown()
+def setMotorSpeed(lin, ang):
+	#rospy.loginfo("angularoutput: " + repr(-ang))
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	pub_cmd_vel.publish(twist)
+
 	
 def echoSounderAvgCallback(msg):
 	if msg.data == 0.0:
@@ -245,10 +239,9 @@ if __name__ == '__main__':
 
 	# Subscriber/Publisher
 	rospy.Subscriber('/echosounderaveragedistance', Float32, echoSounderAvgCallback)
-	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
+#	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 #IMUTMP	rospy.Subscriber('imu', Imu, imuCallback)
-	pub_motor_left = rospy.Publisher('motors/left', sollSpeed)
-	pub_motor_right = rospy.Publisher('motors/right', sollSpeed)
+	pub_cmd_vel = rospy.Publisher('commands/cmd_vel', Twist)
 	pub_angular_target = rospy.Publisher('/wallfollowing_angular_pid/target', Float64)
 	pub_angular_input = rospy.Publisher('/wallfollowing_angular_pid/input', Float64)
 	rospy.Subscriber('/wallfollowing_angular_pid/output', Float64, angularPidOutputCallback)
