@@ -11,20 +11,29 @@
 #include <vector>
 #include <hanse_msgs/Object.h>
 
+typedef enum {R, G, B} Channel;
+
 class ObjectDetection {
 public:
     ObjectDetection(ros::NodeHandle nh) {
         image_pub = nh.advertise<sensor_msgs::Image>("/image_object_detection", 1);
         object_pub = nh.advertise<hanse_msgs::Object>("/object", 1);
-        init();
-    }
 
-    void init() {
+        channel = R;
+        inverted = false;
     }
 
     void configCallback(hanse_object_detection::ObjectDetectionConfig &config, uint32_t level)
     {
-        init();
+        std::string channelStr = config.channel;
+        if (channelStr.compare("R")) {
+            channel = R;
+        } else if (channelStr.compare("G")) {
+            channel = G;
+        } else if (channelStr.compare("B")) {
+            channel = B;
+        }
+        inverted = config.inverted;
     }
 
     void imageCB(const sensor_msgs::ImageConstPtr& visual_img_msg)
@@ -41,14 +50,31 @@ public:
 
         std::vector<cv::Mat> channels;
         cv::split(image_rgb, channels);
-        cv::Mat gray = channels[0];
+        cv::Mat gray;
+
+        switch (channel) {
+        case R:
+            gray = channels[0];
+            break;
+        case G:
+            gray = channels[1];
+            break;
+        case B:
+            gray = channels[2];
+            break;
+        }
 
         cv::Mat binary;
-        cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+
+        if (inverted) {
+            cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+        } else {
+            cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+        }
 
         IplImage *thresh = new IplImage(binary);
-        cvDilate(thresh, thresh, NULL, 20);
-        cvErode(thresh, thresh, NULL, 20);
+        cvDilate(thresh, thresh, NULL, 5);
+        cvErode(thresh, thresh, NULL, 5);
 
         CBlobResult blobs(thresh, NULL, 0);
         blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 100 );
@@ -135,6 +161,8 @@ public:
 private:
     ros::Publisher image_pub;
     ros::Publisher object_pub;
+    Channel channel;
+    bool inverted;
 };
 
 int main(int argc, char** argv)
