@@ -1,0 +1,7 @@
+bool enableDepthPid
+bool enableOrientationPid
+bool enableRotationSpeedPid
+bool enableMotors
+bool resetZeroPressure
+bool setEmergencyStop
+---
