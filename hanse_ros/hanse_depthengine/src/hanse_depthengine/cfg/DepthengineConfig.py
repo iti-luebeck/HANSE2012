@@ -40,7 +40,9 @@
 ##  POSSIBILITY OF SUCH DAMAGE.
 ##**********************************************************/
 
-config_description = [{'srcline': 11, 'description': 'how often to send data to server', 'max': 1000.0, 'cconsttype': 'const double', 'ctype': 'double', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'publish_frequency', 'edit_method': '', 'default': 10.0, 'level': 0, 'min': 0.0, 'type': 'double'}, {'srcline': 12, 'description': 'minimal pressure value', 'max': 1100, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'min_depth_pressure', 'edit_method': '', 'default': 950, 'level': 0, 'min': 900, 'type': 'int'}, {'srcline': 13, 'description': 'maximal pressure value', 'max': 1700, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'max_depth_pressure', 'edit_method': '', 'default': 1500, 'level': 0, 'min': 1300, 'type': 'int'}, {'srcline': 14, 'description': 'depth pid enabled at start', 'max': True, 'cconsttype': 'const bool', 'ctype': 'bool', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'depth_pid_enabled_at_start', 'edit_method': '', 'default': True, 'level': 0, 'min': False, 'type': 'bool'}]
+from dynamic_reconfigure.encoding import extract_params
+
+config_description = {'upper': 'DEFAULT', 'lower': 'groups', 'srcline': 228, 'name': 'Default', 'parent': 0, 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'cstate': 'true', 'parentname': 'Default', 'class': 'DEFAULT', 'field': 'default', 'state': True, 'parentclass': '', 'groups': [], 'parameters': [{'srcline': 254, 'description': 'how often to send data to server', 'max': 1000.0, 'cconsttype': 'const double', 'ctype': 'double', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'publish_frequency', 'edit_method': '', 'default': 10.0, 'level': 0, 'min': 0.0, 'type': 'double'}, {'srcline': 254, 'description': 'minimal pressure value', 'max': 1100, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'min_depth_pressure', 'edit_method': '', 'default': 950, 'level': 0, 'min': 900, 'type': 'int'}, {'srcline': 254, 'description': 'maximal pressure value', 'max': 1700, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'max_depth_pressure', 'edit_method': '', 'default': 1500, 'level': 0, 'min': 1300, 'type': 'int'}, {'srcline': 254, 'description': 'depth pid enabled at start', 'max': True, 'cconsttype': 'const bool', 'ctype': 'bool', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'depth_pid_enabled_at_start', 'edit_method': '', 'default': True, 'level': 0, 'min': False, 'type': 'bool'}], 'type': '', 'id': 0}
 
 min = {}
 max = {}
@@ -49,7 +51,14 @@ level = {}
 type = {}
 all_level = 0
 
-for param in config_description:
+#def extract_params(config):
+#    params = []
+#    params.extend(config['parameters'])    
+#    for group in config['groups']:
+#        params.extend(extract_params(group))
+#    return params
+
+for param in extract_params(config_description):
     min[param['name']] = param['min']
     max[param['name']] = param['max']
     defaults[param['name']] = param['default']
