@@ -1,0 +1,34 @@
+<launch>
+  <group ns="/hanse">
+    <node name="hanse_loc_wall_markers" type="sonar_wall_markers" pkg="hanse_sonarlocalization" />
+  </group>
+
+
+
+  <group ns="hanse">
+    <node name="component_fix" type="component_fix" pkg="lse_xsens_mti" />
+  </group>
+
+  <group>
+    <remap from="/hanse/imu" to="/hanse/imu/component_fix" />
+    <!-- <remap from="/hanse/imu" to="/hanse/imu/wrong" /> -->
+    <include ns="hanse" file="$(find hanse_sonarlocalization)/launch/localization_online.launch">
+      <arg name="map_image" value="$(find hanse_sonarlocalization)/maps/wakenitz_large.png" />
+      <arg name="map_pixel_size" value="0.078125" />
+      <arg name="map_threshold" value="32" />
+    </include>
+  </group>
+
+
+  <!--
+       <include ns="hanse" file="$(find hanse_sonarlocalization)/launch/online_wall_detection.launch" />
+  -->
+  <!--
+  <include ns="hanse" file="$(find hanse_sonarviz)/launch/sonarviz.launch" />
+  <group>
+    <remap from="/hanse/sonar/scan" to="/hanse/sonar/scan/wall_detection" />
+    <remap from="/hanse/sonar/scan/viz" to="/hanse/sonar/scan/wall_detection/viz" />
+    <include ns="hanse" file="$(find hanse_sonarviz)/launch/sonarviz.launch" />
+  </group>
+  -->
+</launch>
