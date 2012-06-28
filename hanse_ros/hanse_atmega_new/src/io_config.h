@@ -11,7 +11,7 @@ static constexpr unsigned long baudrate = 57600;
 static constexpr usart::port serial_port = usart::port0;
 #define SERIAL_IRQ_PREFIX USART0
 
-static constexpr unsigned long i2c_freq = 100000;
+static constexpr unsigned long i2c_freq = 40000;
 
 // we use 8 bit/even addresses
 static constexpr uint8_t pressure_addr = 0x50;
