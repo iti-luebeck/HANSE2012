@@ -1,0 +1,16 @@
+<package>
+  <description brief="hanse_atmega_ros">
+
+     hanse_atmega_ros
+
+  </description>
+  <author>Jannis Harder</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_atmega_ros</url>
+  <depend package="rospy"/>
+  <depend package="hanse_msgs"/>
+
+</package>
+
+
