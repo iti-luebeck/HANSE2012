@@ -1,0 +1,23 @@
+<package>
+  <description brief="hanse_orientationengine">
+
+     hanse_orientationengine
+
+  </description>
+  <author>hajo</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_orientationengine</url>
+  <depend package="roscpp"/>
+  <depend package="hanse_msgs"/>
+  <depend package="hanse_srvs"/>
+  <depend package="std_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="sensor_msgs"/>
+  <depend package="bullet"/>
+
+</package>
+
+
