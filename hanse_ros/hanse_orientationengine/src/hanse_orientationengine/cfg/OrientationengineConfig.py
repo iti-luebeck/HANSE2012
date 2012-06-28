@@ -40,7 +40,9 @@
 ##  POSSIBILITY OF SUCH DAMAGE.
 ##**********************************************************/
 
-config_description = [{'srcline': 11, 'description': 'how often to send data to server', 'max': 1000.0, 'cconsttype': 'const double', 'ctype': 'double', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'publish_frequency', 'edit_method': '', 'default': 10.0, 'level': 0, 'min': 0.0, 'type': 'double'}, {'srcline': 12, 'description': 'scaling of rotation speed', 'max': 3, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'z_axis', 'edit_method': '', 'default': 1, 'level': 0, 'min': 1, 'type': 'int'}, {'srcline': 13, 'description': 'orientation of z axis', 'max': 1, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'orientation_z', 'edit_method': '', 'default': 1, 'level': 0, 'min': -1, 'type': 'int'}, {'srcline': 14, 'description': 'rotation speed pid enabled at start', 'max': True, 'cconsttype': 'const bool', 'ctype': 'bool', 'srcfile': '../cfg/NodeParams.cfg', 'name': 'orientation_pid_enabled_at_start', 'edit_method': '', 'default': True, 'level': 0, 'min': False, 'type': 'bool'}]
+from dynamic_reconfigure.encoding import extract_params
+
+config_description = {'upper': 'DEFAULT', 'lower': 'groups', 'srcline': 228, 'name': 'Default', 'parent': 0, 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'cstate': 'true', 'parentname': 'Default', 'class': 'DEFAULT', 'field': 'default', 'state': True, 'parentclass': '', 'groups': [], 'parameters': [{'srcline': 254, 'description': 'how often to send data to server', 'max': 1000.0, 'cconsttype': 'const double', 'ctype': 'double', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'publish_frequency', 'edit_method': '', 'default': 10.0, 'level': 0, 'min': 0.0, 'type': 'double'}, {'srcline': 254, 'description': 'scaling of rotation speed', 'max': 3, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'z_axis', 'edit_method': '', 'default': 1, 'level': 0, 'min': 1, 'type': 'int'}, {'srcline': 254, 'description': 'orientation of z axis', 'max': 1, 'cconsttype': 'const int', 'ctype': 'int', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'orientation_z', 'edit_method': '', 'default': 1, 'level': 0, 'min': -1, 'type': 'int'}, {'srcline': 254, 'description': 'rotation speed pid enabled at start', 'max': True, 'cconsttype': 'const bool', 'ctype': 'bool', 'srcfile': '/opt/ros/fuerte/stacks/dynamic_reconfigure/src/dynamic_reconfigure/parameter_generator.py', 'name': 'orientation_pid_enabled_at_start', 'edit_method': '', 'default': True, 'level': 0, 'min': False, 'type': 'bool'}], 'type': '', 'id': 0}
 
 min = {}
 max = {}
@@ -49,7 +51,14 @@ level = {}
 type = {}
 all_level = 0
 
-for param in config_description:
+#def extract_params(config):
+#    params = []
+#    params.extend(config['parameters'])    
+#    for group in config['groups']:
+#        params.extend(extract_params(group))
+#    return params
+
+for param in extract_params(config_description):
     min[param['name']] = param['min']
     max[param['name']] = param['max']
     defaults[param['name']] = param['default']

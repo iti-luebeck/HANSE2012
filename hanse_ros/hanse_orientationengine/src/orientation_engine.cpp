@@ -105,8 +105,8 @@ void OrientationEngine::xsensCallback(
 
     double roll, pitch, yaw;
     tf::quaternionMsgToTF(xsensData->orientation, q);
-    //tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    btMatrix3x3(q).getRPY(roll, pitch, yaw);
+    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    //btMatrix3x3(q).getRPY(roll, pitch, yaw);
 
     switch (config.z_axis) {
     case 3:
