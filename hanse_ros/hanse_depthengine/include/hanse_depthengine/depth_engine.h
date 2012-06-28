@@ -48,8 +48,9 @@ private:
     ros::Publisher pubDepthCurrent;
     ros::Publisher pubDepthTarget;
 
-    ros::Publisher pubMotorFront;
-    ros::Publisher pubMotorRear;
+    //ros::Publisher pubMotorFront;
+    //ros::Publisher pubMotorRear;
+    ros::Publisher pubMotorUp;
 
     // Daten Zwischenspeicher.
     double depthTarget;
