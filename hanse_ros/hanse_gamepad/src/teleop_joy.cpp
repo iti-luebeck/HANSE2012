@@ -1,182 +1,236 @@
-#include <ros/ros.h>
-#include <sensor_msgs/Joy.h>
-#include <std_msgs/Bool.h>
-#include <geometry_msgs/Twist.h>
-#include <dynamic_reconfigure/server.h>
+#include "hanse_gamepad/teleop_joy.h"
 
-#include <hanse_gamepad/NodeConfig.h>
-#include <hanse_msgs/EngineCommands.h>
+TeleopHanse::TeleopHanse():
+    linearValue(0),
+    angularValue(0),
+    depthValue(0),
+    motorsEnabled(true),
+    pidsEnabled(true),
+    emergencyStop(false),
+    gamepadEnabled(false) {
 
-class TeleopHanse
-{
-public:
-  TeleopHanse();
+    pubCmdVel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 1);
+    subJoyInput = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
 
-private:
+    // will be set to actual value once config is loaded
+    publishTimer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
 
-  void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
-  void timerCallback(const ros::TimerEvent &e);
-  
-  void dyn_reconfigure_callback(hanse_gamepad::NodeConfig &config, uint32_t level);
+    dynReconfigureCb = boost::bind(&TeleopHanse::dynReconfigureCallback, this, _1, _2);
+    dynReconfigureSrv.setCallback(dynReconfigureCb);
+    // from this point on we can assume a valid config
 
-  ros::NodeHandle node;
+    srvClEngineCommandDepth = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/depth/handleEngineCommand");
+    srvClEngineCommandOrientation = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/orientation/handleEngineCommand");
 
-  ros::Timer control_loop_timer;
-
-  ros::Publisher pub_cmd_vel;
-  ros::Publisher pub_engineCommands;
-  ros::Subscriber sub_joy;
-
-  double value_linear;
-  double value_angular;
-  double value_depth;
-
-  bool emergency_stop;
-  bool enable_handcontrol;
-
-  bool button_up;
-  bool button_down;
-
-  bool config_set;
-
-  hanse_gamepad::NodeConfig config;
-  
-  /** \brief dynamic_reconfigure interface */
-  dynamic_reconfigure::Server<hanse_gamepad::NodeConfig> dyn_reconfigure_srv;
-
-  /** \brief dynamic_reconfigure call back */
-  dynamic_reconfigure::Server<hanse_gamepad::NodeConfig>::CallbackType dyn_reconfigure_cb;
-
-};
-
-TeleopHanse::TeleopHanse() {
-  value_linear = 0;
-  value_angular = 0;
-  value_depth = 0;
-  emergency_stop = false;
-  enable_handcontrol = false;
-  button_up = false;
-  button_down = false;
-
-  pub_cmd_vel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 1);
-  pub_engineCommands = node.advertise<hanse_msgs::EngineCommands>("/hanse/commands/engineCommands", 1);
-  sub_joy = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
-
-  // will be set to actual value once config is loaded
-  control_loop_timer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
-
-  dyn_reconfigure_cb = boost::bind(&TeleopHanse::dyn_reconfigure_callback, this, _1, _2);
-  dyn_reconfigure_srv.setCallback(dyn_reconfigure_cb);
-  // from this point on we can assume a valid config
-
-  ROS_INFO("teleop_joy started");
-
+    ROS_INFO("teleop_joy started");
+    ROS_INFO("Gamepad disabled");
 }
 
-void TeleopHanse::dyn_reconfigure_callback(hanse_gamepad::NodeConfig &config, uint32_t level)
-{
+void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &config, uint32_t level) {
+
     ROS_INFO("got new parameters, level=%d", level);
 
     this->config = config;
 
-    control_loop_timer.setPeriod(ros::Duration(1.0/config.frequency));
+    publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
+//    orientationDelta = DEG2RAD(config.orientation_delta);
 }
 
-void TeleopHanse::timerCallback(const ros::TimerEvent &e)
-{
-    hanse_msgs::EngineCommands engine;
-    engine.emergencyStop = emergency_stop;
-    pub_engineCommands.publish(engine);
+void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
 
-    if (emergency_stop) {
-        ROS_INFO("Pressed emergency_stop button");
-	value_depth = 0;
-	ROS_INFO("value_depth set to 0");
-	enable_handcontrol = false;
-	ROS_INFO("handcontrol disabled");
-    } else {
-    	if (button_down) {
-        	value_depth = value_depth + config.depth_delta;
-        	button_down = false;
-    	}
+    if (gamepadEnabled) {
+        // publish data on topic.
+        geometry_msgs::Twist velocityMsg;
 
-	if (button_up) {
-		if (value_depth > 0)
-        		value_depth = value_depth - config.depth_delta;
-        	button_up = false;
-    	}
+//        if (orientationMode) {
+//            velocityMsg.angular.z = orientationValue;
+//        } else {
+            velocityMsg.angular.z = angularValue;
+//        }
 
-        // publish data on topic. no use for this, yet
-    	geometry_msgs::Twist vel;
-    	vel.angular.z = value_angular;
-    	vel.linear.x = value_linear;
-    	vel.linear.z = value_depth;
+        velocityMsg.linear.x = linearValue;
+        velocityMsg.linear.z = depthValue;
 
-    	ROS_INFO("Current target depth: %f cm - FF %f - ANG %f", value_depth, value_linear, value_angular);
-        // std::cout << "Forward " << value_linear << " Angular " << value_angular << std::endl;
+        // ROS_INFO("Current target depth: %f cm - FF %f - ANG %f - ORI %f", depthValue, linearValue, rotationSpeedValue, orientationValue);
 
-    	pub_cmd_vel.publish(vel);
+        pubCmdVel.publish(velocityMsg);
     }
 }
 
-void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{
-    if (enable_handcontrol)
-    {
-    	if (fabs(joy->axes[config.axis_angular]) < config.joy_gate)
-        	value_angular = 0;
-    	else
-        	value_angular = config.scale_angular * joy->axes[config.axis_angular];
+void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
 
-    	if (fabs(joy->axes[config.axis_linear]) < config.joy_gate)
-        	value_linear = 0;
-    	else
-        	value_linear = config.scale_linear * joy->axes[config.axis_linear];
+    hanse_srvs::EngineCommand commandMsg;
+    commandMsg.request.enableDepthPid = true;
+    commandMsg.request.enableMotors = motorsEnabled;
+//    commandMsg.request.enableOrientationPid = orientationMode;
+    commandMsg.request.enableOrientationPid = true;
+//    commandMsg.request.enableRotationSpeedPid = rotationSpeedMode;
+    commandMsg.request.enableRotationSpeedPid = false;
+    commandMsg.request.resetZeroPressure = false;
+    commandMsg.request.setEmergencyStop = false;
+    bool changed = false;
 
-    	if (joy->buttons[config.button_down])
-	{
-		button_down = true;
-	}
+    if (joy->buttons[config.emergency_stop_button]) {
+        changed = true;
+        emergencyStop = !emergencyStop;
+        commandMsg.request.setEmergencyStop = emergencyStop;
 
-    	if (joy->buttons[config.button_up])
-	{
-        	button_up = true;
-	}
+        if(emergencyStop) {
+            ROS_INFO("Emergency stop! Gamepad disabled, depth is set to 0");
+            gamepadEnabled = false;
+            depthValue = 0;
+            angularValue = 0;
+            linearValue = 0;
+        } else {
+            ROS_INFO("Emergency stop disabled");
+        }
     }
 
+    if (joy->buttons[config.motor_switch_button] && !emergencyStop) {
+        changed = true;
+        motorsEnabled = !motorsEnabled;
+        commandMsg.request.enableMotors = motorsEnabled;
 
-    if (joy->buttons[config.button_hand_control_enable]) {
-        enable_handcontrol = true;
-
-//	std_msgs::Bool boolMessage;
-//    	boolMessage.data = true;
-
-//	pub_switchPid.publish(boolMessage);
+        if(motorsEnabled) {
+            ROS_INFO("Motors enabled.");
+        } else {
+            ROS_INFO("Motors disabled.");
+        }
     }
 
-    if (joy->buttons[config.button_emergency_stop]) {
-	emergency_stop = !emergency_stop;
+    if (joy->buttons[config.pid_switch_button] && !emergencyStop) {
+        changed = true;
+        pidsEnabled = !pidsEnabled;
+        commandMsg.request.enableDepthPid = pidsEnabled;
+
+        if (pidsEnabled) {
+            ROS_INFO("PIDs enabled.");
+
+//            if (orientationMode) {
+                commandMsg.request.enableOrientationPid = true;
+//            } else if (rotationSpeedMode) {
+//                commandMsg.request.enableRotationSpeedPid = true;
+//            }
+        } else {
+            ROS_INFO("PIDs disabled.");
+            commandMsg.request.enableOrientationPid = false;
+//            commandMsg.request.enableRotationSpeedPid = false;
+        }
     }
 
-    if (joy->buttons[config.button_hand_control_disable]) {
-        enable_handcontrol = false;
+//    if (joy->buttons[config.rotation_speed_mode] && !orientationMode && !emergencyStop) {
+//        changed = true;
+//        rotationSpeedMode = !rotationSpeedMode;
+//        commandMsg.request.enableRotationSpeedPid = rotationSpeedMode;
 
-//	std_msgs::Bool boolMessage;
-//    	boolMessage.data = false;
+//        if (rotationSpeedMode) {
+//            ROS_INFO("Rotation speed control activated.");
+//        } else {
+//            angularValue = 0;
+//            ROS_INFO("Rotation speed control deactivated.");
+//        }
+//    }
 
-//	pub_switchPid.publish(boolMessage);
+//    if (joy->buttons[config.orientation_mode] && !rotationSpeedMode && !emergencyStop) {
+//        changed = true;
+//        orientationMode = !orientationMode;
+//        commandMsg.request.enableOrientationPid = orientationMode;
+
+//        if (orientationMode) {
+//            ROS_INFO("Orientation control activated.");
+//        } else {
+//            ROS_INFO("Orientation control deactivated.");
+//        }
+//    }
+
+    if (joy->buttons[config.zero_depth_reset_button] && !emergencyStop) {
+        changed = true;
+        commandMsg.request.resetZeroPressure = true;
+    }
+
+    if (joy->buttons[config.gamepad_switch_button] && !emergencyStop) {
+        gamepadEnabled = !gamepadEnabled;
+
+        if(gamepadEnabled) {
+            ROS_INFO("Gamepad enabled.");
+        } else {
+            ROS_INFO("Gamepad disabled.");
+        }
+    }
+
+    if (gamepadEnabled) {
+        if (fabs(joy->axes[config.linear_axis]) < config.joy_deadzone) {
+            linearValue = 0;
+        } else {
+            linearValue = config.linear_scale * joy->axes[config.linear_axis];
+        }
+
+//        if (orientationMode) {
+//            if (joy->buttons[config.orientation_left_button]) {
+//                orientationValue += orientationDelta;
+
+//                if (orientationValue > M_PI) {
+//                    orientationValue -= 2 * M_PI;
+//                }
+//            } else if (joy->buttons[config.orientation_right_button]) {
+//                orientationValue -= orientationDelta;
+
+//                if (orientationValue < -M_PI) {
+//                    orientationValue += 2 * M_PI;
+//                }
+//            }
+//        } else {
+            if (fabs(joy->axes[config.angular_axis]) < config.joy_deadzone) {
+                angularValue = 0;
+            } else {
+                angularValue = config.angular_scale * joy->axes[config.angular_axis];
+            }
+//        }
+
+        if (config.depth_down_button == config.depth_down_button) {
+            if (joy->axes[config.depth_down_button] != 0) {
+                depthValue -= joy->axes[config.depth_down_button] * config.depth_delta;
+            }
+        } else {
+            if (joy->buttons[config.depth_up_button]) {
+                depthValue -= config.depth_delta;
+            }
+
+            if (joy->buttons[config.depth_down_button]) {
+                depthValue += config.depth_delta;
+            }
+        }
+
+        if (depthValue < 0) {
+            depthValue = 0;
+        }
+    }
+
+    if (changed) {
+        int8_t count = 0;
+        // Senden der Engine-Nachricht
+        ros::Rate loopRate(4);
+        while(ros::ok() && count < NUM_SERVICE_LOOPS) {
+            if (srvClEngineCommandDepth.call(commandMsg) &&
+                    srvClEngineCommandOrientation.call(commandMsg)) {
+                break;
+            } else {
+                ROS_INFO("Engine couldn't be called. Retry.");
+            }
+
+            count++;
+            loopRate.sleep();
+        }
     }
 }
 
-int main(int argc, char** argv)
-{
-  ros::init(argc, argv, "teleop_hanse");
+int main(int argc, char** argv) {
 
-  ros::start();
+    ros::init(argc, argv, "teleop_hanse");
+    ros::start();
 
-  TeleopHanse teleop_hanse;
+    TeleopHanse teleop_hanse;
 
-  ros::spin();
-
+    ros::spin();
 }
 

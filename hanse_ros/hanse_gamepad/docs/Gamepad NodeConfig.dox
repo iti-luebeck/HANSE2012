@@ -1,0 +1,24 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~publish_frequency" : \b [int] how often to send data to server min: -2147483648, default: 1, max: 2147483647
+- \b "~gamepad_enable_button" : \b [int] button to enable hand control min: -2147483648, default: 1, max: 2147483647
+- \b "~gamepad_disable_button" : \b [int] button to disable hand control min: -2147483648, default: 1, max: 2147483647
+- \b "~joy_deadzone" : \b [double] min raw joystick value to be considered != 0 min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~linear_axis" : \b [int] axis for linear speed min: -2147483648, default: 1, max: 2147483647
+- \b "~linear_scale" : \b [double] scale factor for linear speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~rotation_speed_mode" : \b [int] button to switch to rotation by stick min: -2147483648, default: 1, max: 2147483647
+- \b "~angular_axis" : \b [int] axis for angular speed min: -2147483648, default: 1, max: 2147483647
+- \b "~angular_scale" : \b [double] scale factor for angular speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~depth_up_button" : \b [int] button to go up min: -2147483648, default: 1, max: 2147483647
+- \b "~depth_down_button" : \b [int] button to go down min: -2147483648, default: 1, max: 2147483647
+- \b "~depth_delta" : \b [double] increment to go up/down in each step min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~orientation_mode" : \b [int] button to switch to rotation via increments min: -2147483648, default: 1, max: 2147483647
+- \b "~orientation_left_button" : \b [int] button to go an increment to the left min: -2147483648, default: 1, max: 2147483647
+- \b "~orientation_right_button" : \b [int] button to go an increment to the right min: -2147483648, default: 1, max: 2147483647
+- \b "~orientation_delta" : \b [double] increment to turn left/right in each step min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~motor_switch_button" : \b [int] switch motors between ready and off min: -2147483648, default: 1, max: 2147483647
+- \b "~pid_switch_button" : \b [int] switch pid's between all off and last on min: -2147483648, default: 1, max: 2147483647
+- \b "~emergency_stop_button" : \b [int] button for emergency stop min: -2147483648, default: 1, max: 2147483647
+
