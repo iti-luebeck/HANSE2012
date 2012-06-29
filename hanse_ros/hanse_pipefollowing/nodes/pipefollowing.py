@@ -2,17 +2,19 @@
 PACKAGE = 'hanse_pipefollowing'
 import roslib; roslib.load_manifest('hanse_pipefollowing')
 import rospy
+import dynamic_reconfigure.server
 import math
 import smach
 import smach_ros
 from geometry_msgs.msg import Twist, Vector3
 from hanse_msgs.msg import Object
+from hanse_pipefollowing.cfg import PipeFollowingConfig
 
 # bisher gemacht: 
 # - logik aus PipeTracker::update auf smach uebertragen
-# -
+# - logik aus Behaviour_PipeFollowing::controlPipeFollow uebernommen
+# - dynamic_reconfigure
 
-# TODO dynamic_reconfigure
 # TODO Global.x/y/lastX/lastY locken
 # TODO generische Lost-Klasse um platz zu sparen
 # TODO actionserver erstellen zum starten/stoppen des verhaltens
@@ -235,6 +237,20 @@ def objectCallback(msg):
 	Global.size = msg.size
 	Global.orientation = msg.orientation
 
+def configCallback(config, level):
+	rospy.loginfo('Reconfigure Request: ')
+	Config.minSize = config['minSize']
+	Config.maxSize = config['maxSize']
+	Config.fwSpeed = config['fwSpeed']
+	Config.deltaAngle = config['deltaAngle']
+	Config.deltaDist = config['deltaDist']
+	Config.kpAngle = config['kpAngle']
+	Config.kpDist = config['kpDist']
+	Config.robCenterX = config['robCenterX']
+	Config.robCenterY = config['robCenterY']
+	Config.maxDistance = config['maxDistance']
+	return config
+
 
 #=======================================
 # Helper functions
@@ -278,6 +294,9 @@ def setMotorSpeed(lin, ang):
 #=======================================
 if __name__ == '__main__':
 	rospy.init_node('pipefollowing')
+
+	# Config server
+	dynamic_reconfigure.server.Server(PipeFollowingConfig, configCallback)
 	
 	# Subscriber
 	rospy.Subscriber('/object', Object, objectCallback)
