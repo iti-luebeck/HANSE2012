@@ -2,6 +2,7 @@
 PACKAGE = 'hanse_pipefollowing'
 import roslib; roslib.load_manifest('hanse_pipefollowing')
 import rospy
+import math
 import smach
 import smach_ros
 from geometry_msgs.msg import Twist, Vector3
@@ -112,29 +113,31 @@ class IsSeen(smach.State):
 
 			# lost if less than minSize is seen
 			if Global.size <= Config.minSize:
-				if   Global.x < 0.25: return Transistions.LostLeft
-				elif Global.x > 0.75: return Transistions.LostRight
-				elif Global.y < 0.25: return Transistions.LostTop
-				elif Global.y > 0.75: return Transistions.LostBottom
+				if   Global.x < 0.25: return Transitions.LostLeft
+				elif Global.x > 0.75: return Transitions.LostRight
+				elif Global.y < 0.25: return Transitions.LostTop
+				elif Global.y > 0.75: return Transitions.LostBottom
 				else:                 return Transitions.Lost
 
 			# lost if more than maxSize is seen
 			elif Global.size >= Config.maxSize:
-				if   Global.lastX < 0.25: return Transistions.LostLeft
-				elif Global.lastX > 0.75: return Transistions.LostRight
-				elif Global.lastY < 0.25: return Transistions.LostTop
-				elif Global.lastY > 0.75: return Transistions.LostBottom
+				if   Global.lastX < 0.25: return Transitions.LostLeft
+				elif Global.lastX > 0.75: return Transitions.LostRight
+				elif Global.lastY < 0.25: return Transitions.LostTop
+				elif Global.lastY > 0.75: return Transitions.LostBottom
 				else:                     return Transitions.Lost
 
 
-		distanceY = computeIntersection(Global.x, Global.Y, Global.orientation)
-		angularSpeed = 0.0
-		if math.fabs(Global.orientation) > Config.deltaAngle:
-			angularSpeed = Config.kpAngle * Global.orientation / (math.pi/2)
-		if math.fabs(distanceY) > Config.deltaDist:
-			angularSpeed += Config.kpDist * distanceY / Config.maxDistance
+			distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
+			angularSpeed = 0.0
+			if math.fabs(Global.orientation) > Config.deltaAngle:
+				angularSpeed = Config.kpAngle * Global.orientation / (math.pi/2)
+			if math.fabs(distanceY) > Config.deltaDist:
+				angularSpeed += Config.kpDist * distanceY / Config.maxDistance
 
-		rospy.sleep(0.2)
+			rospy.loginfo('angularSpeed: ' + repr(angularSpeed))
+			setMotorSpeed(Config.fwSpeed, angularSpeed)
+			rospy.sleep(0.2)
 				
 
 class LostLeft(smach.State):
@@ -223,12 +226,13 @@ class Passed(smach.State):
 # Callback functions
 #=======================================
 def objectCallback(msg):
-	rospy.loginfo('objectCallback');
+	rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
 	
 	Global.lastX = Global.x
 	Global.lastY = Global.y
 	Global.x = msg.x
 	Global.y = msg.y
+	Global.size = msg.size
 	Global.orientation = msg.orientation
 
 
@@ -237,7 +241,7 @@ def objectCallback(msg):
 #=======================================
 
 def hasPassed():
-	return math.abs(Global.orientation) < math.pi/6.0 and Global.y > 0.75 and Global.x > 0.2 and Global.x < 0.8
+	return math.fabs(Global.orientation) < math.pi/6.0 and Global.y > 0.75 and Global.x > 0.2 and Global.x < 0.8
 
 def determineTransitionFromLostState():
 	# size between min and max value
@@ -279,7 +283,7 @@ if __name__ == '__main__':
 	rospy.Subscriber('/object', Object, objectCallback)
 
 	# Publisher
-	pub_cmd_vel = rospy.Publisher('commands/cmd_vel', Twist)
+	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=[])
