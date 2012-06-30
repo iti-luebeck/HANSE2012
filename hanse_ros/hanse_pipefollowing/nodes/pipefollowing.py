@@ -6,15 +6,22 @@ import dynamic_reconfigure.server
 import math
 import smach
 import smach_ros
+import numpy
 from geometry_msgs.msg import Twist, Vector3
-from hanse_msgs.msg import Object
+from hanse_msgs.msg import Object, sollSpeed
 from hanse_pipefollowing.cfg import PipeFollowingConfig
+
+#################
+IMAGE_COLS = 640
+IMAGE_ROWS = 480
+#################
 
 # bisher gemacht: 
 # - logik aus PipeTracker::update auf smach uebertragen
 # - logik aus Behaviour_PipeFollowing::controlPipeFollow uebernommen
 # - dynamic_reconfigure
 
+# TODO herausfinden wofuer der zweite p-regler ist
 # TODO Global.x/y/lastX/lastY locken
 # TODO generische Lost-Klasse um platz zu sparen
 # TODO actionserver erstellen zum starten/stoppen des verhaltens
@@ -110,8 +117,7 @@ class IsSeen(smach.State):
 			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
 				if hasPassed():
-					return Transtions.Passed
-
+					return Transitions.Passed
 
 			# lost if less than minSize is seen
 			if Global.size <= Config.minSize:
@@ -131,14 +137,15 @@ class IsSeen(smach.State):
 
 
 			distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
+			#rospy.loginfo('distanceY: ' + repr(distanceY))
 			angularSpeed = 0.0
 			if math.fabs(Global.orientation) > Config.deltaAngle:
 				angularSpeed = Config.kpAngle * Global.orientation / (math.pi/2)
-			if math.fabs(distanceY) > Config.deltaDist:
-				angularSpeed += Config.kpDist * distanceY / Config.maxDistance
+			#if math.fabs(distanceY) > Config.deltaDist:
+			#	angularSpeed += Config.kpDist * distanceY / Config.maxDistance
 
-			rospy.loginfo('angularSpeed: ' + repr(angularSpeed))
-			setMotorSpeed(Config.fwSpeed, angularSpeed)
+			rospy.loginfo('angularSpeed: ' + repr(-angularSpeed) + '\t\t ('+repr(Global.x)+','+repr(Global.y)+')')
+			setMotorSpeed(Config.fwSpeed- math.fabs(angularSpeed), -angularSpeed)
 			rospy.sleep(0.2)
 				
 
@@ -228,12 +235,12 @@ class Passed(smach.State):
 # Callback functions
 #=======================================
 def objectCallback(msg):
-	rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
+	#rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
 	
 	Global.lastX = Global.x
 	Global.lastY = Global.y
-	Global.x = msg.x
-	Global.y = msg.y
+	Global.x = msg.x / IMAGE_COLS
+	Global.y = msg.y / IMAGE_ROWS
 	Global.size = msg.size
 	Global.orientation = msg.orientation
 
@@ -257,7 +264,7 @@ def configCallback(config, level):
 #=======================================
 
 def hasPassed():
-	return math.fabs(Global.orientation) < math.pi/6.0 and Global.y > 0.75 and Global.x > 0.2 and Global.x < 0.8
+	return (math.fabs(Global.orientation) < math.pi/6.0) and (Global.y > 0.75) and (0.2 < Global.x < 0.8)
 
 def determineTransitionFromLostState():
 	# size between min and max value
@@ -282,10 +289,20 @@ def computeIntersection(meanX, meanY, theta):
 
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
-	linearVector = Vector3(x=lin,z=0)
-	angularVector = Vector3(z=-ang)
-	twist = Twist(linear=linearVector, angular=angularVector)
-	pub_cmd_vel.publish(twist)
+	#linearVector = Vector3(x=lin,z=0)
+	#angularVector = Vector3(z=-ang)
+	#twist = Twist(linear=linearVector, angular=angularVector)
+	#pub_cmd_vel.publish(twist)
+	#
+	# geschwindigkeitswerte fuer thruster berechnen
+	left = lin*127 + ang*127
+	right = lin*127 - ang*127
+	# auf den wertebereich -127 bis 127 beschraenken
+	left = numpy.clip(left, -127, 127)
+	right = numpy.clip(right, -127, 127)
+	# nachrichten an motoren publishen
+	pub_motor_left.publish(sollSpeed(data = left))
+	pub_motor_right.publish(sollSpeed(data = right))
 
 
 
@@ -302,7 +319,9 @@ if __name__ == '__main__':
 	rospy.Subscriber('/object', Object, objectCallback)
 
 	# Publisher
-	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
+	#pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
+	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
+	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=[])
