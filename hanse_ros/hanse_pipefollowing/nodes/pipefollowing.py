@@ -23,7 +23,6 @@ IMAGE_ROWS = 480
 
 # TODO herausfinden wofuer der zweite p-regler ist
 # TODO Global.x/y/lastX/lastY locken
-# TODO generische Lost-Klasse um platz zu sparen
 # TODO actionserver erstellen zum starten/stoppen des verhaltens
 
 
@@ -65,28 +64,26 @@ class States:
 	NotSeenYet = 'NotSeenYet'
 	Passed = 'Passed'
 	IsSeen = 'IsSeen'
-	LostLeft = 'LostLeft'
-	LostRight = 'LostRight'
-	LostBottom = 'LostBottom'
-	LostTop = 'LostTop'
 	Lost = 'Lost'
 
 class Transitions:
 	IsSeen = 'IsSeen'
 	Passed = 'Passed'
+	Lost = 'Lost'
+
+class LostTypes:
 	LostLeft = 'LostLeft'
 	LostRight = 'LostRight'
 	LostBottom = 'LostBottom'
 	LostTop = 'LostTop'
-	Lost = 'Lost'
-
+	Lost = 'Lost'	
 
 #=======================================
 # State classes
 #=======================================
 class NotSeenYet(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
+		smach.State.__init__(self, outcomes=[Transitions.IsSeen])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state '+States.NotSeenYet)
@@ -106,7 +103,8 @@ class NotSeenYet(smach.State):
 
 class IsSeen(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.Lost,Transitions.LostBottom,Transitions.LostTop,Transitions.LostRight,Transitions.LostLeft])
+		smach.State.__init__(self, outcomes=[Transitions.Lost, Transitions.Passed],
+								output_keys=['lost_type'])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state '+States.IsSeen)
@@ -118,22 +116,25 @@ class IsSeen(smach.State):
 				# end of pipe reached?
 				if hasPassed():
 					return Transitions.Passed
+			# lost
+			else:
+				tmp_x = 0.0
+				tmp_y = 0.0
+				# lost if less than minSize is seen
+				if Global.size <= Config.minSize:
+					tmp_x = Global.x
+					tmp_y = Global.y
+				# lost if more than maxSize is seen
+				elif Global.size >= Config.maxSize:
+					tmp_x = Global.lastX
+					tmp_y = Global.lastY
 
-			# lost if less than minSize is seen
-			if Global.size <= Config.minSize:
-				if   Global.x < 0.25: return Transitions.LostLeft
-				elif Global.x > 0.75: return Transitions.LostRight
-				elif Global.y < 0.25: return Transitions.LostTop
-				elif Global.y > 0.75: return Transitions.LostBottom
-				else:                 return Transitions.Lost
-
-			# lost if more than maxSize is seen
-			elif Global.size >= Config.maxSize:
-				if   Global.lastX < 0.25: return Transitions.LostLeft
-				elif Global.lastX > 0.75: return Transitions.LostRight
-				elif Global.lastY < 0.25: return Transitions.LostTop
-				elif Global.lastY > 0.75: return Transitions.LostBottom
-				else:                     return Transitions.Lost
+				if   tmp_x < 0.25: userdata.lost_type = LostTypes.LostLeft
+				elif tmp_x > 0.75: userdata.lost_type = LostTypes.LostRight
+				elif tmp_y < 0.25: userdata.lost_type = LostTypes.LostTop
+				elif tmp_y > 0.75: userdata.lost_type = LostTypes.LostBottom
+				else:              userdata.lost_type = LostTypes.Lost
+				return Transitions.Lost
 
 
 			distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
@@ -144,81 +145,39 @@ class IsSeen(smach.State):
 			#if math.fabs(distanceY) > Config.deltaDist:
 			#	angularSpeed += Config.kpDist * distanceY / Config.maxDistance
 
-			rospy.loginfo('angularSpeed: ' + repr(-angularSpeed) + '\t\t ('+repr(Global.x)+','+repr(Global.y)+')')
-			setMotorSpeed(Config.fwSpeed- math.fabs(angularSpeed), -angularSpeed)
+			rospy.loginfo('angularSpeed: ' + repr(angularSpeed) + '\t\t ('+repr(Global.x)+','+repr(Global.y)+')')
+			setMotorSpeed(Config.fwSpeed- math.fabs(angularSpeed), angularSpeed)
 			rospy.sleep(0.2)
 				
 
-class LostLeft(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.LostLeft)
-
-		while not rospy.is_shutdown():
-			transition = determineTransitionFromLostState()
-			if transition != None: return transition
-
-			setMotorSpeed(Config.fwSpeed, -0.2)
-			rospy.sleep(0.2)
-
-
-class LostRight(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.LostRight)
-
-		while not rospy.is_shutdown():
-			transition = determineTransitionFromLostState()
-			if transition != None: return transition
-
-			setMotorSpeed(Config.fwSpeed, 0.2)
-			rospy.sleep(0.2)
-
-
-class LostTop(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.LostTop)
-
-		while not rospy.is_shutdown():
-			transition = determineTransitionFromLostState()
-			if transition != None: return transition
-
-			setMotorSpeed(Config.fwSpeed, 0.0)
-			rospy.sleep(0.2)
-
-
-class LostBottom(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.LostBottom)
-
-		while not rospy.is_shutdown():
-			transition = determineTransitionFromLostState()
-			if transition != None: return transition
-
-			setMotorSpeed(0.0, 0.2)
-			rospy.sleep(0.2)
-
-
 class Lost(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Passed])
+		smach.State.__init__(self, outcomes=[Transitions.IsSeen],
+									input_keys=['lost_type'])
 
 	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.Lost)
+		rospy.loginfo('Executing state '+States.Lost+' ('+userdata.lost_type +')')
 
-		while not rospy.is_shutdown():
-			rospy.loginfo('PANIC: lost');
-			rospy.sleep(1.0)
+
+		if userdata.lost_type == LostTypes.Lost:
+			while not rospy.is_shutdown():
+				rospy.loginfo('PANIC: lost');
+				rospy.sleep(1.0)
+		else:
+			# linear-/angularspeed tuples
+			speedDict = {
+				LostTypes.LostLeft:  (Config.fwSpeed, -0.2),
+				LostTypes.LostRight: (Config.fwSpeed, 0.2),
+				LostTypes.LostBottom:(0.0, 0.2),
+				LostTypes.LostTop:   (Config.fwSpeed, 0.0),
+			}
+
+			while not rospy.is_shutdown():
+				transition = determineTransitionFromLostState()
+				if transition != None: return transition
+
+				setMotorSpeed(*speedDict[userdata.lost_type])
+				rospy.sleep(0.2)
 
 
 class Passed(smach.State):
@@ -294,6 +253,7 @@ def setMotorSpeed(lin, ang):
 	#twist = Twist(linear=linearVector, angular=angularVector)
 	#pub_cmd_vel.publish(twist)
 	#
+	ang = -ang
 	# geschwindigkeitswerte fuer thruster berechnen
 	left = lin*127 + ang*127
 	right = lin*127 - ang*127
@@ -330,31 +290,12 @@ if __name__ == '__main__':
 	with sm:
 		# Add states to the container
 		smach.StateMachine.add(States.NotSeenYet, NotSeenYet(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
+                               transitions={Transitions.IsSeen : States.IsSeen})
 		smach.StateMachine.add(States.IsSeen, IsSeen(), 
-                               transitions={Transitions.LostLeft : States.LostLeft, 
-											Transitions.LostRight : States.LostRight,
-											Transitions.LostTop : States.LostTop,
-											Transitions.LostBottom : States.LostBottom,
-											Transitions.Lost : States.Lost})
-
-		smach.StateMachine.add(States.LostLeft, LostLeft(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
-		smach.StateMachine.add(States.LostRight, LostRight(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
-		smach.StateMachine.add(States.LostTop, LostTop(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
-		smach.StateMachine.add(States.LostBottom, LostBottom(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
+                               transitions={Transitions.Lost : States.Lost,
+                               				Transitions.Passed : States.Passed})
 		smach.StateMachine.add(States.Lost, Lost(), 
-                               transitions={Transitions.IsSeen : States.IsSeen, 
-											Transitions.Passed : States.Passed})
-
+                               transitions={Transitions.IsSeen : States.IsSeen})
 		smach.StateMachine.add(States.Passed, Passed(), 
                                transitions={})
 
