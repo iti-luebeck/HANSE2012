@@ -339,5 +339,12 @@ if __name__ == '__main__':
 		smach.StateMachine.add(States.Passed, Passed(), 
                                transitions={})
 
+	# Create and start the introspection server
+	sis = smach_ros.IntrospectionServer('pipefollowing_introspection_server', sm, '/SM_ROOT')
+	sis.start()
+
     # Execute SMACH plan
 	outcome = sm.execute()
+
+	rospy.spin()
+	sis.stop()
