@@ -437,7 +437,7 @@ QList<int> PingerDetection::decodeData(const char *data, qint64 len){
 
             decodeList.append(value);
 
-            ptr = channelBytes;
+            ptr += channelBytes;
         }
 
 
