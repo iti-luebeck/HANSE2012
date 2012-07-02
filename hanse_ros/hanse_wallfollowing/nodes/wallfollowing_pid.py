@@ -130,7 +130,7 @@ class FollowWall(smach.State):
 		smach.State.__init__(self, outcomes=[Transitions.NoWall, Transitions.Ended])
 
 	def execute(self, userdata):
-		rospy.loginfo('Executing state NoTurn')
+		rospy.loginfo('Executing state FollowWall')
 		
 #IMUTMP		startHeadPostion = Global.currentHeadPosition
 		
