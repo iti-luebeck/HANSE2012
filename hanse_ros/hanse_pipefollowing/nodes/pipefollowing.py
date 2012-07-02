@@ -40,6 +40,7 @@ class Config:
 	robCenterX = 320
 	robCenterY = 240
 	maxDistance = 320
+	mirror = False
 
 class Global:
 	x = 0.0
@@ -71,7 +72,7 @@ class LostTypes:
 	LostRight = 'LostRight'
 	LostBottom = 'LostBottom'
 	LostTop = 'LostTop'
-	Lost = 'Lost'	
+	Lost = 'Lost'
 
 
 #==============================================================================
@@ -196,10 +197,15 @@ def objectCallback(msg):
 	#rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
 	Global.lastX = Global.x
 	Global.lastY = Global.y
-	Global.x = msg.x / IMAGE_COLS
-	Global.y = msg.y / IMAGE_ROWS
 	Global.size = msg.size
-	Global.orientation = msg.orientation
+	if Config.mirror:
+		Global.x = (IMAGE_COLS - msg.x) / IMAGE_COLS
+		Global.y = (IMAGE_ROWS - msg.y) / IMAGE_ROWS
+		Global.orientation = -msg.orientation	
+	else:
+		Global.x = msg.x / IMAGE_COLS
+		Global.y = msg.y / IMAGE_ROWS
+		Global.orientation = msg.orientation
 
 def configCallback(config, level):
 	rospy.loginfo('Reconfigure Request: ')
@@ -213,6 +219,7 @@ def configCallback(config, level):
 	Config.robCenterX = config['robCenterX']
 	Config.robCenterY = config['robCenterY']
 	Config.maxDistance = config['maxDistance']
+	Config.mirror = config['mirror']
 	return config
 
 
