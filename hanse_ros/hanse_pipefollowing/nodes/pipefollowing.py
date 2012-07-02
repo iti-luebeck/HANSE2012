@@ -10,21 +10,14 @@ import numpy
 from geometry_msgs.msg import Twist, Vector3
 from hanse_msgs.msg import Object, sollSpeed
 from hanse_pipefollowing.cfg import PipeFollowingConfig
+from hanse_pipefollowing.msg import PipeFollowingAction
 
 #################
 IMAGE_COLS = 640
 IMAGE_ROWS = 480
 #################
 
-# bisher gemacht: 
-# - logik aus PipeTracker::update auf smach uebertragen
-# - logik aus Behaviour_PipeFollowing::controlPipeFollow uebernommen
-# - dynamic_reconfigure
-
-# TODO herausfinden wofuer der zweite p-regler ist
-# TODO Global.x/y/lastX/lastY locken
-# TODO actionserver erstellen zum starten/stoppen des verhaltens
-
+# TODO Global.x/y/lastX/lastY locken?
 
 
 # The pipe is seen if:
@@ -57,9 +50,10 @@ class Global:
 	lastY = 0.0
 	isSizeTooSmall = False
 
-#=======================================
+
+#==============================================================================
 # Constants
-#=======================================
+#==============================================================================
 class States:
 	NotSeenYet = 'NotSeenYet'
 	Passed = 'Passed'
@@ -70,6 +64,7 @@ class Transitions:
 	IsSeen = 'IsSeen'
 	Passed = 'Passed'
 	Lost = 'Lost'
+	Aborted = 'Aborted'
 
 class LostTypes:
 	LostLeft = 'LostLeft'
@@ -78,43 +73,49 @@ class LostTypes:
 	LostTop = 'LostTop'
 	Lost = 'Lost'	
 
-#=======================================
+
+#==============================================================================
 # State classes
-#=======================================
+#==============================================================================
 class NotSeenYet(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen])
+		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Aborted])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state '+States.NotSeenYet)
 
-		while not rospy.is_shutdown():
+		while not rospy.is_shutdown() and not self.preempt_requested():
 			# if size between min und max..
 			if Global.size < Config.maxSize and Global.size > Config.minSize:		
 				# end of pipe reached?
-				if hasPassed():
-					return Transtions.Passed
+				#if hasPassed():
+				#	setMotorSpeed(0,0)
+				#	return Transitions.Passed
 				return Transitions.IsSeen
 
 			setMotorSpeed(Config.fwSpeed, 0.0)
-			rospy.sleep(0.2);
+			rospy.sleep(0.2)
 
+		setMotorSpeed(0,0)
+		self.service_preempt()	
+		return Transitions.Aborted
 
 
 class IsSeen(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.Lost, Transitions.Passed],
+		smach.State.__init__(self, outcomes=[Transitions.Lost, Transitions.Passed, Transitions.Aborted],
 								output_keys=['lost_type'])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state '+States.IsSeen)
 
-		while not rospy.is_shutdown():
+		while not rospy.is_shutdown() and not self.preempt_requested():
 
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
 				if hasPassed():
+					setMotorSpeed(0,0)
 					return Transitions.Passed
 			# lost
 			else:
@@ -149,10 +150,14 @@ class IsSeen(smach.State):
 			setMotorSpeed(Config.fwSpeed- math.fabs(angularSpeed), angularSpeed)
 			rospy.sleep(0.2)
 				
+		setMotorSpeed(0,0)
+		self.service_preempt()		
+		return Transitions.Aborted
+
 
 class Lost(smach.State):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.IsSeen],
+		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Aborted],
 									input_keys=['lost_type'])
 
 	def execute(self, userdata):
@@ -172,30 +177,23 @@ class Lost(smach.State):
 				LostTypes.LostTop:   (Config.fwSpeed, 0.0),
 			}
 
-			while not rospy.is_shutdown():
+			while not rospy.is_shutdown() and not self.preempt_requested():
 				transition = determineTransitionFromLostState()
 				if transition != None: return transition
 
 				setMotorSpeed(*speedDict[userdata.lost_type])
 				rospy.sleep(0.2)
 
-
-class Passed(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state '+States.Passed)
-
-		setMotorSpeed(0.0, 0.0)
+			setMotorSpeed(0,0)
+			self.service_preempt()	
+			return Transitions.Aborted
 
 
-#=======================================
+#==============================================================================
 # Callback functions
-#=======================================
+#==============================================================================
 def objectCallback(msg):
 	#rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
-	
 	Global.lastX = Global.x
 	Global.lastY = Global.y
 	Global.x = msg.x / IMAGE_COLS
@@ -218,12 +216,12 @@ def configCallback(config, level):
 	return config
 
 
-#=======================================
+#==============================================================================
 # Helper functions
-#=======================================
+#==============================================================================
 
 def hasPassed():
-	return (math.fabs(Global.orientation) < math.pi/6.0) and (Global.y > 0.75) and (0.2 < Global.x < 0.8)
+	return (math.fabs(Global.orientation) < math.pi/6.0) and (Global.y > 0.75) and (0.2 < Global.x < 0.8)	
 
 def determineTransitionFromLostState():
 	# size between min and max value
@@ -265,12 +263,14 @@ def setMotorSpeed(lin, ang):
 	pub_motor_right.publish(sollSpeed(data = right))
 
 
-
-#=======================================
+#==============================================================================
 # main
-#=======================================
+#==============================================================================
 if __name__ == '__main__':
 	rospy.init_node('pipefollowing')
+
+	# actionserver starten
+	#Global.actionServer = NavigateActionServer(rospy.get_name())
 
 	# Config server
 	dynamic_reconfigure.server.Server(PipeFollowingConfig, configCallback)
@@ -284,7 +284,7 @@ if __name__ == '__main__':
 	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 
 	# Create a SMACH state machine
-	sm = smach.StateMachine(outcomes=[])
+	sm = smach.StateMachine(outcomes=[Transitions.Passed, Transitions.Aborted])
 
     # Open the container
 	with sm:
@@ -296,15 +296,23 @@ if __name__ == '__main__':
                                				Transitions.Passed : States.Passed})
 		smach.StateMachine.add(States.Lost, Lost(), 
                                transitions={Transitions.IsSeen : States.IsSeen})
-		smach.StateMachine.add(States.Passed, Passed(), 
-                               transitions={})
 
 	# Create and start the introspection server
 	sis = smach_ros.IntrospectionServer('pipefollowing_introspection_server', sm, '/SM_ROOT')
 	sis.start()
 
     # Execute SMACH plan
-	outcome = sm.execute()
+	#outcome = sm.execute()
+	# Construct action server wrapper
+	asw = smach_ros.ActionServerWrapper(
+	    rospy.get_name(), PipeFollowingAction,
+	    wrapped_container = sm,
+	    succeeded_outcomes = [Transitions.Passed],
+	    aborted_outcomes = [Transitions.Aborted],
+	    preempted_outcomes = [])
+
+	# Run the server
+	asw.run_server()
 
 	rospy.spin()
 	sis.stop()
