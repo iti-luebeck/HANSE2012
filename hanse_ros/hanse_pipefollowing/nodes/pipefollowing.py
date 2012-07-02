@@ -78,7 +78,14 @@ class LostTypes:
 #==============================================================================
 # State classes
 #==============================================================================
-class NotSeenYet(smach.State):
+class AbortableState(smach.State):
+	def abort(self):
+		setMotorSpeed(0,0)
+		self.service_preempt()
+		return Transitions.Aborted
+
+
+class NotSeenYet(AbortableState):
 	def __init__(self):
 		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Aborted])
 
@@ -87,22 +94,16 @@ class NotSeenYet(smach.State):
 
 		while not rospy.is_shutdown() and not self.preempt_requested():
 			# if size between min und max..
-			if Global.size < Config.maxSize and Global.size > Config.minSize:		
-				# end of pipe reached?
-				#if hasPassed():
-				#	setMotorSpeed(0,0)
-				#	return Transitions.Passed
+			if Config.minSize < Global.size < Config.maxSize:
 				return Transitions.IsSeen
 
 			setMotorSpeed(Config.fwSpeed, 0.0)
 			rospy.sleep(0.2)
 
-		setMotorSpeed(0,0)
-		self.service_preempt()	
-		return Transitions.Aborted
+		return self.abort()
 
 
-class IsSeen(smach.State):
+class IsSeen(AbortableState):
 	def __init__(self):
 		smach.State.__init__(self, outcomes=[Transitions.Lost, Transitions.Passed, Transitions.Aborted],
 								output_keys=['lost_type'])
@@ -131,32 +132,35 @@ class IsSeen(smach.State):
 					tmp_x = Global.lastX
 					tmp_y = Global.lastY
 
-				if   tmp_x < 0.25: userdata.lost_type = LostTypes.LostLeft
-				elif tmp_x > 0.75: userdata.lost_type = LostTypes.LostRight
-				elif tmp_y < 0.25: userdata.lost_type = LostTypes.LostTop
-				elif tmp_y > 0.75: userdata.lost_type = LostTypes.LostBottom
+				tmp_x /= IMAGE_COLS
+				tmp_y /= IMAGE_ROWS
+
+				if   tmp_x < 0.5: userdata.lost_type = LostTypes.LostLeft
+				elif tmp_x >= 0.5: userdata.lost_type = LostTypes.LostRight
+				elif tmp_y < 0.5: userdata.lost_type = LostTypes.LostTop
+				elif tmp_y >= 0.5: userdata.lost_type = LostTypes.LostBottom
 				else:              userdata.lost_type = LostTypes.Lost
 				return Transitions.Lost
 
 
 			distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
+			if not Config.mirror:
+				distanceY = -distanceY;
 			#rospy.loginfo('distanceY: ' + repr(distanceY))
 			angularSpeed = 0.0
 			if math.fabs(Global.orientation) > Config.deltaAngle:
 				angularSpeed = Config.kpAngle * Global.orientation / (math.pi/2)
-			#if math.fabs(distanceY) > Config.deltaDist:
-			#	angularSpeed += Config.kpDist * distanceY / Config.maxDistance
+			if math.fabs(distanceY) > Config.deltaDist:
+				angularSpeed += Config.kpDist * distanceY / Config.maxDistance
 
-			rospy.loginfo('angularSpeed: ' + repr(angularSpeed) + '\t\t ('+repr(Global.x)+','+repr(Global.y)+')')
-			setMotorSpeed(Config.fwSpeed- math.fabs(angularSpeed), angularSpeed)
+			#rospy.loginfo('angularSpeed: ' + repr(angularSpeed) + '\t\t ('+repr(Global.x)+','+repr(Global.y)+')')
+			setMotorSpeed(Config.fwSpeed, angularSpeed)
 			rospy.sleep(0.2)
 				
-		setMotorSpeed(0,0)
-		self.service_preempt()		
-		return Transitions.Aborted
+		return self.abort()
 
 
-class Lost(smach.State):
+class Lost(AbortableState):
 	def __init__(self):
 		smach.State.__init__(self, outcomes=[Transitions.IsSeen, Transitions.Aborted],
 									input_keys=['lost_type'])
@@ -168,7 +172,7 @@ class Lost(smach.State):
 		if userdata.lost_type == LostTypes.Lost:
 			while not rospy.is_shutdown():
 				rospy.loginfo('PANIC: lost');
-				rospy.sleep(1.0)
+				return self.abort()
 		else:
 			# linear-/angularspeed tuples
 			speedDict = {
@@ -179,15 +183,13 @@ class Lost(smach.State):
 			}
 
 			while not rospy.is_shutdown() and not self.preempt_requested():
-				transition = determineTransitionFromLostState()
-				if transition != None: return transition
+				if Config.minSize < Global.size < Config.maxSize:
+					return Transitions.IsSeen
 
 				setMotorSpeed(*speedDict[userdata.lost_type])
 				rospy.sleep(0.2)
 
-			setMotorSpeed(0,0)
-			self.service_preempt()	
-			return Transitions.Aborted
+			return self.abort()
 
 
 #==============================================================================
@@ -199,13 +201,16 @@ def objectCallback(msg):
 	Global.lastY = Global.y
 	Global.size = msg.size
 	if Config.mirror:
-		Global.x = (IMAGE_COLS - msg.x) / IMAGE_COLS
-		Global.y = (IMAGE_ROWS - msg.y) / IMAGE_ROWS
+		Global.x = (IMAGE_COLS - msg.x)
+		Global.y = (IMAGE_ROWS - msg.y)
 		Global.orientation = -msg.orientation	
 	else:
-		Global.x = msg.x / IMAGE_COLS
-		Global.y = msg.y / IMAGE_ROWS
+		Global.x = msg.x
+		Global.y = msg.y
 		Global.orientation = msg.orientation
+	distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
+	#rospy.loginfo('distY: '+repr(distanceY / Config.maxDistance))
+
 
 def configCallback(config, level):
 	rospy.loginfo('Reconfigure Request: ')
@@ -226,18 +231,8 @@ def configCallback(config, level):
 #==============================================================================
 # Helper functions
 #==============================================================================
-
 def hasPassed():
-	return (math.fabs(Global.orientation) < math.pi/6.0) and (Global.y > 0.75) and (0.2 < Global.x < 0.8)	
-
-def determineTransitionFromLostState():
-	# size between min and max value
-	if Config.minSize < Global.size < Config.maxSize:
-		# end of pipe reached?
-		if hasPassed():
-			return Transtions.Passed
-		return Transitions.IsSeen
-	return None
+	return (math.fabs(Global.orientation) < math.pi/6.0) and (Global.y > 0.75*IMAGE_ROWS) and (0.2*IMAGE_COLS < Global.x < 0.8*IMAGE_COLS)	
 
 
 def computeIntersection(meanX, meanY, theta):
