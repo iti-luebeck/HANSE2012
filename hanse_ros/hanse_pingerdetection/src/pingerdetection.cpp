@@ -53,6 +53,9 @@ private:
     ros::Publisher angle_publisher;
     ros::Publisher msg_publisher;
 
+
+
+
     bool enabled_;
 
     int noiseLeft;
@@ -801,7 +804,7 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
         qDebug() << "Byte order enum (Endian) - "<<QString::number(audioFormat.byteOrder());
         qDebug() << "Sample typ enum - "<<QString::number(audioFormat.sampleType());
 
-        audioInput = new QAudioInput(audioFormat, this);
+        audioInput = new QAudioInput(audioFormat);
         ioDevice = audioInput->start();
 
         // Komische Ausschlge am Anfang einer Messung bergehen
