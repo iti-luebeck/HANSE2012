@@ -9,6 +9,8 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/tis_driver</url>
   <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <rosdep name="opencv2.3"/>
 
 </package>
 

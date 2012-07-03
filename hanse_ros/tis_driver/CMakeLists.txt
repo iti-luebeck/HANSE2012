@@ -16,6 +16,8 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+FIND_PACKAGE(OpenCV REQUIRED)
+
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
@@ -30,6 +32,4 @@ include_directories(/usr/include/unicap /usr/local/include/unicap)
 
 
 rosbuild_add_executable(tis_driver src/tis_driver.cpp)
-target_link_libraries(tis_driver unicap)
-
-#target_link_libraries(example ${PROJECT_NAME})
+target_link_libraries(tis_driver unicap ${OpenCV_LIBS})

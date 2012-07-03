@@ -1,40 +1,14 @@
-#include <ros/ros.h>
-#include <unicap.h>
-#include <vector>
+#include <tis_driver/tis_driver.h>
+//#include <ros/ros.h>
+#include <opencv2/opencv.hpp>
 
 #define FOURCC(A, B, C, D) ((A) | (B << 8) | (C << 16) | (D << 24))
 
-class TisDriver {
-    static const int bufferCount = 10;
-    ros::NodeHandle nh;
-    unicap_device_t camDevice;
-    unicap_handle_t cam;
-    unicap_device_t controlDevice;
-    unicap_handle_t control;
-    unicap_data_buffer_t buffers[bufferCount];
-public:
-    TisDriver();
-
-    void openDevices();
-
-    void checkSuccess(int status) {
-        if (!SUCCESS(status)) {
-            ROS_ERROR("unicap error");
-            exit(1);
-        }
-    }
-
-    void selectVideoFormat();
-
-    void findProperties(bool useControl);
-
-    void setupCapture();
-
-    void tick();
-};
+ros::Publisher pub_image;
 
 TisDriver::TisDriver()
 {
+    pub_image = nh.advertise<sensor_msgs::Image>("/hanse/camera/bottom", 1000);
     openDevices();
     selectVideoFormat();
     findProperties(false);
@@ -137,11 +111,41 @@ static void
 new_frame_cb (unicap_event_t event, unicap_handle_t handle,
               unicap_data_buffer_t * buffer, void *usr_data)
 {
-    for (int i = 0; i < 1024; i++) {
-        printf("%02x ", buffer->data[i]);
-    }
-    printf("\n\n");
-    ROS_INFO("frame!");
+    	//debug stuff
+    /*for (int i = 0; i < 1024; i++) {
+        	printf("%02x ", buffer->data[i]);
+    	}
+    	printf("\n\n");
+        ROS_INFO("frame!");*/
+
+    ROS_INFO("capture_start_time: %d",buffer->frame_number);
+
+    //ros::Publisher pub_image2 = nh.advertise<sensor_msgs::Image>("/hanse/camera/bottom", 1000);
+    int channels = 3;
+    sensor_msgs::Image imageMsg;
+    //ImagePtr image(new Image);
+    imageMsg.height = 480;//480
+    imageMsg.width = 744;//744
+    imageMsg.step = 744*channels;
+    imageMsg.is_bigendian = 0;
+    imageMsg.encoding = "bgr8";
+    imageMsg.header.frame_id = "/map";
+    imageMsg.header.stamp = ros::Time::now();
+    imageMsg.header.seq = buffer->frame_number;
+
+    //imageMsg.data.resize(imageMsg.step * imageMsg.height);
+    imageMsg.data.resize(744*channels*480);
+//    memcpy(&imageMsg.data[0], buffer->data, 744*1*480);
+
+    cv::Mat imBayer(480, 744, CV_8UC1);
+    memcpy(imBayer.data, buffer->data, 744*1*480);
+
+    cv::Mat image;
+    cv::cvtColor(imBayer, image, CV_BayerGR2BGR);
+
+    memcpy(&imageMsg.data[0], image.data, 744*channels*480);
+
+    pub_image.publish(imageMsg);
 }
 
 void TisDriver::setupCapture()
@@ -156,6 +160,8 @@ void TisDriver::setupCapture()
         buffers[i].data = new uint8_t[format.buffer_size * 4];
         buffers[i].buffer_size = format.buffer_size * 4;
     };
+
+    sensor_msgs::Image imageMsg;
 
     unicap_register_callback(cam, UNICAP_EVENT_NEW_FRAME, (unicap_callback_t)new_frame_cb, 0);
 
