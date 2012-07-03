@@ -253,7 +253,7 @@ def setMotorSpeed(lin, ang):
 	#twist = Twist(linear=linearVector, angular=angularVector)
 	#pub_cmd_vel.publish(twist)
 	#
-	ang = -ang
+	ang = ang
 	# geschwindigkeitswerte fuer thruster berechnen
 	left = lin*127 + ang*127
 	right = lin*127 - ang*127
