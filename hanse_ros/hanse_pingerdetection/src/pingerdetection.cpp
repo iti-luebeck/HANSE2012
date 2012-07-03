@@ -9,7 +9,9 @@
 #include <string>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Int32.h>
 #include <sstream>
+#include <cmath>
 
 #include <QtCore>
 #include <QtMultimediaKit/QAudio>
@@ -40,6 +42,8 @@
 
 using namespace QtMultimediaKit;
 
+namespace hanse_pingerdetection{
+
 class PingerDetection {
 private:
     // **** ros-related variables
@@ -55,7 +59,7 @@ private:
     int noiseRight;
 
 
-    void calculateAngle(int leftMicroSampleDelay, double leftMicroMagnitude, int rightMicroSampleDelay, double rightMicroMagnitude);
+    void calculateAngle(double samplediff);
     double getAngle();
     double angle;
 
@@ -66,6 +70,8 @@ private:
     void setRecordTime(int t);
     void setRecordLogname(QString n);
     void setRecordSource(QString n);
+
+    void pingerCallback(const std_msgs::StringConstPtr &msg);
 
     void configAudio();
     void startRecording();
@@ -259,16 +265,16 @@ void PingerDetection::initVariables(){
     rightMicroCos.clear();
 
     QSettings settings("Qt-Ros Package", "hanse_pinger");
-     sampleRate = settings.value("SampleRate", 48000).toInt();
-     window = settings.value("Window", 480).toInt();
-     scale = settings.value("Scale", 0.00001).toDouble();
-     threshold = settings.value("Threshold", 0.5).toDouble();
-     runMode = settings.value("RunMode", RUNMODE_RUNTIME).toString();
-     setRecordTime(settings.value("RecordTime", 20).toInt());
-     setRecordLogname(settings.value("RecordLogname", "testlog01").toString());
-     setRecordSource(settings.value("RecordSource", "testinput").toString());
-     noiseLeft = settings.value("NoiseLeft", 0).toInt();
-     noiseRight = settings.value("NoiseRight", 0).toInt();
+    sampleRate = settings.value("SampleRate", 48000).toInt();
+    window = settings.value("Window", 480).toInt();
+    scale = settings.value("Scale", 0.00001).toDouble();
+    threshold = settings.value("Threshold", 0.5).toDouble();
+    runMode = settings.value("RunMode", RUNMODE_RUNTIME).toString();
+    setRecordTime(settings.value("RecordTime", 20).toInt());
+    setRecordLogname(settings.value("RecordLogname", "testlog01").toString());
+    setRecordSource(settings.value("RecordSource", "testinput").toString());
+    noiseLeft = settings.value("NoiseLeft", 0).toInt();
+    noiseRight = settings.value("NoiseRight", 0).toInt();
 
 
 
@@ -315,7 +321,7 @@ void PingerDetection::configAudio(){
     }
 
     if(!info.isFormatSupported(audioFormat)) {
-          //ROS_INFO("Format not supported - try to use nearest");
+        //ROS_INFO("Format not supported - try to use nearest");
         audioFormat = info.nearestFormat(audioFormat);
     }
 
@@ -330,13 +336,13 @@ void PingerDetection::configAudio(){
 
 void PingerDetection::setRecordTime(int t){
     // t in Sekunden
-     recordTime = t*1000;
+    recordTime = t*1000;
     //ROS_INFO("RecordTime"+QString::number(recordTime));
 }
 
 
 void PingerDetection::setRecordLogname(QString n){
-     recordLogname = n;
+    recordLogname = n;
 
     outputFile = new QFile("neueDaten/"+recordLogname+".goertzel");
     outputFile->remove();
@@ -344,7 +350,7 @@ void PingerDetection::setRecordLogname(QString n){
     if (outputFile->open(QFile::WriteOnly | QIODevice::Append)) {
         outputStream = new QTextStream(outputFile);
     } else {
-          //ROS_INFO("Could not open file to write"outputFile->fileName());
+        //ROS_INFO("Could not open file to write"outputFile->fileName());
     }
 
     outputFile01 = new QFile("neueDaten/"+recordLogname+"_analysis.goertzel");
@@ -353,20 +359,20 @@ void PingerDetection::setRecordLogname(QString n){
     if (outputFile01->open(QFile::WriteOnly | QIODevice::Append)) {
         outputStream01 = new QTextStream(outputFile01);
     } else {
-          //ROS_INFO("Could not open file to write"outputFile01->fileName());
+        //ROS_INFO("Could not open file to write"outputFile01->fileName());
     }
 
     //ROS_INFO("Record logname"recordLogname);
 }
 
 void PingerDetection::setRecordSource(QString n){
-     recordSource = n;
+    recordSource = n;
     inputFile = new QFile("neueDaten/"+recordSource+".goertzel");
 
     if (inputFile->open(QFile::ReadOnly | QIODevice::ReadOnly)) {
         inputStream = new QTextStream(inputFile);
     } else {
-          //ROS_INFO("Could not open file to read"inputFile->fileName());
+        //ROS_INFO("Could not open file to read"inputFile->fileName());
     }
 }
 
@@ -461,10 +467,10 @@ void PingerDetection::audioProcessing(){
         saveListRightFSK.append(rightFSK);
 
         // Sin/Cos Zaehler erhhen
-         inkrementSinCosCounter();
+        inkrementSinCosCounter();
 
         // FSK Werte verwursten
-         signalDelayAnalysis(leftFSK, rightFSK);
+        signalDelayAnalysis(leftFSK, rightFSK);
 
         // Erste Eintrge loeschen, da wir gleiten :)
         leftMicro.removeFirst();
@@ -472,9 +478,9 @@ void PingerDetection::audioProcessing(){
 
     } else {
         // Integral schrittweise bilden
-         leftNonCoherentFSKDemodulator(leftMicro.last(), true);
-         rightNonCoherentFSKDemodulator(rightMicro.last(), true);
-         inkrementSinCosCounter();
+        leftNonCoherentFSKDemodulator(leftMicro.last(), true);
+        rightNonCoherentFSKDemodulator(rightMicro.last(), true);
+        inkrementSinCosCounter();
 
         // Daten in einer Liste speichern, um sie nach der Aufnahme in eine Datei zu schreiben
         saveListLeftFSK.append(0.0);
@@ -550,7 +556,7 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
                 leftMicroSampleDelay++;
 
             } else {
-                  //ROS_INFO("State error");
+                //ROS_INFO("State error");
             }
         }
     } else if(delayState == STATE_WAIT_FOR_LEFT_MICRO_SIGNAL){
@@ -629,8 +635,8 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             bothMicroSignalDetectedCount++;
 
         } else if(signalDetected == 0){
-
-             calculateAngle(leftMicroSampleDelay, leftMicroMaxMagnitude, rightMicroSampleDelay, rightMicroMaxMagnitude);
+//////////////////////////////////////////////////////////////////////////////////////////////////
+            calculateAngle(0);
 
             delayState = STATE_WAIT_FOR_FIRST_SIGNAL;
             bothMicroSignalDetectedCount = 0;
@@ -639,7 +645,7 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
 
         }
     } else {
-          //ROS_INFO("Pinger detection state error");
+        //ROS_INFO("Pinger detection state error");
     }
 
     saveListDelay0.append(leftMicroSignalDetected);
@@ -654,16 +660,21 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
 }
 
 
-void PingerDetection::calculateAngle(int leftMicroSampleDelay, double leftMicroMagnitude, int rightMicroSampleDelay, double rightMicroMagnitude){
+void PingerDetection::calculateAngle(double samplediff){
 
-    int diff = leftMicroSampleDelay-rightMicroSampleDelay;
-    diff = 0;
-    // 42.23;
+    double baseline = 0.4; // Distanz zwischen den Hydrophonen in m
 
-    // TODO
-    // ...
+    double delta_t = 48000/samplediff; // Berechnung des Zeitunterschieds in Sekunden
 
-    angle = 42.23;
+    double distdiff = 1500 / delta_t; // Berechnung der zurückgelegten Wegstrecke aus dem Zeitunterschied.
+
+    angle = asin(distdiff / baseline);
+
+    std_msgs::Float32 winkel;
+    winkel.data = angle;
+
+    angle_publisher.publish(winkel);
+
 }
 
 double PingerDetection::getAngle(){
@@ -776,11 +787,102 @@ double PingerDetection::rightNonCoherentFSKDemodulator(double y, bool skipPop){
     }
 }
 
+void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
+
+    ROS_INFO("I heard: [%s]", msg->data.c_str());
+
+    QString state = msg->data.c_str();
+
+    if(state.contains("pinger")){
+
+        qDebug() << "Frequency - "<<QString::number(audioFormat.frequency());
+        qDebug() << "Channles - "<<QString::number(audioFormat.channels());
+        qDebug() << "Sample size - "<<QString::number(audioFormat.sampleSize());
+        qDebug() << "Byte order enum (Endian) - "<<QString::number(audioFormat.byteOrder());
+        qDebug() << "Sample typ enum - "<<QString::number(audioFormat.sampleType());
+
+        audioInput = new QAudioInput(audioFormat, this);
+        ioDevice = audioInput->start();
+
+        // Komische Ausschlge am Anfang einer Messung bergehen
+        timer.restart();
+        while(timer.elapsed() < 5000){
+            qint64 bytesReady = audioInput->bytesReady();
+            if(bytesReady > sampleRate){
+                bytesReady = sampleRate;
+            }
+            qint64 l = ioDevice->read(audioBuffer.data(), bytesReady);
+            Q_UNUSED(l)
+        }
+        timer.restart();
+
+
+        while (ros::ok() && (timer.elapsed() < recordTime)) {
+
+            if(!audioInput){
+                ROS_ERROR("No audio input");
+                return;
+            }
+
+            // Bereitstehende Daten ermitteln und anschließend ggf. lesen
+            qint64 bytesReady = audioInput->bytesReady();
+            if(bytesReady > sampleRate){
+                bytesReady = sampleRate;
+            }
+
+            qint64 l = ioDevice->read(audioBuffer.data(), bytesReady);
+
+            if(l > 0) {
+                // Neue Daten von der Soundkarte decodieren
+                QList<int> decodeList = this->decodeData(audioBuffer.constData(), l);
+
+                if(!decodeList.isEmpty()){
+                    for(int i = 0; i < decodeList.length()-2; i=2){
+                        // Decodierte Daten von Rauschen befreien...
+                        double zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale;
+                        double zerolineRight = ((double)decodeList.at(i)-(double)noiseRight)*scale;
+//double zerolineRight = ((double)decodeList.at(i1)-(double)noiseRight)*scale;
+                        // ... und in Listen zur Verarbeitung speichern
+                        leftMicro.append(zerolineLeft);
+                        rightMicro.append(zerolineRight);
+
+                        this->audioProcessing();
+                    }
+                }
+            }
+        }
+    }else if(state.contains("file")){
+        ROS_INFO("Reading from file...");
+        while (ros::ok()  && !inputStream->atEnd()) {
+            QString line = inputStream->readLine();
+            QStringList tempList = line.split(",", QString::SkipEmptyParts);
+
+            // Auf Spaltennummern achten!
+            leftMicro.append(tempList.at(0).toDouble());
+            rightMicro.append(tempList.at(2).toDouble());
+
+            this->audioProcessing();
+        }
+    }else{
+        return;
+    }
+
+}
+
 
 
 
 PingerDetection::PingerDetection() {
-    //ROS_INFO("Starting PingerDetection");
+    ROS_INFO("Starting PingerDetection");
+
+    // Auf Reihenfolge achten!
+    this->initVariables();
+    this->periodicSinCos();
+    this->configAudio();
+
+    angle_publisher = nh_.advertise<std_msgs::Float32>("/hanse/pinger", 100);
+    input_subscriber_ = nh_.subscribe("/hanse/pingerstart",10, pingerCallback);
+
 
     enabled_ = false;
 }
@@ -814,5 +916,8 @@ int main(int argc, char** argv)
 
     PingerDetection pinger_detection;
 
+    ros::spin();
+
     return 0;
+}
 }
