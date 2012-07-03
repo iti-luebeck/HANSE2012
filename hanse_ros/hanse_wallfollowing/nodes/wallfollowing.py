@@ -9,6 +9,7 @@ import sys
 from rospy.numpy_msg import numpy_msg
 from dynamic_reconfigure.server import Server
 from hanse_wallfollowing.cfg import WallFollowingConfig
+from hanse_wallfollowing.msg import WallFollowingAction
 from std_msgs.msg import Float64, Float32
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist, Vector3
@@ -30,9 +31,12 @@ class Global:
 	scanningSonarDistance = 0.0
 	angularSpeedOutput = 0.0
 
+
+#==============================================================================
+# Constants
+#==============================================================================
 class States:
-	Init = 'Init'
-	Align = 'Align'
+	#Align = 'Align'
 	FollowWall = 'FollowWall'
 	NoWall = 'NoWall'
 
@@ -41,93 +45,40 @@ class Transitions:
 	NoWall = 'NoWall'
 	InitFinished = 'InitFinished'
 	AlignFinished = 'AlignFinished'
-	Ended = 'Ended'
+	Aborted = 'Aborted'
 
-# In diesem Zustand passieren Initialisierungen
-class Init(smach.State):
+
+#==============================================================================
+# State classes
+#==============================================================================
+class AbortableState(smach.State):
+	def abort(self):
+		setMotorSpeed(0,0)
+		self.service_preempt()
+		return Transitions.Aborted
+
+
+# Auf der Stelle drehen und warten bis eine Wand zu sehen ist
+class NoWall(AbortableState):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.InitFinished])
-
-	def execute(self, userdata):
-		rospy.loginfo('Executing state Init')
-
-		# Auf Service warten und PID-Regler aktivieren
-		rospy.loginfo('Waiting for pid service...')
-		rospy.wait_for_service('/wallfollowing_angular_pid/enable')
-		enable = rospy.ServiceProxy('/wallfollowing_angular_pid/enable', Enable)
-		enable(True)
-
-		# Warten bis es eine Imu-Message gab (damit Orientierung des AUV bekannt ist)
-#IMUTMP		rospy.loginfo('Waiting for imu message...')
-#IMUTMP		while not Global.imuCallbackCalled:
-#IMUTMP			rospy.sleep(0.2)
-
-		return Transitions.InitFinished
-
-
-# In diesem Zustand wird das auv parallel zur nahsten Wand ausgerichtet
-#class Align(smach.State):
-#	def __init__(self):
-#		smach.State.__init__(self, outcomes=[Transitions.AlignFinished,Transitions.NoWall])
-#
-#	def execute(self, userdata):
-#		rospy.loginfo('Executing state Align')
-#
-#		# 360 grad drehen und nahste wand suchen
-#		initHeading = Global.currentHeadPosition
-#		lastHeading = initHeadingxsensUpdate
-#		rotated = 0.0
-#		smallestDistanceHeading = 0.0
-#		smallestDistance = sys.maxint
-#		setMotorSpeed(0, 1)
-#		rospy.loginfo('initHeading: ' + repr(initHeading))
-#
-#		#rospy.loginfo('math.fabs(initHeading - currentHeadPosition))
-#		while math.fabs(initHeading - Global.currentHeadPosition) > 0.15 or rotated < 2*math.pi:
-#			#rospy.loginfo('rotated: ' + repr(rotated))
-#			#rospy.loginfo('distance: ' + repr(Global.currentDistance))			
-#			rotated += calcRadiansDiff(lastHeading, Global.currentHeadPosition)
-#			lastHeading = Global.currentHeadPosition
-#			if Global.currentDistance > 0.0 and Global.currentDistance < smallestDistance:
-#				rospy.loginfo('new smallestDistanceHeading: ' + repr(smallestDistanceHeading))
-#				smallestDistance = Global.currentDistance
-#				smallestDistanceHeading = Global.currentHeadPosition
-#			rospy.sleep(0.1)
-#
-#		if smallestDistance==sys.maxint:
-#			rospy.logwarn('keine wand in sicht')
-#			return Transitions.NoWall
-#		else:
-#			while math.fabs(smallestDistanceHeading - Global.currentHeadPosition) > 0.15:
-#				rospy.loginfo(repr(smallestDistanceHeading) + '  -  ' + repr(Global.currentHeadPosition))
-#				rospy.sleep(0.1)
-#			
-#		setMotorSpeed(0, 0)
-#		
-#		return Transitions.AlignFinished
-
- 
-class NoWall(smach.State):
-	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.Wall])
+		smach.State.__init__(self, outcomes=[Transitions.Wall, Transitions.Aborted])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state NoWall')		
 
-		while Global.noWall and not rospy.is_shutdown():
-			setMotorSpeed(0, 0.7)
+		while not rospy.is_shutdown() and not self.preempt_requested():			
+			setMotorSpeed(0, 0.5)
+			if not Global.noWall:
+				return Transitions.Wall
 			rospy.sleep(0.2)
-		setMotorSpeed(0, 0)
 
-		if rospy.is_shutdown():
-			return Transitions.Ended
-		return Transitions.Wall
+		return self.abort()
 		
 
 # In diesem Zustand wird der Wand gefolgt
-class FollowWall(smach.State):
+class FollowWall(AbortableState):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.NoWall, Transitions.Ended])
+		smach.State.__init__(self, outcomes=[Transitions.NoWall, Transitions.Aborted])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state FollowWall')
@@ -136,7 +87,10 @@ class FollowWall(smach.State):
 		
 		# pid geregelten angular wert benutzen
 		rospy.loginfo('diff = ' + repr(Global.currentDistance-Config.desiredDistance))
-		while not Global.noWall and not rospy.is_shutdown():
+		while not rospy.is_shutdown() and not self.preempt_requested():
+			if Global.noWall:
+				return Transitions.NoWall
+
 			# lineare geschwindigkeit in abhaengigkeit von der abweichung von desiredDistance			
 			abweichung = math.fabs(Global.currentDistance-Config.desiredDistance)
 			linearSpeed = Config.maxSpeed - Config.linearSpeedScaleDownFactor * (abweichung / (Config.desiredDistance-0.2))
@@ -157,33 +111,18 @@ class FollowWall(smach.State):
 			setMotorSpeed(linearSpeed, angularSpeed) # Config.maxSpeed-(Config.maxSpeed-0.1)*math.fabs(Global.angularSpeedOutput)
 			rospy.sleep(0.1)
 
-		if rospy.is_shutdown():
-			return Transitions.Ended
-		return Transitions.NoWall
+		return self.abort();
 			
 
-# werte im bereich [-1, 1]
-def setMotorSpeed(lin, ang):
-	#rospy.loginfo("angularoutput: " + repr(-ang))
-	#twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
-	#pub_cmd_vel.publish(twist)
-		# geschwindigkeitswerte fuer thruster berechnen
-	left = lin*127 + ang*127
-	right = lin*127 - ang*127
-	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
-	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))
-
-	
+#==============================================================================
+# Callback functions
+#==============================================================================
 def echoSounderAvgCallback(msg):
 	if msg.data == 0.0:
 		Global.noWallCounter = Global.noWallCounter + 1
 		if Global.noWallCounter > 3:
 			Global.noWall = True
-			rospy.loginfo("NOWALL")
+			#rospy.loginfo("NOWALL")
 	else:
 		Global.noWallCounter = 0
 		Global.noWall = False
@@ -215,6 +154,24 @@ def timerCallback(event):
 def angularPidOutputCallback(msg):
 	Global.angularSpeedOutput = -msg.data
 
+#==============================================================================
+# Helper functions
+#==============================================================================
+# werte im bereich [-1, 1]
+def setMotorSpeed(lin, ang):
+	#rospy.loginfo("angularoutput: " + repr(-ang))
+	#twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	#pub_cmd_vel.publish(twist)
+		# geschwindigkeitswerte fuer thruster berechnen
+	left = lin*127 + ang*127
+	right = lin*127 - ang*127
+	# auf den wertebereich -127 bis 127 beschraenken
+	left = numpy.clip(left, -127, 127)
+	right = numpy.clip(right, -127, 127)
+	# nachrichten an motoren publishen
+	pub_motor_left.publish(sollSpeed(data = left))
+	pub_motor_right.publish(sollSpeed(data = right))	
+
 # Gibt RPY fuer ein Quaternion zurueck
 def quatToAngles(x,y,z,w):
 	angles = [0,0,0]
@@ -242,8 +199,17 @@ def calcRadiansDiff(a, b):
 	return min(math.fabs(a-b), 2*math.pi - math.fabs(a-b))
 
 
+#==============================================================================
+# main
+#==============================================================================
 if __name__ == '__main__':
-	rospy.init_node('wallfollowing')	
+	rospy.init_node('wallfollowing')
+
+	# Auf Service warten und PID-Regler aktivieren
+	rospy.loginfo('Init: Waiting for pid service...')
+	rospy.wait_for_service('/wallfollowing_angular_pid/enable')
+	enable = rospy.ServiceProxy('/wallfollowing_angular_pid/enable', Enable)
+	enable(True)
 	
 	# Config server
 	configSrv = Server(WallFollowingConfig, configCallback)
@@ -264,13 +230,11 @@ if __name__ == '__main__':
 	rospy.Timer(rospy.Duration(1.0 / 10), timerCallback)
 
    	# Create a SMACH state machine
-	sm = smach.StateMachine(outcomes=[Transitions.Ended])
+	sm = smach.StateMachine(outcomes=[Transitions.Aborted])
 
 	# Open the container
 	with sm:
 		# Add states to the container
-		smach.StateMachine.add(States.Init, Init(),
-								transitions={Transitions.InitFinished : States.NoWall})
 #		smach.StateMachine.add(States.Align, Align(),
 #								transitions={Transitions.AlignFinished : States.FollowWall,
 #											Transitions.NoWall : States.NoWall})
@@ -283,10 +247,16 @@ if __name__ == '__main__':
 	sis = smach_ros.IntrospectionServer('server_name', sm, '/WALLFOLLOWING')
 	sis.start()
 
-    # Execute SMACH plan
-	outcome = sm.execute()
+	# Construct action server wrapper
+	asw = smach_ros.ActionServerWrapper(
+	    rospy.get_name(), WallFollowingAction,
+	    wrapped_container = sm,
+	    succeeded_outcomes = [],
+	    aborted_outcomes = [Transitions.Aborted],
+	    preempted_outcomes = [])
 
-	rospy.loginfo('state machine stopped')
+	# Run the server
+	asw.run_server()
 
-	#rospy.spin()
+	rospy.spin()
 	sis.stop()
