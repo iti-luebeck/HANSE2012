@@ -271,9 +271,6 @@ def setMotorSpeed(lin, ang):
 if __name__ == '__main__':
 	rospy.init_node('pipefollowing')
 
-	# actionserver starten
-	#Global.actionServer = NavigateActionServer(rospy.get_name())
-
 	# Config server
 	dynamic_reconfigure.server.Server(PipeFollowingConfig, configCallback)
 	
