@@ -851,7 +851,8 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
         ROS_INFO("reading data from audiobuffer done");
 
         while (ros::ok() && sampleCounter < 960000) {
-
+            ROS_INFO("in while");
+            ROS_INFO("%i", sampleCounter);
             if(!audioInput){
                 ROS_ERROR("No audio input");
                 return;
@@ -866,11 +867,12 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
             qint64 l = ioDevice->read(audioBuffer.data(), bytesReady);
 
             //ROS_INFO("decoding audio-data");
-
+            ROS_INFO("%i", l);
             if(l > 0) {
+                //ROS_INFO("test");
                 // Neue Daten von der Soundkarte decodieren
                 QList<int> decodeList = this->decodeData(audioBuffer.constData(), l);
-
+                //ROS_INFO("%i", decodeList.length());
                 if(!decodeList.isEmpty()){
                     for(int i = 0; i < decodeList.length()-2; i=2){
                         // Decodierte Daten von Rauschen befreien...
