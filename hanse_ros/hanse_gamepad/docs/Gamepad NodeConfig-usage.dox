@@ -1,0 +1,25 @@
+\subsubsection usage Usage
+\verbatim
+<node name="gamepad_node" pkg="hanse_gamepad" type="gamepad_node">
+  <param name="publish_frequency" type="int" value="1" />
+  <param name="gamepad_enable_button" type="int" value="1" />
+  <param name="gamepad_disable_button" type="int" value="1" />
+  <param name="joy_deadzone" type="double" value="1.0" />
+  <param name="linear_axis" type="int" value="1" />
+  <param name="linear_scale" type="double" value="1.0" />
+  <param name="rotation_speed_mode" type="int" value="1" />
+  <param name="angular_axis" type="int" value="1" />
+  <param name="angular_scale" type="double" value="1.0" />
+  <param name="depth_up_button" type="int" value="1" />
+  <param name="depth_down_button" type="int" value="1" />
+  <param name="depth_delta" type="double" value="1.0" />
+  <param name="orientation_mode" type="int" value="1" />
+  <param name="orientation_left_button" type="int" value="1" />
+  <param name="orientation_right_button" type="int" value="1" />
+  <param name="orientation_delta" type="double" value="1.0" />
+  <param name="motor_switch_button" type="int" value="1" />
+  <param name="pid_switch_button" type="int" value="1" />
+  <param name="emergency_stop_button" type="int" value="1" />
+</node>
+\endverbatim
+

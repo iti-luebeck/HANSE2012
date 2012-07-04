@@ -1,0 +1,7 @@
+<launch>
+  <node name="pipefollowing" type="pipefollowing.py" pkg="hanse_pipefollowing" output="screen"/>
+
+   <node name="object_detection_node" type="object_detection_node" pkg="hanse_object_detection">
+    <param name="image_topic" value="/image_raw" />
+  </node>
+</launch>

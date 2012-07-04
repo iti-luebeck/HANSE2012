@@ -1,0 +1,15 @@
+\subsubsection usage Usage
+\verbatim
+<node name="pidcontrol_node" pkg="hanse_pidcontrol" type="pidcontrol_node">
+  <param name="publish_frequency" type="double" value="1.0" />
+  <param name="k_p" type="double" value="1.0" />
+  <param name="k_i" type="double" value="1.0" />
+  <param name="k_d" type="double" value="1.0" />
+  <param name="bias" type="double" value="1.0" />
+  <param name="i_max" type="double" value="1.0" />
+  <param name="output_min" type="double" value="1.0" />
+  <param name="output_max" type="double" value="1.0" />
+  <param name="angular" type="bool" value="False" />
+</node>
+\endverbatim
+

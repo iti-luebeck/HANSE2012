@@ -1,6 +1,0 @@
-{
-orientation_bias: 0.0,
-rotation_speed_scale: 20,
-publish_frequency: 10.0,
-orientation_z: 1
-}

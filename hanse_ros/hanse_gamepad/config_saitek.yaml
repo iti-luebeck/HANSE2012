@@ -1,14 +1,16 @@
 {
-axis_angular: 0,
-axis_depth: 2,
-axis_linear: 1,
-button_emegency_stop: 1,
-button_hand_control: 0,
-button_up: 4,
-button_down: 5,
-depth_delta: 5,
-frequency: 10,
-joy_gate: 0.15,
-scale_angular: -0.2,
-scale_linear: 0.2
+publish_frequency: 10,
+gamepad_switch_button: 2,
+joy_deadzone: 0.15,
+linear_axis: 1,
+linear_scale: 1.0,
+angular_axis: 3,
+angular_scale: 1.0, # 10 fuer PID
+depth_up_button: 5,
+depth_down_button: 5,
+depth_delta: 10,
+zero_depth_reset_button: 3,
+motor_switch_button: 4,
+pid_switch_button: 10,
+emergency_stop_button: 5
 }

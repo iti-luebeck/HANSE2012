@@ -11,9 +11,10 @@
   <depend package="roscpp"/>
   <depend package="sensor_msgs"/>
   <depend package="geometry_msgs"/>
-  <depend package="driver_base" />
   <depend package="dynamic_reconfigure"/>
+  <depend package="joy"/>
   <depend package="hanse_msgs"/>
+  <depend package="hanse_srvs"/>
 
 </package>
 

@@ -1,9 +1,13 @@
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
 #include <boost/thread/mutex.hpp>
-#include "hanse_pidcontrol/GetOutput.h"
-#include "hanse_pidcontrol/SetTarget.h"
-#include "hanse_pidcontrol/Enable.h"
+#include <dynamic_reconfigure/server.h>
+
+#include "hanse_srvs/GetOutput.h"
+#include "hanse_srvs/SetTarget.h"
+#include "hanse_srvs/Bool.h"
+
+#include "hanse_pidcontrol/PidcontrolConfig.h"
 
 const std::string input_topic_ = "input";
 const std::string target_topic_ = "target";
@@ -23,17 +27,7 @@ private:
 	ros::ServiceServer enable_srv_;
 	ros::ServiceServer get_output_srv_;
 
-	// **** parameters
-
-	double frequency_;
-	double k_p_;
-	double k_i_;
-	double k_d_;
-	double bias_;
-	double i_max_;
-	double output_min_;
-	double output_max_;
-	bool angular_; // if true, then wraps the error to (-pi, pi]
+    ros::Timer publishTimer;
 
 	// **** state variables
 
@@ -52,12 +46,12 @@ private:
 
 	// **** services
 
-	bool enable(hanse_pidcontrol::Enable::Request &req,
-			hanse_pidcontrol::Enable::Response &res);
-	bool getOutput(hanse_pidcontrol::GetOutput::Request &req,
-			hanse_pidcontrol::GetOutput::Response &res);
-	bool setTarget(hanse_pidcontrol::SetTarget::Request &req,
-			hanse_pidcontrol::SetTarget::Response &res);
+    bool enable(hanse_srvs::Bool::Request &req,
+            hanse_srvs::Bool::Response &res);
+    bool getOutput(hanse_srvs::GetOutput::Request &req,
+            hanse_srvs::GetOutput::Response &res);
+    bool setTarget(hanse_srvs::SetTarget::Request &req,
+            hanse_srvs::SetTarget::Response &res);
 
 	// **** member functions
 
@@ -65,6 +59,17 @@ private:
 	void inputCallback(const std_msgs::Float64Ptr& input_msg);
 	void targetCallback(const std_msgs::Float64Ptr& target_msg);
 	void publishCallback(const ros::TimerEvent& event);
+
+    // **** dynamic reconfigure
+
+    void dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config, uint32_t level);
+    hanse_pidcontrol::PidcontrolConfig config;
+
+    /** \brief dynamic_reconfigure interface */
+    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig> dynReconfigureSrv;
+
+    /** \brief dynamic_reconfigure call back */
+    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig>::CallbackType dynReconfigureCb;
 
 public:
 
@@ -82,7 +87,10 @@ PIDControl::PIDControl() {
 	received_input_ = false;
 	enabled_ = false;
 
-	initParams();
+    dynReconfigureCb = boost::bind(&PIDControl::dynReconfigureCallback, this, _1, _2);
+    dynReconfigureSrv.setCallback(dynReconfigureCb);
+
+    // initParams();
 
 	// **** subscribers
 
@@ -95,7 +103,7 @@ PIDControl::PIDControl() {
 
 	output_publisher_ = nh_.advertise<std_msgs::Float64>(output_topic_, 1);
 	// TODO: Do we need to publish in a loop here? or would 1 time suffice
-	ros::Timer timer = nh_.createTimer(ros::Duration(1.0 / frequency_),
+    ros::Timer publishTimer = nh_.createTimer(ros::Duration(1),
 			&PIDControl::publishCallback, this);
 
 	// **** services
@@ -109,25 +117,18 @@ PIDControl::~PIDControl() {
 	std::cout << "Destroying PIDControl." << std::endl;
 }
 
-void PIDControl::initParams() {
-	if (!nh_private_.getParam("k_p", k_p_))
-		ROS_FATAL("k_p needs to be set");
-	if (!nh_private_.getParam("k_i", k_i_))
-		ROS_ERROR("k_i needs to be set");
-	if (!nh_private_.getParam("k_d", k_d_))
-		ROS_FATAL("k_d needs to be set");
-	if (!nh_private_.getParam("bias", bias_))
-		bias_ = 0.0;
-	if (!nh_private_.getParam("i_max", i_max_))
-		ROS_FATAL("i_max needs to be set");
-	if (!nh_private_.getParam("frequency", frequency_))
-		frequency_ = 10.0;
-	if (!nh_private_.getParam("output_min", output_min_))
-		ROS_FATAL("output_min needs to be set");
-	if (!nh_private_.getParam("output_max", output_max_))
-		ROS_FATAL("output_max needs to be set");
-	if (!nh_private_.getParam("angular", angular_))
-		angular_ = false;
+void PIDControl::dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config, uint32_t level) {
+
+    ROS_INFO("got new parameters, level=%d", level);
+
+    this->config = config;
+
+    target_ = 0.0;
+    i_ = 0.0;
+    received_input_ = false;
+    prev_error_ = 0.0;
+
+    publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
 }
 
 void PIDControl::targetCallback(const std_msgs::Float64Ptr& target_msg) {
@@ -147,13 +148,13 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 	// TODO: new Topic with time
 	ros::Time input_stamp = ros::Time::now();
 
-	ROS_INFO("PID: Input: %f \t Target: %f", input, target_);
+    // ROS_INFO("PID: Input: %f \t Target: %f", input, target_);
 
 	// **** calculate error
 
 	double error = target_ - input;
 
-	if (angular_) // wrap the error to (-pi, pi]
+    if (config.angular) // wrap the error to (-pi, pi]
 	{
 		while (error > M_PI)
 			error -= M_PI * 2.0;
@@ -164,24 +165,24 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 	// **** calculate P, I, D terms
 
 	double p_term, i_term, d_term;
-	p_term = k_p_ * error;
+    p_term = config.k_p * error;
 
 	if (received_input_) {
 		double dt = (input_stamp - prev_input_stamp_).toSec();
 
 		i_ += error * dt;
-		if (i_ > i_max_) {
-			ROS_WARN("PID Control integral wind-up: clamping to %f", i_max_);
-			i_ = i_max_;
+        if (i_ > config.i_max) {
+            //ROS_WARN("PID Control integral wind-up: clamping to %f", config.i_max);
+            i_ = config.i_max;
 		}
-		if (i_ < -i_max_) {
-			ROS_WARN("PID Control integral wind-down: clamping to %f", -i_max_);
-			i_ = -i_max_;
+        if (i_ < -config.i_max) {
+            //ROS_WARN("PID Control integral wind-down: clamping to %f", -config.i_max);
+            i_ = -config.i_max;
 		}
 
-		i_term = k_i_ * i_;
+        i_term = config.k_i * i_;
 
-		d_term = k_d_ * (error - prev_error_) / dt;
+        d_term = config.k_d * (error - prev_error_) / dt;
 	} else {
 		received_input_ = true;
 		i_term = 0.0;
@@ -190,15 +191,15 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 
 	// **** calculate output
 
-	double output = p_term + i_term + d_term + bias_;
-	if (output < output_min_) {
-		ROS_WARN(
-				"PID Control output too small, clamping to to %f", output_min_);
-		output = output_min_; // clamp to min value
+    double output = p_term + i_term + d_term + config.bias;
+    if (output < config.output_min) {
+        //ROS_WARN(
+        //        "PID Control output too small, clamping to to %f", config.output_min);
+        output = config.output_min; // clamp to min value
 	}
-	if (output > output_max_) {
-		ROS_WARN("PID Control output too big, clamping to to %f", output_max_);
-		output = output_max_; // clamp to max value
+    if (output > config.output_max) {
+        //ROS_WARN("PID Control output too big, clamping to to %f", config.output_max);
+        output = config.output_max; // clamp to max value
 	}
 
 	//ROS_INFO("PID: Output: %f (%f + %f + %f + %f)", output, p_term, i_term, d_term, bias_);
@@ -223,29 +224,29 @@ void PIDControl::publishCallback(const ros::TimerEvent& event) {
 
 }
 
-bool PIDControl::enable(hanse_pidcontrol::Enable::Request &req,
-		hanse_pidcontrol::Enable::Response &res) {
-	ROS_INFO("Service call: hanse_pidcontrol");
+bool PIDControl::enable(hanse_srvs::Bool::Request &req,
+        hanse_srvs::Bool::Response &res) {
+    // ROS_INFO("Service call: hanse_pidcontrol");
 
 	boost::mutex::scoped_lock(mutex_);
 	if (req.enable) {
-		ROS_INFO("Enabling hanse_pidcontrol");
-		target_ = 0.0;
-		i_ = 0.0;
-		received_input_ = false;
-		prev_error_ = 0.0;
+        // ROS_INFO("Enabling hanse_pidcontrol");
 		enabled_ = true;
 	} else {
-		ROS_INFO("Disabling hanse_pidcontrol");
-		enabled_ = false;
+        // ROS_INFO("Disabling hanse_pidcontrol");
+        target_ = 0.0;
+        i_ = 0.0;
+        received_input_ = false;
+        prev_error_ = 0.0;
+        enabled_ = false;
 	}
 
-	ROS_INFO("Service leave: hanse_pidcontrol");
+    // ROS_INFO("Service leave: hanse_pidcontrol");
 	return true;
 }
 
-bool PIDControl::getOutput(hanse_pidcontrol::GetOutput::Request &req,
-		hanse_pidcontrol::GetOutput::Response &res) {
+bool PIDControl::getOutput(hanse_srvs::GetOutput::Request &req,
+        hanse_srvs::GetOutput::Response &res) {
 	boost::mutex::scoped_lock(mutex_);
 	res.output = output_msg_->data;
 	return true;

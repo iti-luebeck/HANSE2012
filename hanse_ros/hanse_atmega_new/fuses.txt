@@ -1,0 +1,3 @@
+avrdude: safemode: lfuse reads as F7
+avrdude: safemode: hfuse reads as 98
+avrdude: safemode: efuse reads as FF

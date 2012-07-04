@@ -1,0 +1,11 @@
+{
+publish_frequency: 10.0,
+k_p: 200.0,
+k_i: 20.0,
+k_d: 90.0,
+bias: 3.0,
+i_max: 10,
+output_min: -127,
+output_max: 127,
+angular: false
+}

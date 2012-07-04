@@ -1,0 +1,21 @@
+<launch>
+  <!-- ENGINE -->
+  <group ns="hanse">
+    <node name="orientationEngine" pkg="hanse_orientationengine" type="hanse_orientationengine" output="screen">
+      <rosparam file="$(find hanse_orientationengine)/config_orientationengine.yaml"/>
+    </node>
+  </group>
+
+  <!-- ORIENTATION PID -->
+  <group ns="/hanse/pid/orientation">
+    <node name="orientationPid" pkg="hanse_pidcontrol" type="pid_control" output="screen">
+      <rosparam file="$(find hanse_orientationengine)/config_orientation_pid.yaml"/>
+    </node>
+  </group>
+  
+<!-- XSens -->
+<!--
+  <remap from="/imu/data" to="/hanse/imu"/>
+  <node name="xsens" pkg="lse_xsens_mti" type="mti_node" output="screen"></node>
+-->
+</launch>

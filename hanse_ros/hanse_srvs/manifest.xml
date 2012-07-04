@@ -1,0 +1,15 @@
+<package>
+  <description brief="hanse_srvs">
+
+     hanse_srvs
+
+  </description>
+  <author>hajo</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_srvs</url>
+  <depend package="roscpp"/>
+
+</package>
+
+
