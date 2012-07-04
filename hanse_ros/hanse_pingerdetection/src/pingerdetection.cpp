@@ -48,15 +48,16 @@ class PingerDetection {
 private:
     // **** ros-related variables
 
-    ros::NodeHandle nh_;
-    ros::Subscriber input_subscriber_;
+    ros::NodeHandle nh;
+    ros::Subscriber input_subscriber;
+    ros::Subscriber input_subscriber_stop;
     ros::Publisher angle_publisher;
     ros::Publisher msg_publisher;
 
 
 
 
-    bool enabled_;
+    bool enabled;
 
     int noiseLeft;
     int noiseRight;
@@ -75,6 +76,7 @@ private:
     void setRecordSource(QString n);
 
     void pingerCallback(const std_msgs::StringConstPtr &msg);
+    void pingerCallbackStop(const std_msgs::StringConstPtr &msg);
 
     void configAudio();
     void startRecording();
@@ -638,7 +640,7 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             bothMicroSignalDetectedCount++;
 
         } else if(signalDetected == 0){
-//////////////////////////////////////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////////////////////////////////////
             calculateAngle(0);
 
             delayState = STATE_WAIT_FOR_FIRST_SIGNAL;
@@ -707,15 +709,15 @@ void PingerDetection::periodicSinCos(){
         cosLUT.append(cosTemp);
     }
 
-    //  qDebug() << "sinLUT.length " << sinLUT.length() << " cosLUT.length  " << cosLUT.length();
-    //  qDebug() << "sinLUT.first " << sinLUT.first() << " cosLUT.first  " << cosLUT.first();
-    // qDebug() << "sinLUT.last " << sinLUT.last() << " cosLUT.last  " << cosLUT.last();
+    //  //qDebug() << "sinLUT.length " << sinLUT.length() << " cosLUT.length  " << cosLUT.length();
+    //  //qDebug() << "sinLUT.first " << sinLUT.first() << " cosLUT.first  " << cosLUT.first();
+    // //qDebug() << "sinLUT.last " << sinLUT.last() << " cosLUT.last  " << cosLUT.last();
 
     //    for(int x = 0; x < 70;  x){
-    //        qDebug() << "x= "<< x;
+    //        //qDebug() << "x= "<< x;
     //        double sinLeft = sin(2.0*M_PI*(double)omega*(double)sinCounter/(double)sampleRate);
     //        double cosLeft = cos(2.0*M_PI*(double)omega*(double)cosCounter/(double)sampleRate);
-    //        qDebug() << "sinLeft " << sinLeft << "   cosLeft " << cosLeft;
+    //        //qDebug() << "sinLeft " << sinLeft << "   cosLeft " << cosLeft;
     //         inkrementSinCosCounter();
     //    }
 
@@ -798,11 +800,11 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
 
     if(state.contains("pinger")){
 
-        qDebug() << "Frequency - "<<QString::number(audioFormat.frequency());
-        qDebug() << "Channles - "<<QString::number(audioFormat.channels());
-        qDebug() << "Sample size - "<<QString::number(audioFormat.sampleSize());
-        qDebug() << "Byte order enum (Endian) - "<<QString::number(audioFormat.byteOrder());
-        qDebug() << "Sample typ enum - "<<QString::number(audioFormat.sampleType());
+        //qDebug() << "Frequency - "<<QString::number(audioFormat.frequency());
+        //qDebug() << "Channles - "<<QString::number(audioFormat.channels());
+        //qDebug() << "Sample size - "<<QString::number(audioFormat.sampleSize());
+        //qDebug() << "Byte order enum (Endian) - "<<QString::number(audioFormat.byteOrder());
+        //qDebug() << "Sample typ enum - "<<QString::number(audioFormat.sampleType());
 
         audioInput = new QAudioInput(audioFormat);
         ioDevice = audioInput->start();
@@ -820,7 +822,7 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
         timer.restart();
 
 
-        while (ros::ok() && (timer.elapsed() < recordTime)) {
+        while (ros::ok() && enabled) {
 
             if(!audioInput){
                 ROS_ERROR("No audio input");
@@ -843,8 +845,7 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
                     for(int i = 0; i < decodeList.length()-2; i=2){
                         // Decodierte Daten von Rauschen befreien...
                         double zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale;
-                        double zerolineRight = ((double)decodeList.at(i)-(double)noiseRight)*scale;
-//double zerolineRight = ((double)decodeList.at(i1)-(double)noiseRight)*scale;
+                        double zerolineRight = ((double)decodeList.at(i+1)-(double)noiseRight)*scale;
                         // ... und in Listen zur Verarbeitung speichern
                         leftMicro.append(zerolineLeft);
                         rightMicro.append(zerolineRight);
@@ -854,7 +855,7 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
                 }
             }
         }
-    }else if(state.contains("file")){
+    } else if(state.contains("file")){
         ROS_INFO("Reading from file...");
         while (ros::ok()  && !inputStream->atEnd()) {
             QString line = inputStream->readLine();
@@ -866,14 +867,24 @@ void PingerDetection::pingerCallback(const std_msgs::StringConstPtr& msg){
 
             this->audioProcessing();
         }
-    }else{
+    } else {
+        ROS_INFO("Start error");
         return;
     }
 
 }
 
 
+void PingerDetection::pingerCallbackStop(const std_msgs::StringConstPtr& msg){
 
+    ROS_INFO("I heard: [%s]", msg->data.c_str());
+
+    QString state = msg->data.c_str();
+
+    if(state.contains("stop")){
+        this->enable(false);
+    }
+}
 
 PingerDetection::PingerDetection() {
     ROS_INFO("Starting PingerDetection");
@@ -883,11 +894,11 @@ PingerDetection::PingerDetection() {
     this->periodicSinCos();
     this->configAudio();
 
-    angle_publisher = nh_.advertise<std_msgs::Float32>("/hanse/pinger", 100);
-    input_subscriber_ = nh_.subscribe("/hanse/pingerstart",10, pingerCallback);
+    angle_publisher = nh.advertise<std_msgs::Float32>("/hanse/pinger", 100);
+    input_subscriber = nh.subscribe("/hanse/pingerstart",1, &PingerDetection::pingerCallback, this);
+    input_subscriber_stop = nh.subscribe("/hanse/pingerstop",1, &PingerDetection::pingerCallbackStop, this);
 
-
-    enabled_ = false;
+    enabled = false;
 }
 
 PingerDetection::~PingerDetection() {
@@ -899,15 +910,18 @@ bool PingerDetection::enable(bool b) {
 
     if (b) {
         // //ROS_INFO("Enabling pinger_detection");
-        enabled_ = true;
+        enabled = true;
     } else {
         // //ROS_INFO("Disabling pinger_detection");
 
-        enabled_ = false;
+        enabled = false;
     }
 
     // //ROS_INFO("Service leave: hanse_pidcontrol");
     return true;
+}
+
+
 }
 
 
@@ -917,10 +931,9 @@ int main(int argc, char** argv)
 
     ros::start();
 
-    PingerDetection pinger_detection;
+    hanse_pingerdetection::PingerDetection pinger_detection;
 
     ros::spin();
 
     return 0;
-}
 }
