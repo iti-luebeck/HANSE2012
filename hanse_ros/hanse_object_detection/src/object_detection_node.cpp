@@ -22,6 +22,7 @@ public:
         channel = R;
         inverted = false;
         use_blobs = false;
+        morph_iterations = 5;
     }
 
     void configCallback(hanse_object_detection::ObjectDetectionConfig &config, uint32_t level)
@@ -43,6 +44,7 @@ public:
 
         inverted = config.inverted;
         use_blobs = config.use_blobs;
+        morph_iterations = config.morph_iterations;
     }
 
     void imageCB(const sensor_msgs::ImageConstPtr& visual_img_msg)
@@ -81,16 +83,16 @@ public:
             cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
         }
 
-        IplImage *thresh = new IplImage(binary);
-        cvErode(thresh, thresh, NULL, 5);
-        cvDilate(thresh, thresh, NULL, 5);
+        cv::erode(binary, binary, cv::Mat(), cv::Point(-1,-1), morph_iterations);
+        cv::dilate(binary, binary, cv::Mat(), cv::Point(-1,-1), morph_iterations);
 
         float size = 0;
         float orientation = 0;
         float x = 0;
         float y = 0;
 
-        if (use_blobs) {
+        if (use_blobs) {            
+            IplImage *thresh = new IplImage(binary);
             CBlobResult blobs(thresh, NULL, 0);
             blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 100 );
 
@@ -115,9 +117,9 @@ public:
                 y = m01;
 
                 // Second order moments -> orientation
-                double mu11 = blobs.GetBlob(maxBlob)->Moment(1, 1) / size;
-                double mu20 = blobs.GetBlob(maxBlob)->Moment(2, 0) / size;
-                double mu02 = blobs.GetBlob(maxBlob)->Moment(0, 2) / size;
+                double mu11 = blobs.GetBlob(maxBlob)->Moment(1, 1);
+                double mu20 = blobs.GetBlob(maxBlob)->Moment(2, 0);
+                double mu02 = blobs.GetBlob(maxBlob)->Moment(0, 2);
                 orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
 
                 // Draw blob to gray image.
@@ -125,17 +127,18 @@ public:
                 blobs.GetBlob(maxBlob)->FillBlob(thresh, cvScalar(255), 0, 0);
             }
         } else {
-            CvMoments M;
-            cvMoments(thresh, &M, 1);
+            cv::Moments moment = cv::moments(binary, true);
+
+            size = moment.m00;
 
             // First order moments -> mean position
-            x = cvGetCentralMoment( &M, 1, 0 ) / size;
-            y = cvGetCentralMoment( &M, 1, 0 ) / size;
+            x = moment.m10 / size;
+            y = moment.m01 / size;
 
             // Second order moments -> orientation
-            double mu11 = cvGetCentralMoment( &M, 1, 1 ) / size;
-            double mu20 = cvGetCentralMoment( &M, 2, 0 ) / size;
-            double mu02 = cvGetCentralMoment( &M, 0, 2 ) / size;
+            double mu11 = moment.mu11;
+            double mu20 = moment.mu20;
+            double mu02 = moment.mu02;
             orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
         }
 
@@ -179,6 +182,7 @@ private:
     Channel channel;
     bool inverted;
     bool use_blobs;
+    int morph_iterations;
 };
 
 int main(int argc, char** argv)
