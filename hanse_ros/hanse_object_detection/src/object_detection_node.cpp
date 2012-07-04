@@ -21,19 +21,28 @@ public:
 
         channel = R;
         inverted = false;
+        use_blobs = false;
     }
 
     void configCallback(hanse_object_detection::ObjectDetectionConfig &config, uint32_t level)
     {
-        std::string channelStr = config.channel;
-        if (channelStr.compare("R")) {
+        switch (config.channel) {
+        case 0:
             channel = R;
-        } else if (channelStr.compare("G")) {
+            break;
+        case 1:
             channel = G;
-        } else if (channelStr.compare("B")) {
+            break;
+        case 2:
             channel = B;
+            break;
+        default:
+            channel = B;
+            break;
         }
+
         inverted = config.inverted;
+        use_blobs = config.use_blobs;
     }
 
     void imageCB(const sensor_msgs::ImageConstPtr& visual_img_msg)
@@ -73,56 +82,62 @@ public:
         }
 
         IplImage *thresh = new IplImage(binary);
-        cvDilate(thresh, thresh, NULL, 5);
         cvErode(thresh, thresh, NULL, 5);
-
-        CBlobResult blobs(thresh, NULL, 0);
-        blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 100 );
-
-        // Get largest blob.
-        int maxArea = 0;
-        int maxBlob = -1;
-        for (int j = 0; j < blobs.GetNumBlobs(); j++) {
-            CBlob *blob = blobs.GetBlob(j);
-            if (blob->Area() > maxArea) {
-                maxArea = blob->Area();
-                maxBlob = j;
-            }
-        }
+        cvDilate(thresh, thresh, NULL, 5);
 
         float size = 0;
         float orientation = 0;
         float x = 0;
         float y = 0;
 
-        if (maxBlob >= 0) {
-            size = blobs.GetBlob(maxBlob)->Moment(0, 0);
+        if (use_blobs) {
+            CBlobResult blobs(thresh, NULL, 0);
+            blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 100 );
+
+            // Get largest blob.
+            int maxArea = 0;
+            int maxBlob = -1;
+            for (int j = 0; j < blobs.GetNumBlobs(); j++) {
+                CBlob *blob = blobs.GetBlob(j);
+                if (blob->Area() > maxArea) {
+                    maxArea = blob->Area();
+                    maxBlob = j;
+                }
+            }
+
+            if (maxBlob >= 0) {
+                size = blobs.GetBlob(maxBlob)->Moment(0, 0);
+
+                // First order moments -> mean position
+                double m10 = blobs.GetBlob(maxBlob)->Moment(1, 0) / size;
+                double m01 = blobs.GetBlob(maxBlob)->Moment(0, 1) / size;
+                x = m10;
+                y = m01;
+
+                // Second order moments -> orientation
+                double mu11 = blobs.GetBlob(maxBlob)->Moment(1, 1) / size;
+                double mu20 = blobs.GetBlob(maxBlob)->Moment(2, 0) / size;
+                double mu02 = blobs.GetBlob(maxBlob)->Moment(0, 2) / size;
+                orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
+
+                // Draw blob to gray image.
+                binary = binary.setTo(cv::Scalar(0));
+                blobs.GetBlob(maxBlob)->FillBlob(thresh, cvScalar(255), 0, 0);
+            }
+        } else {
+            CvMoments M;
+            cvMoments(thresh, &M, 1);
 
             // First order moments -> mean position
-            double m10 = blobs.GetBlob(maxBlob)->Moment(1, 0) / size;
-            double m01 = blobs.GetBlob(maxBlob)->Moment(0, 1) / size;
-            x = m10;
-            y = m01;
+            x = cvGetCentralMoment( &M, 1, 0 ) / size;
+            y = cvGetCentralMoment( &M, 1, 0 ) / size;
 
             // Second order moments -> orientation
-            double mu11 = blobs.GetBlob(maxBlob)->Moment(1, 1) / size;
-            double mu20 = blobs.GetBlob(maxBlob)->Moment(2, 0) / size;
-            double mu02 = blobs.GetBlob(maxBlob)->Moment(0, 2) / size;
+            double mu11 = cvGetCentralMoment( &M, 1, 1 ) / size;
+            double mu20 = cvGetCentralMoment( &M, 2, 0 ) / size;
+            double mu02 = cvGetCentralMoment( &M, 0, 2 ) / size;
             orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
-
-            // Draw blob to gray image.
-            binary = binary.setTo(cv::Scalar(0));
-            blobs.GetBlob(maxBlob)->FillBlob(thresh, cvScalar(255), 0, 0);
         }
-
-        CvMoments M;
-        cvMoments(thresh, &M, 1);
-
-        // Second order moments -> orientation
-        double mu11 = cvGetCentralMoment( &M, 1, 1 ) / size;
-        double mu20 = cvGetCentralMoment( &M, 2, 0 ) / size;
-        double mu02 = cvGetCentralMoment( &M, 0, 2 ) / size;
-        orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
 
         cv::line(binary, cv::Point(x, y),
                 cv::Point(x + cos(orientation)*200, y + sin(orientation)*200),
@@ -163,6 +178,7 @@ private:
     ros::Publisher object_pub;
     Channel channel;
     bool inverted;
+    bool use_blobs;
 };
 
 int main(int argc, char** argv)
