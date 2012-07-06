@@ -169,11 +169,22 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         // Senden der Engine-Nachricht
         ros::Rate loopRate(4);
         while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-            if (srvClEngineCommandDepth.call(commandMsg) &&
-                    srvClEngineCommandOrientation.call(commandMsg)) {
+            if (srvClEngineCommandDepth.call(commandMsg)) {
                 break;
             } else {
-                ROS_INFO("Engine couldn't be called. Retry.");
+                ROS_INFO("Depth engine couldn't be called. Retry.");
+            }
+
+            count++;
+            loopRate.sleep();
+        }
+
+        count = 0;
+        while(ros::ok() && count < NUM_SERVICE_LOOPS) {
+            if (srvClEngineCommandOrientation.call(commandMsg)) {
+                break;
+            } else {
+                ROS_INFO("Orientation engine couldn't be called. Retry.");
             }
 
             count++;
@@ -181,6 +192,8 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         }
     }
 }
+
+
 
 int main(int argc, char** argv) {
 
