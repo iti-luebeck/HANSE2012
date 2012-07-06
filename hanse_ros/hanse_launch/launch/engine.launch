@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find hanse_launch)/launch/depth.launch" />
+  <include file="$(find hanse_launch)/launch/orientation.launch" />
+</launch>

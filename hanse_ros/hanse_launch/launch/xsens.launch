@@ -1,7 +1,9 @@
 <launch>
-  <node pkg="xsens_driver" type="mtnode.py" name="xsens_driver" output="screen" respawn="true">
-    <param name="frame_id" value="/map" />
-    <param name="device" value="/dev/ttyUSB_imu" />
-    <param name="baudrate" value="921600" />
-  </node>
+  <group ns="hanse">
+    <node pkg="xsens_driver" type="mtnode.py" name="xsens_driver" output="screen" respawn="true">
+      <param name="frame_id" value="/map" />
+      <param name="device" value="/dev/ttyUSB_imu" />
+      <param name="baudrate" value="921600" />
+    </node>
+  </group>
 </launch>

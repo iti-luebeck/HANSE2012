@@ -1,0 +1,7 @@
+<launch>
+  <group ns="hanse">
+    <node name="hanse_sonar_driver_scan" type="sonar_driver_scan" pkg="hanse_sonardriver">
+      <param name="serial_port" value="/dev/ttyUSB_scan" />
+    </node>
+  </group>
+</launch>
