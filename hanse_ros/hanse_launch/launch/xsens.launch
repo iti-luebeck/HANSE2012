@@ -1,5 +1,5 @@
 <launch>
-  <group ns="hanse"><group>
+  <group ns="hanse">
     <remap from="/imu/data" to="/hanse/imu" />
 
     <node pkg="xsens_driver" type="mtnode.py" name="xsens_driver" output="screen" respawn="true">
