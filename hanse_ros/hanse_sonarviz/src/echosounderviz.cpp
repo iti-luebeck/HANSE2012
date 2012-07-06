@@ -5,7 +5,7 @@
 EchoSounderViz::EchoSounderViz(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<sensor_msgs::Image>("sonar/echo/viz", 1)),
-    subscriber(handle.subscribe("/hanse/sonar/echo", 1, &EchoSounderViz::callback, this))
+    subscriber(handle.subscribe("sonar/echo", 1, &EchoSounderViz::callback, this))
 {
     for(int i=0; i<252; i++)
         echoSounderMsgs.push_back(hanse_msgs::EchoSounder());
