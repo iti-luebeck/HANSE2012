@@ -7,7 +7,6 @@
 #include "hanse_gamepad/GamepadNodeConfig.h"
 #include "hanse_srvs/EngineCommand.h"
 
-//#define DEG2RAD(DEG) ((DEG)*((M_PI)/(180.0)))
 #define NUM_SERVICE_LOOPS 8
 
 class TeleopHanse

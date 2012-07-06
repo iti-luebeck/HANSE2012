@@ -33,7 +33,6 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
     this->config = config;
 
     publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
-//    orientationDelta = DEG2RAD(config.orientation_delta);
 }
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
@@ -42,11 +41,7 @@ void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
         // publish data on topic.
         geometry_msgs::Twist velocityMsg;
 
-//        if (orientationMode) {
-//            velocityMsg.angular.z = orientationValue;
-//        } else {
-            velocityMsg.angular.z = angularValue;
-//        }
+        velocityMsg.angular.z = angularValue;
 
         velocityMsg.linear.x = linearValue;
         velocityMsg.linear.z = depthValue;
@@ -62,9 +57,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
     hanse_srvs::EngineCommand commandMsg;
     commandMsg.request.enableDepthPid = true;
     commandMsg.request.enableMotors = motorsEnabled;
-//    commandMsg.request.enableOrientationPid = orientationMode;
     commandMsg.request.enableOrientationPid = true;
-//    commandMsg.request.enableRotationSpeedPid = rotationSpeedMode;
     commandMsg.request.enableRotationSpeedPid = false;
     commandMsg.request.resetZeroPressure = false;
     commandMsg.request.setEmergencyStop = false;
@@ -105,43 +98,12 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
 
         if (pidsEnabled) {
             ROS_INFO("PIDs enabled.");
-
-//            if (orientationMode) {
-                commandMsg.request.enableOrientationPid = true;
-//            } else if (rotationSpeedMode) {
-//                commandMsg.request.enableRotationSpeedPid = true;
-//            }
+            commandMsg.request.enableOrientationPid = true;
         } else {
             ROS_INFO("PIDs disabled.");
             commandMsg.request.enableOrientationPid = false;
-//            commandMsg.request.enableRotationSpeedPid = false;
         }
     }
-
-//    if (joy->buttons[config.rotation_speed_mode] && !orientationMode && !emergencyStop) {
-//        changed = true;
-//        rotationSpeedMode = !rotationSpeedMode;
-//        commandMsg.request.enableRotationSpeedPid = rotationSpeedMode;
-
-//        if (rotationSpeedMode) {
-//            ROS_INFO("Rotation speed control activated.");
-//        } else {
-//            angularValue = 0;
-//            ROS_INFO("Rotation speed control deactivated.");
-//        }
-//    }
-
-//    if (joy->buttons[config.orientation_mode] && !rotationSpeedMode && !emergencyStop) {
-//        changed = true;
-//        orientationMode = !orientationMode;
-//        commandMsg.request.enableOrientationPid = orientationMode;
-
-//        if (orientationMode) {
-//            ROS_INFO("Orientation control activated.");
-//        } else {
-//            ROS_INFO("Orientation control deactivated.");
-//        }
-//    }
 
     if (joy->buttons[config.zero_depth_reset_button] && !emergencyStop) {
         changed = true;
@@ -165,27 +127,11 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
             linearValue = config.linear_scale * joy->axes[config.linear_axis];
         }
 
-//        if (orientationMode) {
-//            if (joy->buttons[config.orientation_left_button]) {
-//                orientationValue += orientationDelta;
-
-//                if (orientationValue > M_PI) {
-//                    orientationValue -= 2 * M_PI;
-//                }
-//            } else if (joy->buttons[config.orientation_right_button]) {
-//                orientationValue -= orientationDelta;
-
-//                if (orientationValue < -M_PI) {
-//                    orientationValue += 2 * M_PI;
-//                }
-//            }
-//        } else {
-            if (fabs(joy->axes[config.angular_axis]) < config.joy_deadzone) {
-                angularValue = 0;
-            } else {
-                angularValue = config.angular_scale * joy->axes[config.angular_axis];
-            }
-//        }
+        if (fabs(joy->axes[config.angular_axis]) < config.joy_deadzone) {
+            angularValue = 0;
+        } else {
+            angularValue = config.angular_scale * joy->axes[config.angular_axis];
+        }
 
         if (config.depth_down_button == config.depth_up_button) {
             if (joy->axes[config.depth_down_button] != 0) {
