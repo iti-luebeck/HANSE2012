@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find hanse_launch)/launch/gamepad.launch" />
+  <include file="$(find hanse_launch)/launch/visualization.launch" />
+</launch>

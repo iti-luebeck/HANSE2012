@@ -1,0 +1,5 @@
+<launch>
+  <group ns="hanse">
+    <node name="$(anon hanse_sonar_viz)" type="sonar_viz" pkg="hanse_sonarviz" />
+  </group>
+</launch>

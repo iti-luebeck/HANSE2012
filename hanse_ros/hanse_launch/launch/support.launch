@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find hanse_launch)/launch/hw.launch" />
+  <include file="$(find hanse_launch)/launch/localization.launch" />
+</launch>

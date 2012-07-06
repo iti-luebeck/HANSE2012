@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find hanse_launch)/launch/sonarviz.launch" />
+  <include file="$(find hanse_launch)/launch/locviz.launch" />
+</launch>
