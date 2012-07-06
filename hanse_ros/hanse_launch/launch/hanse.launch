@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find hanse_launch)/launch/hw.launch" />
   <include file="$(find hanse_launch)/launch/support.launch" />
   <include file="$(find hanse_launch)/launch/behavior.launch" />
 </launch>

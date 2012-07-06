@@ -1,0 +1,3 @@
+<launch>
+  <include file="$(find hanse_wallfollowing)/launch/wallfollowing.launch" />
+</launch>
