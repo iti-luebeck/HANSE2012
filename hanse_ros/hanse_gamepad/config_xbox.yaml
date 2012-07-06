@@ -10,7 +10,7 @@ angular_axis: 3,
 angular_scale: 1.0, # 10 fuer PID
 depth_up_button: 13,
 depth_down_button: 14,
-depth_delta: 0.1,
+depth_delta: 10,
 zero_depth_reset_button: 1,
 motor_switch_button: 8,
 pid_switch_button: 6,

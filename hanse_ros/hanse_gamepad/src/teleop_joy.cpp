@@ -187,7 +187,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
             }
 //        }
 
-        if (config.depth_down_button == config.depth_down_button) {
+        if (config.depth_down_button == config.depth_up_button) {
             if (joy->axes[config.depth_down_button] != 0) {
                 depthValue -= joy->axes[config.depth_down_button] * config.depth_delta;
             }

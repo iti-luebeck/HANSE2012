@@ -7,7 +7,7 @@
   </node>
 
   <node name="teleop_joy" pkg="hanse_gamepad" type="teleop_joy" output="screen">
-    <rosparam file="$(find hanse_gamepad)/config_saitek.yaml"/>
+    <rosparam file="$(find hanse_gamepad)/config_xbox.yaml"/>
   </node>
 </group>
 
