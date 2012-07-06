@@ -34,6 +34,9 @@ private:
     bool emergencyStop;
     bool gamepadEnabled;
 
+    bool depthUpLast;
+    bool depthDownLast;
+
     void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
     void timerCallback(const ros::TimerEvent &e);
 

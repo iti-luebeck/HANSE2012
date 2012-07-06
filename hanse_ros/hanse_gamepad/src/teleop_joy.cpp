@@ -7,7 +7,10 @@ TeleopHanse::TeleopHanse():
     motorsEnabled(true),
     pidsEnabled(true),
     emergencyStop(false),
-    gamepadEnabled(false) {
+    gamepadEnabled(false),
+    depthUpLast(false),
+    depthDownLast(false)
+{
 
     pubCmdVel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 1);
     subJoyInput = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
@@ -53,6 +56,21 @@ void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
 }
 
 void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
+
+    bool depthUpRisingFlank;
+    bool depthDownRisingFlank;
+
+    if (config.depth_up_button == config.depth_down_button) {
+        depthUpRisingFlank = !depthUpLast && (joy->axes[config.depth_up_button] == -1);
+        depthDownRisingFlank = !depthDownLast && (joy->axes[config.depth_down_button == 1]);
+        depthUpLast = joy->axes[config.depth_up_button == -1];
+        depthDownLast = joy->axes[config.depth_down_button == 1];
+    } else {
+        depthUpRisingFlank = !depthUpLast && joy->buttons[config.depth_up_button];
+        depthDownRisingFlank = !depthDownLast && joy->buttons[config.depth_down_button];
+        depthUpLast = joy->buttons[config.depth_up_button];
+        depthDownLast = joy->buttons[config.depth_down_button];
+    }
 
     hanse_srvs::EngineCommand commandMsg;
     commandMsg.request.enableDepthPid = true;
@@ -133,18 +151,12 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
             angularValue = config.angular_scale * joy->axes[config.angular_axis];
         }
 
-        if (config.depth_down_button == config.depth_up_button) {
-            if (joy->axes[config.depth_down_button] != 0) {
-                depthValue -= joy->axes[config.depth_down_button] * config.depth_delta;
-            }
-        } else {
-            if (joy->buttons[config.depth_up_button]) {
-                depthValue -= config.depth_delta;
-            }
+        if (depthUpRisingFlank) {
+            depthValue += config.depth_delta;
+        }
 
-            if (joy->buttons[config.depth_down_button]) {
-                depthValue += config.depth_delta;
-            }
+        if (depthDownRisingFlank) {
+            depthValue -= config.depth_delta;
         }
 
         if (depthValue < 0) {
