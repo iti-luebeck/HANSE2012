@@ -18,6 +18,14 @@ TeleopHanse::TeleopHanse():
     // will be set to actual value once config is loaded
     publishTimer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
 
+    ros::Rate r(10);
+
+    while(ros::Time::now().toSec() == 0.0) {
+        r.sleep();
+    }
+
+    ignoreTime = ros::Time::now() + ros::Duration(0.25);
+
     dynReconfigureCb = boost::bind(&TeleopHanse::dynReconfigureCallback, this, _1, _2);
     dynReconfigureSrv.setCallback(dynReconfigureCb);
     // from this point on we can assume a valid config
@@ -40,7 +48,7 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
 
-    if (gamepadEnabled) {
+    if (gamepadEnabled && (ros::Time::now() > ignoreTime)) {
         // publish data on topic.
         geometry_msgs::Twist velocityMsg;
 
@@ -126,6 +134,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
     if (joy->buttons[config.zero_depth_reset_button] && !emergencyStop) {
         changed = true;
         commandMsg.request.resetZeroPressure = true;
+        ROS_INFO("Resetted pressure zero value.");
     }
 
     if (joy->buttons[config.gamepad_switch_button] && !emergencyStop) {

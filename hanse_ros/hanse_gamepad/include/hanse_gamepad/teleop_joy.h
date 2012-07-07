@@ -37,6 +37,8 @@ private:
     bool depthUpLast;
     bool depthDownLast;
 
+    ros::Time ignoreTime;
+
     void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
     void timerCallback(const ros::TimerEvent &e);
 
