@@ -155,8 +155,8 @@ void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e) {
 
          // Berechnung der Ansteuerungsstärke der seitlichen Motoren.
          if (angularSpeed == 0) {
-             motorLeft = linearSpeed * 127 - angularSpeed - orientationOutput;
-             motorRight = linearSpeed * 127 + angularSpeed + orientationOutput;
+             motorLeft = linearSpeed * 127 - orientationOutput;
+             motorRight = linearSpeed * 127 + orientationOutput;
          } else {
              motorLeft = linearSpeed * 127 - angularSpeed * 127;
              motorRight = linearSpeed * 127 + angularSpeed * 127;

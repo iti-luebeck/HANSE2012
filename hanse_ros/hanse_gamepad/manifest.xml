@@ -15,6 +15,7 @@
   <depend package="joy"/>
   <depend package="hanse_msgs"/>
   <depend package="hanse_srvs"/>
+  <depend package="topic_tools"/>
 
 </package>
 

@@ -1,6 +1,5 @@
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
-#include <geometry_msgs/Twist.h>
 #include <dynamic_reconfigure/server.h>
 
 #include "hanse_msgs/pressure.h"
@@ -8,6 +7,7 @@
 #include "hanse_srvs/Bool.h"
 #include "hanse_srvs/Empty.h"
 #include "hanse_srvs/EngineCommand.h"
+#include "hanse_srvs/SetTarget.h"
 #include "hanse_depthengine/DepthengineConfig.h"
 
 #define NUM_SERVICE_LOOPS 8
@@ -35,12 +35,14 @@ private:
     // Service for setting emergency stop
     ros::ServiceServer srvSetEmergencyStop;
 
+    // Service for setting the depth
+    ros::ServiceServer srvSetDepth;
+
     // Service Clients.
     ros::ServiceClient srvClDepthPid;
 
     // Subscriber.
     ros::Subscriber subPressure;
-    ros::Subscriber subVelocity;
 
     ros::Subscriber subDepthOutput;
 
@@ -48,9 +50,8 @@ private:
     ros::Publisher pubDepthCurrent;
     ros::Publisher pubDepthTarget;
 
-    //ros::Publisher pubMotorFront;
-    //ros::Publisher pubMotorRear;
-    ros::Publisher pubMotorUp;
+    ros::Publisher pubMotorFront;
+    ros::Publisher pubMotorRear;
 
     // Daten Zwischenspeicher.
     double depthTarget;
@@ -87,10 +88,11 @@ private:
                            hanse_srvs::Empty::Response &res);
     bool setEmergencyStop(hanse_srvs::Bool::Request &req,
                           hanse_srvs::Bool::Response &res);
+    bool setDepth(hanse_srvs::SetTarget::Request &req,
+                  hanse_srvs::SetTarget::Response &res);
 
     // Methodendeklaration.
     void pressureCallback(const hanse_msgs::pressure::ConstPtr &pressure);
-    void velocityCallback(const geometry_msgs::Twist::ConstPtr &twist);
 
     void depthOutputCallback(const std_msgs::Float64::ConstPtr &depthOutput);
 
