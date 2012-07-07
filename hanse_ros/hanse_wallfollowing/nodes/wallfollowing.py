@@ -218,7 +218,7 @@ if __name__ == '__main__':
 	rospy.Subscriber('/echosounderaveragedistance', Float32, echoSounderAvgCallback)
 #	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 #IMUTMP	rospy.Subscriber('imu', Imu, imuCallback)
-	pub_cmd_vel = rospy.Publisher('commands/cmd_vel_behaviour', Twist)
+	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
 	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
 	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 
