@@ -110,6 +110,8 @@ void OrientationEngine::xsensCallback(
 
     orientationCurrent = atan2(direction.y(), direction.x());
 
+    ROS_INFO("Angle: %f", orientationCurrent);
+
     if (angularSpeed != 0 || !orientationInit) {
         orientationInit = true;
         orientationTarget = orientationCurrent;
@@ -138,7 +140,7 @@ void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e) {
          double rotation;
          //double absoluteDistance = std::abs(orientationTarget) + std::abs(orientationCurrent);
 
-         rotation = orientationTarget - orientationCurrent;
+         rotation = - (orientationTarget - orientationCurrent);
 
          if(rotation < -M_PI) {
              rotation = rotation + 2 * M_PI;
