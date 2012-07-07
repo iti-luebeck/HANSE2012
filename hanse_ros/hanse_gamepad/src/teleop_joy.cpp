@@ -34,7 +34,7 @@ TeleopHanse::TeleopHanse():
     srvClEngineCommandDepth = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/depth/handleEngineCommand");
     srvClEngineCommandOrientation = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/orientation/handleEngineCommand");
     srvClEngineSetDepth = node.serviceClient<hanse_srvs::SetTarget>("/hanse/engine/depth/setDepth");
-    srvClCmdVelMuxSelect = node.serviceClient<topic_tools::MuxSelect>("/hanse/commands/cmd_mux");
+    srvClCmdVelMuxSelect = node.serviceClient<topic_tools::MuxSelect>("/hanse/commands/cmd_vel_select");
 
     ROS_INFO("teleop_joy started");
     ROS_INFO("Gamepad disabled");
