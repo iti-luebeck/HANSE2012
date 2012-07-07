@@ -1,8 +1,8 @@
 <launch>
   <!-- TODO anpassen der map -->
   <include ns="hanse" file="$(find hanse_sonarlocalization)/launch/localization_online.launch">
-    <arg name="map_image" value="$(find hanse_sonarlocalization)/maps/wakenitz_large.png" />
-    <arg name="map_pixel_size" value="0.078125" />
+    <arg name="map_image" value="$(find hanse_sonarlocalization)/maps/italy.png" />
+    <arg name="map_pixel_size" value="0.1" />
     <arg name="map_threshold" value="32" />
   </include>
 </launch>
