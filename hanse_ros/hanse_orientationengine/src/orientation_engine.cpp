@@ -20,7 +20,6 @@ OrientationEngine::OrientationEngine() :
 
     // Registrierung der Publisher und Subscriber.
     pubOrientationCurrent = node.advertise<std_msgs::Float64>("/hanse/pid/orientation/input", 1);
-    //pubOrientationTarget = node.advertise<std_msgs::Float64>("/hanse/pid/orientation/target",1);
 
     pubMotorLeft = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/left", 1);
     pubMotorRight = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/right", 1);
@@ -32,23 +31,21 @@ OrientationEngine::OrientationEngine() :
 
     subOrientationOutput = node.subscribe<std_msgs::Float64>(
                 "/hanse/pid/orientation/output", 10, &OrientationEngine::orientationOutputCallback, this);
-    //subOrientationTarget = node.subscribe<std_msgs::Float64>(
-    //            "/hanse/commands/orientation_target", 10, &OrientationEngine::orientationTargetCallback, this);
 
     publishTimer = node.createTimer(ros::Duration(1),
                                     &OrientationEngine::publishTimerCallback, this);
 
     // Registrierung der Services.
-    srvHandleEngineCommand = node.advertiseService("engine/rotation/handleEngineCommand",
+    srvHandleEngineCommand = node.advertiseService("engine/orientation/handleEngineCommand",
                                                    &OrientationEngine::handleEngineCommand, this);
 
-    srvEnableOrientationPid = node.advertiseService("engine/rotation/enableOrientationPid",
+    srvEnableOrientationPid = node.advertiseService("engine/orientation/enableOrientationPid",
                                                     &OrientationEngine::enableOrientationPid, this);
 
-    srvEnableMotors = node.advertiseService("engine/rotation/enableMotors",
+    srvEnableMotors = node.advertiseService("engine/orientation/enableMotors",
                                             &OrientationEngine::enableMotors, this);
 
-    srvSetEmergencyStop = node.advertiseService("engine/rotation/setEmergencyStop",
+    srvSetEmergencyStop = node.advertiseService("engine/orientation/setEmergencyStop",
                                                 &OrientationEngine::setEmergencyStop, this);
 
     dynReconfigureCb = boost::bind(&OrientationEngine::dynReconfigureCallback, this, _1, _2);
@@ -98,29 +95,20 @@ void OrientationEngine::velocityCallback(
 void OrientationEngine::xsensCallback(
         const sensor_msgs::Imu::ConstPtr& xsensData) {
 
-    double orientation = 0;
+    Eigen::Quaternionf flipped(xsensData->orientation.w,
+                               xsensData->orientation.x,
+                               xsensData->orientation.y,
+                               xsensData->orientation.z);
 
-    // Konvertierung der Quaternion zu RPY bei deaktivierter Handcontrol.
-    tf::Quaternion q;
+    // This undos the rotation of the xsens (180 deg around the y
+    // axis) this is why: we first (right side) put the xsens into hanse the
+    // wrong way around and _then_ move hanse around (left side) so
+    // the inverse of the xsens orientation has to be at the right
+    // side too for them to cancle
+    Eigen::Quaternionf orientation = flipped * Eigen::AngleAxis<float>(M_PI, Eigen::Vector3f(0, 1, 0));
+    Eigen::Vector3f direction = orientation * Eigen::Vector3f(1, 0, 0);
 
-    double roll, pitch, yaw;
-    tf::quaternionMsgToTF(xsensData->orientation, q);
-    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    //btMatrix3x3(q).getRPY(roll, pitch, yaw);
-
-    switch (config.z_axis) {
-    case 3:
-        orientation = yaw;
-        break;
-    case 2:
-        orientation = pitch;
-        break;
-    case 1:
-    default:
-        orientation = roll;
-    }
-
-    orientationCurrent = orientation * config.orientation_z;
+    orientationCurrent = atan2(direction.y(), direction.x());
 
     if (angularSpeed != 0 || !orientationInit) {
         orientationInit = true;
@@ -167,8 +155,8 @@ void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e) {
 
          // Berechnung der Ansteuerungsstärke der seitlichen Motoren.
          if (angularSpeed == 0) {
-             motorLeft = linearSpeed * 127 - angularSpeed - orientationOutput;
-             motorRight = linearSpeed * 127 + angularSpeed + orientationOutput;
+             motorLeft = linearSpeed * 127 - orientationOutput;
+             motorRight = linearSpeed * 127 + orientationOutput;
          } else {
              motorLeft = linearSpeed * 127 - angularSpeed * 127;
              motorRight = linearSpeed * 127 + angularSpeed * 127;

@@ -1,6 +1,4 @@
 {
 publish_frequency: 10,
-z_axis: 1,
-orientation_z: -1,
 orientation_pid_enabled_at_start: True
 }

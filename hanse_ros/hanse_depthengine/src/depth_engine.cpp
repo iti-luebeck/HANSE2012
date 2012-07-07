@@ -19,15 +19,11 @@ DepthEngine::DepthEngine() :
     pubDepthCurrent = node.advertise<std_msgs::Float64>("/hanse/pid/depth/input", 1);
     pubDepthTarget = node.advertise<std_msgs::Float64>("/hanse/pid/depth/target",1);
 
-    //pubMotorFront = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/downFront", 1);
-    //pubMotorRear = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/downBack", 1);
-    pubMotorUp = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/up", 1);
-
+    pubMotorFront = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/downFront", 1);
+    pubMotorRear = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/downBack", 1);
 
     subPressure = node.subscribe<hanse_msgs::pressure>("/hanse/pressure/depth", 10,
                                                        &DepthEngine::pressureCallback, this);
-    subVelocity = node.subscribe<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 10,
-                                                       &DepthEngine::velocityCallback, this);
 
     subDepthOutput = node.subscribe<std_msgs::Float64>(
                 "/hanse/pid/depth/output", 10, &DepthEngine::depthOutputCallback, this);
@@ -44,11 +40,14 @@ DepthEngine::DepthEngine() :
 
     srvEnableMotors = node.advertiseService("engine/depth/enableMotors",
                                             &DepthEngine::enableMotors, this);
+
     srvResetZeroPressure = node.advertiseService("engine/depth/resetZeroPressure",
                                                  &DepthEngine::resetZeroPressure, this);
 
     srvSetEmergencyStop = node.advertiseService("engine/depth/setEmergencyStop",
                                                 &DepthEngine::setEmergencyStop, this);
+
+    srvSetDepth = node.advertiseService("engine/depth/setDepth", &DepthEngine::setDepth, this);
 
     dynReconfigureCb = boost::bind(&DepthEngine::dynReconfigureCallback, this, _1, _2);
     dynReconfigureSrv.setCallback(dynReconfigureCb);
@@ -90,11 +89,13 @@ void DepthEngine::pressureCallback(
     pressureCurrent = pressure->data;
 }
 
-// Auswertung und Zwischenspeicherung der cmd_vel Nachricht.
-void DepthEngine::velocityCallback(
-        const geometry_msgs::Twist::ConstPtr& twist) {
+// Speicherung der Zieltiefe
+bool DepthEngine::setDepth(
+        hanse_srvs::SetTarget::Request &req,
+        hanse_srvs::SetTarget::Response &res) {
 
-    depthTarget = twist->linear.z;
+    depthTarget = req.target;
+    return true;
 }
 
 // Auswertung und Zwischenspeicherung der Ausgabedaten des Druck-PID-Reglers.
@@ -109,6 +110,7 @@ void DepthEngine::depthOutputCallback(
 void DepthEngine::publishTimerCallback(const ros::TimerEvent &e) {
 
     hanse_msgs::sollSpeed motorHeightMsg;
+    motorHeightMsg.header.stamp = ros::Time::now();
 
     if(emergencyStop) {
         motorHeightMsg.data = 127;
@@ -137,9 +139,8 @@ void DepthEngine::publishTimerCallback(const ros::TimerEvent &e) {
         }
     }
 
-    //pubMotorFront.publish(motorHeightMsg);
-    //pubMotorRear.publish(motorHeightMsg);
-    pubMotorUp.publish(motorHeightMsg);
+    pubMotorFront.publish(motorHeightMsg);
+    pubMotorRear.publish(motorHeightMsg);
 }
 
 bool DepthEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &req,

@@ -281,7 +281,7 @@ if __name__ == '__main__':
 	#pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
 	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
 	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
-	pub_cmd_vel = rospy.Publisher('commands/cmd_vel_behaviour', Twist)
+	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=[Transitions.Passed, Transitions.Aborted])

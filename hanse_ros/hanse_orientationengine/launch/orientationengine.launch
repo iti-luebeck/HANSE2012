@@ -12,10 +12,8 @@
       <rosparam file="$(find hanse_orientationengine)/config_orientation_pid.yaml"/>
     </node>
   </group>
-  
-<!-- XSens -->
-<!--
-  <remap from="/imu/data" to="/hanse/imu"/>
-  <node name="xsens" pkg="lse_xsens_mti" type="mti_node" output="screen"></node>
--->
+
+  <group ns="/hanse/commands">
+    <node name="cmd_vel_mux" pkg="topic_tools" type="mux" output="screen" args="cmd_vel cmd_vel_behaviour cmd_vel_joystick mux:=cmd_vel_mux" />
+  </group>
 </launch>

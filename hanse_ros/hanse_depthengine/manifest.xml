@@ -12,7 +12,6 @@
   <depend package="dynamic_reconfigure"/>
   <depend package="hanse_msgs"/>
   <depend package="hanse_srvs"/>
-  <depend package="geometry_msgs"/>
   <depend package="std_msgs"/>
 
 </package>
