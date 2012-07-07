@@ -1,0 +1,23 @@
+<package>
+  <description brief="automatic_color_equalization">
+
+     automatic_color_equalization
+
+  </description>
+  <author>Jan Hartmann</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/automatic_color_equalization</url>
+  <depend package="roslib"/>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="cv_bridge"/>
+  <depend package="image_transport"/>
+  <rosdep name="opencv2.3"/>
+  <depend package="dynamic_reconfigure" />
+  <depend package="driver_base" />
+
+</package>
+
+
