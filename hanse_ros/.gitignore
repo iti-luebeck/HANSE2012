@@ -15,3 +15,5 @@ _*.py
 *.bak
 *~
 *.aux
+/hanse_ros/hanse_depthengine/src/hanse_depthengine/cfg/DepthengineConfig.py
+/hanse_gamepad/src/hanse_gamepad/cfg/GamepadNodeConfig.py

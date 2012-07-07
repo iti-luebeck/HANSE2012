@@ -14,7 +14,7 @@ from std_msgs.msg import Float64, Float32
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist, Vector3
 from hanse_msgs.msg import ScanningSonar, sollSpeed
-from hanse_pidcontrol.srv import *
+from hanse_srvs.srv import *
 
 class Config:
 	desiredDistance = 1.5
@@ -208,7 +208,7 @@ if __name__ == '__main__':
 	# Auf Service warten und PID-Regler aktivieren
 	rospy.loginfo('Init: Waiting for pid service...')
 	rospy.wait_for_service('/wallfollowing_angular_pid/enable')
-	enable = rospy.ServiceProxy('/wallfollowing_angular_pid/enable', Enable)
+	enable = rospy.ServiceProxy('/wallfollowing_angular_pid/enable', Bool)
 	enable(True)
 	
 	# Config server
