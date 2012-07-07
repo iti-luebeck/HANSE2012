@@ -2,5 +2,8 @@
 channel: 0,
 inverted: 0,
 use_blobs: 0,
-morph_iterations: 1
+morph_iterations: 1,
+automatic: 1,
+subtract_background: 0,
+subtract_mean: 1
 }
