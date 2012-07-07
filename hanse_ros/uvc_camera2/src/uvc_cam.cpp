@@ -349,9 +349,9 @@ void Cam::enumerate()
 }
 
 // saturate input into [0, 255]
-inline unsigned char sat(float f)
+inline unsigned int sat(unsigned int f)
 {
-  return (unsigned char)( f >= 255 ? 255 : (f < 0 ? 0 : f));
+  return ( (f & (1<<31)) ? 0 : ((f & (0xFFFFFF00 << 10)) ? 255 << 10: f));
 }
 
 int Cam::grab(unsigned char **frame, uint32_t &bytes_used)
@@ -390,22 +390,22 @@ int Cam::grab(unsigned char **frame, uint32_t &bytes_used)
     unsigned char *pyuv = (unsigned char *)mem[buf.index];
     // yuyv is 2 bytes per pixel. step through every pixel pair.
     unsigned char *prgb = rgb_frame;
-    unsigned char *pyuv_last = last_yuv_frame;
+    //unsigned char *pyuv_last = last_yuv_frame;
     for (unsigned i = 0; i < width * height * 2; i += 4)
     {
-      *prgb++ = sat(pyuv[i]+1.402f  *(pyuv[i+3]-128));
-      *prgb++ = sat(pyuv[i]-0.34414f*(pyuv[i+1]-128)-0.71414f*(pyuv[i+3]-128));
-      *prgb++ = sat(pyuv[i]+1.772f  *(pyuv[i+1]-128));
-      *prgb++ = sat(pyuv[i+2]+1.402f*(pyuv[i+3]-128));
-      *prgb++ = sat(pyuv[i+2]-0.34414f*(pyuv[i+1]-128)-0.71414f*(pyuv[i+3]-128));
-      *prgb++ = sat(pyuv[i+2]+1.772f*(pyuv[i+1]-128));
-      if ((int)pyuv[i] - (int)pyuv_last[i] > motion_threshold_luminance ||
+      *prgb++ = sat(pyuv[i]*1024u+((unsigned)(1024 * 1.402f))  *(pyuv[i+3]-128)) >> 10;
+      *prgb++ = sat(pyuv[i]*1024u-((unsigned)(1024 * 0.34414f))*(pyuv[i+1]-128)-((unsigned)(1024 * 0.71414f))*(pyuv[i+3]-128)) >> 10;
+      *prgb++ = sat(pyuv[i]*1024u+((unsigned)(1024 * 1.772f))  *(pyuv[i+1]-128)) >> 10;
+      *prgb++ = sat(pyuv[i+2]*1024u+((unsigned)(1024 * 1.402f))*(pyuv[i+3]-128)) >> 10;
+      *prgb++ = sat(pyuv[i+2]*1024u-((unsigned)(1024 * 0.34414f))*(pyuv[i+1]-128)-((unsigned)(1024 * 0.71414f))*(pyuv[i+3]-128)) >> 10;
+      *prgb++ = sat(pyuv[i+2]*1024u+((unsigned)(1024 * 1.772f))*(pyuv[i+1]-128)) >> 10;
+      /*if ((int)pyuv[i] - (int)pyuv_last[i] > motion_threshold_luminance ||
           (int)pyuv_last[i] - (int)pyuv[i] > motion_threshold_luminance)
         num_pixels_different++;
       if ((int)pyuv[i+2] - (int)pyuv_last[i+2] > motion_threshold_luminance ||
           (int)pyuv_last[i+2] - (int)pyuv[i+2] > motion_threshold_luminance)
         num_pixels_different++;
-
+*/
       // this gives bgr images...
       /*
       *prgb++ = sat(pyuv[i]+1.772f  *(pyuv[i+1]-128));
@@ -416,8 +416,8 @@ int Cam::grab(unsigned char **frame, uint32_t &bytes_used)
       *prgb++ = sat(pyuv[i+2]+1.402f*(pyuv[i+3]-128));
       */
     }
-    memcpy(last_yuv_frame, pyuv, width * height * 2);
-    if (num_pixels_different > motion_threshold_count) // default: always true
+    //memcpy(last_yuv_frame, pyuv, width * height * 2);
+    if (true) //num_pixels_different > motion_threshold_count) // default: always true
       *frame = rgb_frame;
     else
     {
