@@ -19,8 +19,7 @@ DepthEngine::DepthEngine() :
     pubDepthCurrent = node.advertise<std_msgs::Float64>("/hanse/pid/depth/input", 1);
     pubDepthTarget = node.advertise<std_msgs::Float64>("/hanse/pid/depth/target",1);
 
-    pubMotorFront = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/up", 1);
-//    pubMotorRear = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/downBack", 1);
+    pubMotorUp = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/up", 1);
 
     subPressure = node.subscribe<hanse_msgs::pressure>("/hanse/pressure/depth", 10,
                                                        &DepthEngine::pressureCallback, this);
@@ -139,8 +138,7 @@ void DepthEngine::publishTimerCallback(const ros::TimerEvent &e) {
         }
     }
 
-    pubMotorFront.publish(motorHeightMsg);
-//    pubMotorRear.publish(motorHeightMsg);
+    pubMotorUp.publish(motorHeightMsg);
 }
 
 bool DepthEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &req,

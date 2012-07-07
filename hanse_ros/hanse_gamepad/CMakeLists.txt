@@ -33,5 +33,5 @@ gencfg()
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
-rosbuild_add_executable(teleop_joy src/teleop_joy.cpp)
+rosbuild_add_executable(teleop_joy src/teleop_joy.cpp src/flank_trigger.cpp)
 #target_link_libraries(teleop_joy)

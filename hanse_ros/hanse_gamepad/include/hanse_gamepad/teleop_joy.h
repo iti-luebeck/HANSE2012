@@ -6,6 +6,7 @@
 #include <topic_tools/MuxSelect.h>
 
 #include "hanse_gamepad/GamepadNodeConfig.h"
+#include "hanse_gamepad/flank_trigger.h"
 #include "hanse_srvs/EngineCommand.h"
 #include "hanse_srvs/SetTarget.h"
 
@@ -43,6 +44,8 @@ private:
     bool depthDownLast;
 
     ros::Time ignoreTime;
+
+    FlankTrigger trig;
 
     void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
     void timerCallback(const ros::TimerEvent &e);
