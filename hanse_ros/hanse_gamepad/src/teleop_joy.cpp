@@ -152,11 +152,11 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         }
 
         if (depthUpRisingFlank) {
-            depthValue += config.depth_delta;
+            depthValue -= config.depth_delta;
         }
 
         if (depthDownRisingFlank) {
-            depthValue -= config.depth_delta;
+            depthValue += config.depth_delta;
         }
 
         if (depthValue < 0) {

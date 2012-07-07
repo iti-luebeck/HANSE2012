@@ -4,9 +4,8 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Imu.h>
 #include <dynamic_reconfigure/server.h>
-#include <tf/tf.h>
-#include <LinearMath/btQuaternion.h>
-#include <LinearMath/btMatrix3x3.h>
+
+#include <Eigen/Geometry>
 
 #include "hanse_orientationengine/OrientationengineConfig.h"
 #include "hanse_msgs/pressure.h"
