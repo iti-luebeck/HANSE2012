@@ -248,21 +248,21 @@ def computeIntersection(meanX, meanY, theta):
 
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
-	#linearVector = Vector3(x=lin,z=0)
-	#angularVector = Vector3(z=-ang)
-	#twist = Twist(linear=linearVector, angular=angularVector)
-	#pub_cmd_vel.publish(twist)
+	linearVector = Vector3(x=lin,z=0)
+	angularVector = Vector3(z=ang)
+	twist = Twist(linear=linearVector, angular=angularVector)
+	pub_cmd_vel.publish(twist)
 	#
-	ang = ang
+	#ang = ang
 	# geschwindigkeitswerte fuer thruster berechnen
-	left = lin*127 + ang*127
-	right = lin*127 - ang*127
+	#left = lin*127 + ang*127
+	#right = lin*127 - ang*127
 	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
+	#left = numpy.clip(left, -127, 127)
+	#right = numpy.clip(right, -127, 127)
 	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))
+	#pub_motor_left.publish(sollSpeed(data = left))
+	#pub_motor_right.publish(sollSpeed(data = right))
 
 
 #==============================================================================
@@ -279,8 +279,9 @@ if __name__ == '__main__':
 
 	# Publisher
 	#pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
-	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
-	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
+	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
+	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
+	pub_cmd_vel = rospy.Publisher('commands/cmd_vel_behaviour', Twist)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=[Transitions.Passed, Transitions.Aborted])

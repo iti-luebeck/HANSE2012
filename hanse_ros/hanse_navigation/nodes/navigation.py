@@ -242,17 +242,17 @@ def configCallback(config, level):
 
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
-	#rospy.loginfo("angularoutput: " + repr(-ang))
-	#twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
-	#pub_cmd_vel.publish(twist)
-	left = lin*127 + ang*127
-	right = lin*127 - ang*127
+	rospy.loginfo("angularoutput: " + repr(-ang))
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	pub_cmd_vel.publish(twist)
+	#left = lin*127 + ang*127
+	#right = lin*127 - ang*127
 	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
+	#left = numpy.clip(left, -127, 127)
+	#right = numpy.clip(right, -127, 127)
 	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))
+	#pub_motor_left.publish(sollSpeed(data = left))
+	#pub_motor_right.publish(sollSpeed(data = right))
 
 # aus dem angles-package uebernommen
 def normalize_angle_positive(angle):
@@ -339,9 +339,9 @@ if __name__ == '__main__':
 
 	rospy.Subscriber('/goal', PoseStamped, goalCallback)
 #	rospy.Subscriber('/waypoints', Path, pathCallback)
-	#pub_cmd_vel = rospy.Publisher('commands/cmd_vel', Twist)
-	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
-	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)	
+	pub_cmd_vel = rospy.Publisher('commands/cmd_vel_behaviour', Twist)
+	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
+	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)	
 	
 	pub_path = rospy.Publisher('/path', Path)
 	

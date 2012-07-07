@@ -1,0 +1,12 @@
+\subsubsection usage Usage
+\verbatim
+<node name="wallfollowing" pkg="hanse_wallfollowing" type="wallfollowing">
+  <param name="desiredDistance" type="double" value="1.5" />
+  <param name="maxSpeed" type="double" value="0.7" />
+  <param name="linearSpeedScaleDownFactor" type="double" value="0.75" />
+  <param name="wd_averageWindow" type="int" value="12" />
+  <param name="wd_threshold" type="int" value="30" />
+  <param name="wd_calcFactor" type="double" value="0.3" />
+</node>
+\endverbatim
+
