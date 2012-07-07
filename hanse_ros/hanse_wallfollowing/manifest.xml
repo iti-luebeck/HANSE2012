@@ -19,6 +19,7 @@
   <depend package="python_orocos_kdl" />
   <depend package="sensor_msgs" />
   <depend package="hanse_msgs"/>
+  <depend package="hanse_srvs"/>
   <depend package="hanse_pidcontrol"/>
 
 </package>

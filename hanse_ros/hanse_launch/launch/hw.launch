@@ -3,5 +3,5 @@
   <include file="$(find hanse_launch)/launch/xsens.launch" />
   <include file="$(find hanse_launch)/launch/engine.launch" />
   <include file="$(find hanse_launch)/launch/sonar.launch" />
-  <incldue file="$(find hanse_launch)/launch/cameras.launch" />
+  <include file="$(find hanse_launch)/launch/cameras.launch" />
 </launch>
