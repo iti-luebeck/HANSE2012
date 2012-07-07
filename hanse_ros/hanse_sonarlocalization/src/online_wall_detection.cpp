@@ -7,6 +7,7 @@ OnlineWallDetection::OnlineWallDetection(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<hanse_msgs::WallDetection>("sonar/scan/walls", 1)),
     debugPublisher(handle.advertise<hanse_msgs::ScanningSonar>("sonar/scan/wall_detection", 1)),
+    debugPublisher2(handle.advertise<hanse_msgs::ScanningSonar>("sonar/scan/wall_detection/debug", 1)),
     subscriber(handle.subscribe("sonar/scan", 1, &OnlineWallDetection::callback, this))
 {
     reconfigServer.setCallback(boost::bind(&OnlineWallDetection::reconfigure, this, _1, _2));
@@ -23,8 +24,21 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 
     Eigen::ArrayXf ones;
     ones.setOnes(echoData.rows());
+    Eigen::ArrayXf zeros;
+    zeros.setZero(echoData.rows());
 
-    echoData = (nmsFilter(wallFilter(minFilter(echoData, config.min_filter_width)), config.nms_filter_width) * config.pre_gain).min(ones);
+    Eigen::ArrayXf slope(echoData.rows());
+
+    for (unsigned i = 0; i < echoData.rows(); i++)
+        slope(i) = (float)i / echoData.rows();
+
+    //echoData = densityFilter(echoData);
+    Eigen::ArrayXf damping = config.distance_damping * slope;;
+    echoData = (echoData - damping).max(zeros) * (ones / (1 - damping));
+    //echoData = (echoData - medianFilter(echoData, config.min_filter_width, 0.5)).max(zeros) * 4;
+    echoData = medianFilter(echoData, config.median_filter_width, config.median_filter_mu);
+    echoData = wallFilter(echoData);
+    echoData = (nmsFilter(echoData, config.nms_filter_width) * config.pre_gain).min(ones);
     for (unsigned i = config.length_cutoff; i < msg.echoData.size(); i++) {
 	echoData[i] = 0;
     }
@@ -35,6 +49,7 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 	echoDatas.pop_back();
 	lastMessages.pop_back();
     }
+
 
     if (echoDatas.size() == 3) {
 	const Eigen::ArrayXf &left = echoDatas[0];
@@ -58,6 +73,9 @@ void OnlineWallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 	Eigen::ArrayXf betweenA = leftInnerSlope.min(rightOuterSlope);
 	Eigen::ArrayXf betweenB = rightInnerSlope.min(leftOuterSlope);
 	Eigen::ArrayXf between = betweenA.max(betweenB).max(leftOutside).max(rightOutside);
+
+        debugPublisher2.publish(debugMessage(between, 0));
+
 
 	Eigen::ArrayXf midFiltered = mid * between;
 
@@ -105,6 +123,31 @@ Eigen::ArrayXf OnlineWallDetection::minFilter(Eigen::ArrayXf const &data, unsign
     }
     return minfilter;
 }
+
+Eigen::ArrayXf OnlineWallDetection::medianFilter(Eigen::ArrayXf const &data, unsigned width, float mu)
+{
+    Eigen::ArrayXf medianfilter(data.rows());
+
+    float buffer[2 * width + 1];
+
+    for (unsigned i = 0; i < data.rows(); i++) {
+	for (int k = -width; k <= (int)width; k++) {
+	    int j = i + k;
+            float val;
+	    if (j < 0)
+                val = 0;
+            else if (j >= data.rows())
+                val = 0;
+            else
+                val = data(j);
+            buffer[k+width] = val;
+	}
+        std::sort(buffer, buffer + 2 * width + 1);
+	medianfilter(i) = buffer[(int)(mu * 2 * width)];
+    }
+    return medianfilter;
+}
+
 
 Eigen::ArrayXf OnlineWallDetection::integralFilter(Eigen::ArrayXf const &data)
 {
