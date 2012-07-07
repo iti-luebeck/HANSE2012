@@ -2,7 +2,12 @@
   <node name="pipefollowing" type="pipefollowing.py" pkg="hanse_pipefollowing" output="screen"/>
 
   <node name="object_detection_node" type="object_detection_node" pkg="hanse_object_detection">
-    <param name="image_topic" value="/hanse/camera/bottom" />
+    <param name="image_topic" value="/image_ace" />
     <rosparam file="$(find hanse_object_detection)/cfg/pipe.yaml"/>
+  </node>
+
+  <node name="ace_node" type="ace" pkg="automatic_color_equalization">
+    <param name="image_topic" value="/hanse/camera/bottom" />
+    <rosparam file="$(find automatic_color_equalization)/cfg/ace.yaml"/>
   </node>
 </launch>

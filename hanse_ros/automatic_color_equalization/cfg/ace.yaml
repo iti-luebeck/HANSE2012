@@ -1,0 +1,5 @@
+{
+step: 64,
+samples: 100,
+sigma: 0.4
+}
