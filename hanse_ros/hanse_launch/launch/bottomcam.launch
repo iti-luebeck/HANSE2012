@@ -1,0 +1,3 @@
+<launch>
+  <include file="$(find uvc_camera2)/launch/camera_node.launch" />
+</launch>
