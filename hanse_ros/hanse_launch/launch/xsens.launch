@@ -1,5 +1,7 @@
 <launch>
   <group ns="hanse">
+    <remap from="/imu/data" to="/hanse/imu" />
+
     <node pkg="xsens_driver" type="mtnode.py" name="xsens_driver" output="screen" respawn="true">
       <param name="frame_id" value="/map" />
       <param name="device" value="/dev/ttyUSB_imu" />

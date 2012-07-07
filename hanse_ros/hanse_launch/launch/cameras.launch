@@ -1,0 +1,3 @@
+<launch>
+  <incldue file="$(find hanse_launch)/launch/bottomcam.launch" />
+</launch>

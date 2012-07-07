@@ -26,6 +26,7 @@ private:
     ros::NodeHandle nh;
     ros::Publisher publisher;
     ros::Publisher debugPublisher;
+    ros::Publisher debugPublisher2;
     ros::Subscriber subscriber;
 
     std::deque<Eigen::ArrayXf> echoDatas;
@@ -45,6 +46,7 @@ private:
     Eigen::ArrayXf slopeFilter(Eigen::ArrayXf const &data, float slope) { return slopeFilter(data, slope, slope); }
     Eigen::ArrayXf slopeFilter(Eigen::ArrayXf const &data, float inner, float outer);
     Eigen::ArrayXf nmsFilter(Eigen::ArrayXf const &data, unsigned width);
+    Eigen::ArrayXf medianFilter(Eigen::ArrayXf const &data, unsigned width, float mu);
 
     hanse_msgs::ScanningSonar debugMessage(unsigned i = 0) { return debugMessage(echoDatas[i], i); }
     hanse_msgs::ScanningSonar debugMessage(Eigen::ArrayXf const &data, unsigned i = 0);

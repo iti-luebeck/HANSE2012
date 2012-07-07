@@ -159,18 +159,18 @@ def angularPidOutputCallback(msg):
 #==============================================================================
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
-	#rospy.loginfo("angularoutput: " + repr(-ang))
-	#twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
-	#pub_cmd_vel.publish(twist)
+	rospy.loginfo("angularoutput: " + repr(-ang))
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	pub_cmd_vel.publish(twist)
 		# geschwindigkeitswerte fuer thruster berechnen
-	left = lin*127 + ang*127
-	right = lin*127 - ang*127
+	#left = lin*127 + ang*127
+	#right = lin*127 - ang*127
 	# auf den wertebereich -127 bis 127 beschraenken
-	left = numpy.clip(left, -127, 127)
-	right = numpy.clip(right, -127, 127)
+	#left = numpy.clip(left, -127, 127)
+	#right = numpy.clip(right, -127, 127)
 	# nachrichten an motoren publishen
-	pub_motor_left.publish(sollSpeed(data = left))
-	pub_motor_right.publish(sollSpeed(data = right))	
+	#pub_motor_left.publish(sollSpeed(data = left))
+	#pub_motor_right.publish(sollSpeed(data = right))	
 
 # Gibt RPY fuer ein Quaternion zurueck
 def quatToAngles(x,y,z,w):
@@ -218,9 +218,9 @@ if __name__ == '__main__':
 	rospy.Subscriber('/echosounderaveragedistance', Float32, echoSounderAvgCallback)
 #	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 #IMUTMP	rospy.Subscriber('imu', Imu, imuCallback)
-	#pub_cmd_vel = rospy.Publisher('commands/cmd_vel', Twist)
-	pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
-	pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
+	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
+	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
+	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 
 	pub_angular_target = rospy.Publisher('/wallfollowing_angular_pid/target', Float64)
 	pub_angular_input = rospy.Publisher('/wallfollowing_angular_pid/input', Float64)
