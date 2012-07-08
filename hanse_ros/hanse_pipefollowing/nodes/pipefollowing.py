@@ -144,8 +144,8 @@ class IsSeen(AbortableState):
 
 
 			distanceY = computeIntersection(Global.x, Global.y, Global.orientation)
-			if not Config.mirror:
-				distanceY = -distanceY;
+			#if not Config.mirror:
+                        distanceY = -distanceY
 			#rospy.loginfo('distanceY: ' + repr(distanceY))
 			angularSpeed = 0.0
 			if math.fabs(Global.orientation) > Config.deltaAngle:
