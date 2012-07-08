@@ -15,6 +15,11 @@
 #include <QtMultimediaKit/QAudioDeviceInfo>
 #include <QIODevice>
 
+#include "hanse_pingerdetection/PingerdetectionNodeConfig.h"
+#include <dynamic_reconfigure/server.h>
+
+#include "audioplot.h"
+
 #define STATE_WAIT_FOR_FIRST_SIGNAL "Wait for signal"
 #define STATE_COUNT_DELAY "Count delay between both micros"
 #define STATE_WAIT_FOR_SIGNAL_FINISHED "Wait until no signal is detected"
@@ -69,9 +74,33 @@ private:
     ros::NodeHandle nh;
     ros::Subscriber input_subscriber;
     ros::Publisher angle_publisher;
-    ros::Publisher msg_publisher;
     ros::Publisher left_publisher;
     ros::Publisher right_publisher;
+
+
+    //Dyn Reconfigure
+
+    ros::Timer publishTimer;
+
+    void dynReconfigureCallback(hanse_pingerdetection::PingerdetectionNodeConfig &config, uint32_t level);
+    hanse_pingerdetection::PingerdetectionNodeConfig config;
+
+    /** \brief dynamic_reconfigure interface */
+    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig> dynReconfigureSrv;
+
+    /** \brief dynamic_reconfigure call back */
+    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig>::CallbackType dynReconfigureCb;
+
+    //End of dyn reconfigure stuff
+
+    // Plot
+
+    AudioPlot audioPlot;
+
+    bool plotRaw;
+    bool plotGoertzel;
+    bool plotAngle;
+    bool saveData;
 
     // Variables
 
@@ -80,6 +109,8 @@ private:
     int noiseLeft;
     int noiseRight;
     double angle;
+
+        std_msgs::Float32 winkel;
 
 
     QAudioInput *audioInput;

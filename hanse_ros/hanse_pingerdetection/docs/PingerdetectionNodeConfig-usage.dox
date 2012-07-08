@@ -1,0 +1,21 @@
+\subsubsection usage Usage
+\verbatim
+<node name="pingerdetection_node" pkg="hanse_pingerdetection" type="pingerdetection_node">
+  <param name="publish_frequency" type="int" value="1" />
+  <param name="omega" type="double" value="15000.0" />
+  <param name="sampleRate" type="int" value="48000" />
+  <param name="window" type="int" value="480" />
+  <param name="threshold" type="double" value="0.5" />
+  <param name="scale" type="double" value="1e-05" />
+  <param name="noiseLeft" type="double" value="0.0" />
+  <param name="noiseRight" type="double" value="0.0" />
+  <param name="saveData" type="bool" value="False" />
+  <param name="samplesPerPixelRaw" type="int" value="100" />
+  <param name="samplesPerPixelGoertzel" type="int" value="100" />
+  <param name="counterRaw" type="int" value="100" />
+  <param name="counterGoertzel" type="int" value="100" />
+  <param name="plotRaw" type="bool" value="False" />
+  <param name="plotGoertzel" type="bool" value="False" />
+</node>
+\endverbatim
+
