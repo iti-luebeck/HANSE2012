@@ -18,10 +18,6 @@ from geometry_msgs.msg import PoseStamped, Point, Twist, Vector3
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Path
 
-#################
-SIMULATOR = False
-#################
-
 # konfigurierbare werte, werden durch dynamic_reconfigure gesetzt  
 class Config:
 	hysteresis_goal = 0
@@ -31,6 +27,7 @@ class Config:
 	angular_min_speed = 0
 	angular_max_speed = 0
 	p_heading = 0
+        simulator = False
 
 # variablen, die in mehreren zustaenden verwendet werden
 class Global:
@@ -180,10 +177,10 @@ def closeEnoughToGoal():
 	return distanceToGoal < Config.hysteresis_goal
 
 # die orientierung wird aus der imu ermittelt
-def imuCallback(msg):
-	q = msg.orientation	
-	(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
-	Global.currentHeading = yaw
+#def imuCallback(msg):
+#	q = msg.orientation	
+#	(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
+#	Global.currentHeading = yaw
 	#rospy.loginfo('imuCallback: ' + repr(Global.currentHeading))
 
 # die aktuelle position wird aus posemeter ausgelesen
@@ -196,7 +193,7 @@ def positionCallback(msg):
 		Global.headingToGoal = normalize_angle(math.atan2(dy, dx))
 		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy)
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
-	if not SIMULATOR:
+#	if not Config.simulator:
 		q = msg.pose.orientation	
 		(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
 		Global.currentHeading = yaw
@@ -238,6 +235,7 @@ def configCallback(config, level):
 	Config.angular_min_speed = config['angular_min_speed']
 	Config.angular_max_speed = config['angular_max_speed']
 	Config.p_heading = config['p_heading']
+        Config.simulator = config['simulator']
 	return config
 
 # werte im bereich [-1, 1]
@@ -321,8 +319,8 @@ if __name__ == '__main__':
 
 	# Subscriber/Publisher
 		
-	if SIMULATOR:
-		rospy.Subscriber('imu', Imu, imuCallback)
+	if Config.simulator:
+#		rospy.Subscriber('imu', Imu, imuCallback)
 		rospy.Subscriber('posemeter', PoseStamped, positionCallback)
 	else:
 		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
