@@ -3,7 +3,7 @@
   <!-- PINGERDETECTION -->
 
   <group ns="hanse">
-    <node name="hanse_pingerdetection" pkg="hanse_pingerdetection" type="pingerdetection.py" output="screen" />
+    <node name="pingerdetection" pkg="hanse_pingerdetection" type="hanse_pingerdetection" output="screen" />
   </group>
 
 </launch>

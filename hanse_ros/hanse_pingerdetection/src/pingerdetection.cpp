@@ -1,12 +1,12 @@
 #include "pingerdetection.h"
 #include <QApplication>
+
 namespace hanse_pingerdetection{
 
 void PingerDetection::run()
 {
     QEventLoop eventLoop;
     eventLoop.processEvents();
-    setEnabled(true);
 
     if(saveData){
         outputFile = new QFile("pingerdetection.record");
@@ -658,6 +658,10 @@ void PingerDetection::pingerDetectionCallback(const std_msgs::StringConstPtr& ms
     if(state.contains("start")){
         ROS_INFO("Pingerdetection callback start");
         if(!enabled){
+            this->setEnabled(true);
+            this->initVariables();
+            this->configAudio();
+            this->periodicSinCos();
             this->start();
         }
     } else if(state.contains("stop")){
@@ -673,7 +677,7 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
 
     //ROS_INFO("Got new parameters, level=%d", level);
 
-    this->config = config;
+    //    this->config = config;
 
     publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
 
@@ -699,6 +703,7 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     saveData = config.saveData;
 
     ROS_INFO("Dynamic reconfigure pingerdetection");
+
     //ROS_INFO("omega %f", omega);
     //ROS_INFO("sampleRate %i", sampleRate);
     //ROS_INFO("window %i", window);
@@ -714,6 +719,7 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     //ROS_INFO("plotRaw %d", plotRaw);
     //ROS_INFO("plotGoertzel %d", plotGoertzel);
     //ROS_INFO("saveData %d", saveData);
+    //ROS_INFO("detection %d", detection);
 
 }
 
@@ -725,20 +731,13 @@ PingerDetection::PingerDetection() :
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, ".");
     QSettings::setDefaultFormat(QSettings::IniFormat);
 
-    // Auf Reihenfolge achten!
-    this->initVariables();
-    this->periodicSinCos();
-    this->configAudio();
-
     input_subscriber = nh.subscribe("/hanse/pingerdetection",1, &PingerDetection::pingerDetectionCallback, this);
     angle_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/angle", 100);
     left_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/left_raw", 10);
     right_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/right_raw", 10);
 
-    // will be set to actual value once config is loaded
-
-    dynReconfigureCb = boost::bind(&PingerDetection::dynReconfigureCallback, this, _1, _2);
-    dynReconfigureSrv.setCallback(dynReconfigureCb);
+    //    dynReconfigureCb = boost::bind(&PingerDetection::dynReconfigureCallback, this, _1, _2);
+    //    dynReconfigureSrv.setCallback(dynReconfigureCb);
     // from this point on we can assume a valid config
 
     enabled = false;
@@ -765,6 +764,7 @@ void PingerDetection::setEnabled(bool b) {
 
 int main(int argc, char** argv)
 {
+
     ros::init(argc, argv, "PingerDetection");
 
     ros::start();
@@ -772,7 +772,15 @@ int main(int argc, char** argv)
     hanse_pingerdetection::PingerDetection pinger_detection;
     //pinger_detection.start();
 
+    // will be set to actual value once config is loaded
+    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig> server;
+    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig>::CallbackType f;
+
+    f = boost::bind(&hanse_pingerdetection::PingerDetection::dynReconfigureCallback, &pinger_detection, _1, _2);
+    server.setCallback(f);
+
     QApplication app(argc, argv);
+    //app.exec();
 
     ros::spin();
 

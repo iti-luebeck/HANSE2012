@@ -8,17 +8,17 @@
 class AudioPlot
 {
 public:
-    AudioPlot(ros::NodeHandle nh, unsigned width, unsigned height);
+    AudioPlot(ros::NodeHandle nh, int width, int height);
     ~AudioPlot();
 
     void addSampleRaw(float left, float right);
     void addSampleGoertzel(float left, float right);
 
-    void setSamplesPerPixelRaw(unsigned samples) { samplesPerPixelRaw = samples; }
-    void setSamplesPerPixelGoertzel(unsigned samples) { samplesPerPixelGoertzel = samples; }
+    void setSamplesPerPixelRaw(int samples) { samplesPerPixelRaw = samples; }
+    void setSamplesPerPixelGoertzel(int samples) { samplesPerPixelGoertzel = samples; }
 
-    void setCounterRaw(unsigned counter) { counterRaw = counter; }
-    void setCounterGoertzel(unsigned counter) { counterGoertzel = counter; }
+    void setCounterRaw(int counter) { counterRaw = counter; }
+    void setCounterGoertzel(int counter) { counterGoertzel = counter; }
 
 private:
     ros::Publisher imgPubRaw;
@@ -27,20 +27,20 @@ private:
     sensor_msgs::Image plotDataRaw();
     sensor_msgs::Image plotDataGoertzel();
 
-    unsigned samplesPerPixelRaw;
-    unsigned samplesPerPixelGoertzel;
+    int samplesPerPixelRaw;
+    int samplesPerPixelGoertzel;
 
-    unsigned width, height;
+    int width, height;
 
-    unsigned char *dataRaw;
-    unsigned counterRaw;
-    unsigned counterPixelRaw;
-    unsigned shiftRaw;
+    char *dataRaw;
+    int counterRaw;
+    int counterPixelRaw;
+    int shiftRaw;
 
-    unsigned char *dataGoertzel;
-    unsigned counterGoertzel;
-    unsigned counterPixelGoertzel;
-    unsigned shiftGoertzel;
+    char *dataGoertzel;
+    int counterGoertzel;
+    int counterPixelGoertzel;
+    int shiftGoertzel;
 };
 
 #endif // AUDIOPLOT_H

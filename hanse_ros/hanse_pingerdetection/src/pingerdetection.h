@@ -42,6 +42,7 @@ public:
     PingerDetection();
     virtual ~PingerDetection();
     void run();
+    void dynReconfigureCallback(hanse_pingerdetection::PingerdetectionNodeConfig &config, uint32_t level);
 
 public slots:
     void receiveAudio();
@@ -82,20 +83,21 @@ private:
 
     ros::Timer publishTimer;
 
-    void dynReconfigureCallback(hanse_pingerdetection::PingerdetectionNodeConfig &config, uint32_t level);
-    hanse_pingerdetection::PingerdetectionNodeConfig config;
+//    hanse_pingerdetection::PingerdetectionNodeConfig config;
 
     /** \brief dynamic_reconfigure interface */
-    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig> dynReconfigureSrv;
+//    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig> dynReconfigureSrv;
 
     /** \brief dynamic_reconfigure call back */
-    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig>::CallbackType dynReconfigureCb;
+//    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig>::CallbackType dynReconfigureCb;
 
     //End of dyn reconfigure stuff
 
     // Plot
 
     AudioPlot audioPlot;
+
+    bool detection;
 
     bool plotRaw;
     bool plotGoertzel;
