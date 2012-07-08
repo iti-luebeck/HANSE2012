@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- PINGERDETECTION -->
+
+  <group ns="hanse">
+    <node name="hanse_pingerdetection" pkg="hanse_pingerdetection" type="pingerdetection.py" output="screen" />
+  </group>
+
+</launch>
