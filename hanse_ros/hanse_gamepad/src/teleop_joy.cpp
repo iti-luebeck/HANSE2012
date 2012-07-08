@@ -21,6 +21,8 @@ TeleopHanse::TeleopHanse():
 
     ros::Rate r(10);
 
+    trig = new FlankTrigger();
+
     while(ros::Time::now().toSec() == 0.0) {
         r.sleep();
     }
@@ -51,7 +53,7 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
 
-    if (gamepadEnabled && (ros::Time::now() > ignoreTime)) {
+    if (gamepadEnabled && (ros::Time::now() < ignoreTime)) {
         // publish data on topic.
         geometry_msgs::Twist velocityMsg;
 
@@ -70,11 +72,11 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
     int8_t count = 0;
     ros::Rate loopRate(4);
 
-    trig.setActual(joy->buttons);
-
-    if (ros::Time::now() > ignoreTime) {
+    if (ros::Time::now() < ignoreTime) {
         return;
     }
+
+    trig->setActual(joy->buttons);
 
     hanse_srvs::EngineCommand commandMsg;
     commandMsg.request.enableDepthPid = true;
@@ -85,7 +87,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
     commandMsg.request.setEmergencyStop = false;
     bool changed = false;
 
-    if (trig.isSet(config.emergency_stop_button)) {
+    if (trig->isSet(config.emergency_stop_button)) {
         changed = true;
         emergencyStop = !emergencyStop;
         commandMsg.request.setEmergencyStop = emergencyStop;
@@ -101,7 +103,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         }
     }
 
-    if (trig.isSet(config.motor_switch_button) && !emergencyStop) {
+    if (trig->isSet(config.motor_switch_button) && !emergencyStop) {
         changed = true;
         motorsEnabled = !motorsEnabled;
         commandMsg.request.enableMotors = motorsEnabled;
@@ -113,7 +115,7 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         }
     }
 
-    if (trig.isSet(config.pid_switch_button) && !emergencyStop) {
+    if (trig->isSet(config.pid_switch_button) && !emergencyStop) {
         changed = true;
         pidsEnabled = !pidsEnabled;
         commandMsg.request.enableDepthPid = pidsEnabled;
@@ -127,13 +129,13 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
         }
     }
 
-    if (trig.isSet(config.zero_depth_reset_button) && !emergencyStop) {
+    if (trig->isSet(config.zero_depth_reset_button) && !emergencyStop) {
         changed = true;
         commandMsg.request.resetZeroPressure = true;
         ROS_INFO("Resetted pressure zero value.");
     }
 
-    if (trig.isSet(config.gamepad_switch_button) && !emergencyStop) {
+    if (trig->isSet(config.gamepad_switch_button) && !emergencyStop) {
         topic_tools::MuxSelect selectMsg;
 
         if(!gamepadEnabled) {
@@ -186,11 +188,11 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
             angularValue = config.angular_scale * joy->axes[config.angular_axis];
         }
 
-        if (trig.isSet(config.depth_up_button)) {
+        if (trig->isSet(config.depth_up_button)) {
             depthValue -= config.depth_delta;
         }
 
-        if (trig.isSet(config.depth_down_button)) {
+        if (trig->isSet(config.depth_down_button)) {
             depthValue += config.depth_delta;
         }
 

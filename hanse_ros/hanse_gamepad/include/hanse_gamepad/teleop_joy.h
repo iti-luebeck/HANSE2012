@@ -1,3 +1,6 @@
+#ifndef TELEOP_JOY_BLA_H
+#define TELEOP_JOY_BLA_H
+
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/Joy.h>
@@ -45,7 +48,7 @@ private:
 
     ros::Time ignoreTime;
 
-    FlankTrigger trig;
+    FlankTrigger* trig;
 
     void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
     void timerCallback(const ros::TimerEvent &e);
@@ -60,3 +63,5 @@ private:
     dynamic_reconfigure::Server<hanse_gamepad::GamepadNodeConfig>::CallbackType dynReconfigureCb;
 
 };
+
+#endif // TELEOP_JOY_H

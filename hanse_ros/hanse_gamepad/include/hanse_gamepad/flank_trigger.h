@@ -1,8 +1,9 @@
-#include <vector>
-#include <ros/types.h>
-
 #ifndef FLANK_TRIGGER_H
 #define FLANK_TRIGGER_H
+
+#include <vector>
+#include <ros/types.h>
+#include <iostream>
 
 class FlankTrigger
 {
