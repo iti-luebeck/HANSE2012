@@ -53,7 +53,7 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
 
 void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
 
-    if (gamepadEnabled && (ros::Time::now() < ignoreTime)) {
+    if (gamepadEnabled && (ros::Time::now() > ignoreTime)) {
         // publish data on topic.
         geometry_msgs::Twist velocityMsg;
 
