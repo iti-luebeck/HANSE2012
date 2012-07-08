@@ -195,7 +195,7 @@ def positionCallback(msg):
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
 #	if not Config.simulator:
 		q = msg.pose.orientation	
-		(yaw,pitch,roll) = euler_from_quaternion([q.w, q.x, q.y, q.z])
+		(roll,pitch,yaw) = euler_from_quaternion([q.x, q.y, q.z, q.w])
 		Global.currentHeading = yaw
 	
 def goalCallback(msg):
