@@ -240,7 +240,7 @@ def configCallback(config, level):
 
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
-	rospy.loginfo("angularoutput: " + repr(-ang))
+	rospy.loginfo("angularoutput: " + repr(ang))
 	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=ang))
 	pub_cmd_vel.publish(twist)
 	#left = lin*127 + ang*127
