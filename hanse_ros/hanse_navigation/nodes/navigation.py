@@ -110,17 +110,17 @@ class AdjustHeading(smach.State):
 				return Transitions.Aborted
 			
 			#diffHeading = Global.headingToGoal - Global.currentHeading
-			diffHeading = shortest_angular_distance(Global.currentHeading, Global.headingToGoal)			
+			diffHeading = normalize_angle(Global.headingToGoal - Global.currentHeading)
 			rospy.loginfo('diffHeading = ' + repr(diffHeading))
 
 			# pruefen ob heading in akzeptablem bereich ist
 			if math.fabs(diffHeading) < Config.hysteresis_heading: 
 				return Transitions.HeadingAdjusted
 			
-			# angular speed berechnen (positive: rotate right (clockwise))
+			# angular speed berechnen (positive: rotate left (counter clockwise))
 			maxAngSpeed = Config.angular_max_speed
 			minAngSpeed = Config.angular_min_speed
-			val = -Config.p_heading * diffHeading
+			val = Config.p_heading * diffHeading
 			if val > 0: val = numpy.clip(val, minAngSpeed, maxAngSpeed)
 			if val < 0: val = numpy.clip(val, -maxAngSpeed, -minAngSpeed)
 			
@@ -146,7 +146,7 @@ class MoveForward(smach.State):
 				return Transitions.CloseEnoughToGoal
 			
 			# pruefen, ob heading korrigiert werden muss
-			if math.fabs(shortest_angular_distance(Global.headingToGoal, Global.currentHeading)) > Config.hysteresis_heading:
+			if math.fabs(normalize_angle(Global.headingToGoal - Global.currentHeading)) > Config.hysteresis_heading:
 				return Transitions.HeadingAdjustmentNeeded
 			
 			forwardspeed = Config.forward_max_speed
@@ -193,7 +193,7 @@ def positionCallback(msg):
 	if Global.currentGoal!=None:
 		dx = Global.currentGoal.pose.position.x - Global.currentPosition.x
 		dy = Global.currentGoal.pose.position.y - Global.currentPosition.y
-		Global.headingToGoal = normalize_angle(math.atan2(dx, dy) + math.pi/2)
+		Global.headingToGoal = normalize_angle(math.atan2(dy, dx))
 		Global.distanceToGoal = math.sqrt(dx*dx + dy*dy)
 		rospy.loginfo('headingToGoal='+repr(Global.headingToGoal)+' ### currentHeading='+repr(Global.currentHeading))		
 	if not SIMULATOR:
@@ -243,7 +243,7 @@ def configCallback(config, level):
 # werte im bereich [-1, 1]
 def setMotorSpeed(lin, ang):
 	rospy.loginfo("angularoutput: " + repr(-ang))
-	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=-ang))
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=ang))
 	pub_cmd_vel.publish(twist)
 	#left = lin*127 + ang*127
 	#right = lin*127 - ang*127
@@ -264,16 +264,6 @@ def normalize_angle(angle):
 	if a > math.pi:
 		a -= 2.0 *math.pi
 	return a
-
-# aus dem angles-package uebernommen
-def shortest_angular_distance(fr, to):
-	result = normalize_angle_positive(normalize_angle_positive(to) - normalize_angle_positive(fr));
-	if result > math.pi:
-		# If the result > 180,
-		# It's shorter the other way.
-		result = -(2.0*math.pi - result);
-	return normalize_angle(result); 
-	
 
 class NavigateActionServer(object):
 	# create messages that are used to publish feedback/result
