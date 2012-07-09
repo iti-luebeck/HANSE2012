@@ -111,6 +111,7 @@ static void
 new_frame_cb (unicap_event_t event, unicap_handle_t handle,
               unicap_data_buffer_t * buffer, void *usr_data)
 {
+    static int skipCounter = 0;
     	//debug stuff
     /*for (int i = 0; i < 1024; i++) {
         	printf("%02x ", buffer->data[i]);
@@ -144,8 +145,11 @@ new_frame_cb (unicap_event_t event, unicap_handle_t handle,
     cv::cvtColor(imBayer, image, CV_BayerGR2BGR);
 
     memcpy(&imageMsg.data[0], image.data, 744*channels*480);
-
-    pub_image.publish(imageMsg);
+    if (skipCounter == 0) {
+        pub_image.publish(imageMsg);
+        skipCounter = 3;
+    }
+    skipCounter--;
 }
 
 void TisDriver::setupCapture()
