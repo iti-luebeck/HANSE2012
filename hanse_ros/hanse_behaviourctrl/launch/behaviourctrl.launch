@@ -1,0 +1,7 @@
+<launch>
+  <!-- behaviourctrl -->
+  <group ns="hanse">
+    <node name="behaviourCtrl" pkg="hanse_behaviourctrl" type="behaviourctrl.py" output="screen">
+    </node>
+  </group>
+</launch>
