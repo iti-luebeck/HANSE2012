@@ -8,7 +8,7 @@ ros::Publisher pub_image;
 
 TisDriver::TisDriver()
 {
-    pub_image = nh.advertise<sensor_msgs::Image>("/hanse/camera/bottom", 1000);
+    pub_image = nh.advertise<sensor_msgs::Image>("/hanse/camera/front", 1000);
     openDevices();
     selectVideoFormat();
     findProperties(false);
