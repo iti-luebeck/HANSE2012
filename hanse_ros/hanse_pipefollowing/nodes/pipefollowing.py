@@ -7,7 +7,7 @@ import math
 import smach
 import smach_ros
 import numpy
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import PoseStamped, Point, Twist, Vector3
 from hanse_msgs.msg import Object, sollSpeed
 from hanse_pipefollowing.cfg import PipeFollowingConfig
 from hanse_pipefollowing.msg import PipeFollowingAction
@@ -50,6 +50,7 @@ class Global:
 	lastX = 0.0
 	lastY = 0.0
 	isSizeTooSmall = False
+	currentPosition = Point()
 
 
 #==============================================================================
@@ -116,7 +117,8 @@ class IsSeen(AbortableState):
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
-				if hasPassed():
+				#Coordiantes for end of pipe
+				if Global.currentPosition.y > 5:
 					setMotorSpeed(0,0)
 					return Transitions.Passed
 			# lost
@@ -227,6 +229,8 @@ def configCallback(config, level):
 	Config.mirror = config['mirror']
 	return config
 
+def positionCallback(msg):	
+	Global.currentPosition = msg.pose.position
 
 #==============================================================================
 # Helper functions
@@ -276,6 +280,7 @@ if __name__ == '__main__':
 	
 	# Subscriber
 	rospy.Subscriber('/object', Object, objectCallback)
+	rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
 
 	# Publisher
 	#pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel', Twist)
