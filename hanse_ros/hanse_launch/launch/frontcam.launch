@@ -1,0 +1,4 @@
+<launch>
+  <node name="front_camera" pkg="tis_driver" type="tis_driver" />
+  <node name="republish_front_cam_hanse" pkg="image_transport" type="republish" args="raw in:=/hanse/camera/front compressed out:=/hanse/camera/front/transport" />
+</launch>
