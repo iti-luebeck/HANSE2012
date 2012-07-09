@@ -1,3 +1,4 @@
 <launch>
   <include file="$(find hanse_launch)/launch/bottomcam.launch" />
+  <include file="$(find hanse_launch)/launch/frontcam.launch" />
 </launch>
