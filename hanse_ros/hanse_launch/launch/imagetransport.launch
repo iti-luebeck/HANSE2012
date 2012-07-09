@@ -1,4 +1,6 @@
 <launch>
     <node name="republish_cam_bottom" pkg="image_transport" type="republish" args="compressed in:=/hanse/camera/bottom raw out:=/hanse/camera/bottom/local" />
     <node name="republish_object_detection" pkg="image_transport" type="republish" args="compressed in:=/image_object_detection/transport raw out:=/image_object_detection/local" />
+    <node name="republish_pinger_raw" pkg="image_transport" type="republish" args="compressed in:=/pingerdetection/plotRaw/transport raw out:=/pingerdetection/plotRaw/local" />
+    <node name="republish_pinger_goertzel" pkg="image_transport" type="republish" args="compressed in:=/pingerdetection/plotRaw/transport raw out:=/pingerdetection/plotRaw/local" /> 
 </launch>
