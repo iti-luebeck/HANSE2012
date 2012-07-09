@@ -1,4 +1,5 @@
 <launch>
   <include file="$(find hanse_launch)/launch/localization.launch" />
   <include file="$(find hanse_launch)/launch/navigation.launch" />
+  <include file="$(find hanse_launch)/launch/pingerdetection.launch" />
 </launch>
