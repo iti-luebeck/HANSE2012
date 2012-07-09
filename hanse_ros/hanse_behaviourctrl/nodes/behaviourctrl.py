@@ -114,17 +114,17 @@ class validationGate(smach.State):
 	##############
 	goal = create_nav_goal(-4.0, 6.0, 0.0)
 	state = client.send_goal_and_wait(goal, rospy.Duration(5))
-        if state == GoalStatus.SUCCEEDED and Global.duration.secs < 60:
+        if state == GoalStatus.SUCCEEDED and Global.duration.secs < 360:
 		rospy.loginfo('navigation succeeded')
 		goal = create_nav_goal(4.0, 6.0, 0.0)
-		state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(240))
+		state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 		if state == GoalStatus.SUCCEEDED:
 			##############
 			# enter nav goal
 			##############
 			rospy.loginfo('navigation succeeded')
 			goal = create_nav_goal(2.0, 6.0, 0.0)
-			state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(240))
+			state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 			return Transitions.Goal_passed
 		else:
 			rospy.loginfo('navigation failed: ' + GoalStatus.to_string(state))
@@ -149,7 +149,7 @@ class PipeFollowing(smach.State):
         client.wait_for_server()
 	rospy.loginfo("server listening for goals")
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
-        state = client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(300))
+        state = client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(500))
 
         goalStatusDict = {
             GoalStatus.PENDING : "PENDING",
