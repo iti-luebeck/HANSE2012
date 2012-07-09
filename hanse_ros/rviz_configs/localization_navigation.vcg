@@ -1,0 +1,104 @@
+Background\ ColorB=0
+Background\ ColorG=0
+Background\ ColorR=0
+Camera\ Config=5.60439 98.9315 69.9008 0.015
+Camera\ Type=rviz::FixedOrientationOrthoViewController
+Fixed\ Frame=/map
+Image.Enabled=1
+Image.Image\ Topic=/sonar/echo/viz
+Image.Transport\ Hint=raw
+Path.Alpha=1
+Path.ColorB=0
+Path.ColorG=1
+Path.ColorR=0.1
+Path.Enabled=1
+Path.Topic=/path
+Target\ Frame=<Fixed Frame>
+Tool\ 2D\ Nav\ GoalTopic=/goal
+Tool\ 2D\ Pose\ EstimateTopic=initialpose
+grid\ 1m.Alpha=0.5
+grid\ 1m.Cell\ Size=1
+grid\ 1m.ColorB=0.5
+grid\ 1m.ColorG=0.5
+grid\ 1m.ColorR=0.5
+grid\ 1m.Enabled=1
+grid\ 1m.Line\ Style=0
+grid\ 1m.Line\ Width=0.03
+grid\ 1m.Normal\ Cell\ Count=0
+grid\ 1m.OffsetX=0
+grid\ 1m.OffsetY=0
+grid\ 1m.OffsetZ=0
+grid\ 1m.Plane=0
+grid\ 1m.Plane\ Cell\ Count=1000
+grid\ 1m.Reference\ Frame=<Fixed Frame>
+map.Alpha=0.7
+map.Draw\ Behind=0
+map.Enabled=1
+map.Topic=/hanse/localization/viz/map
+particles.ColorB=0
+particles.ColorG=0.1
+particles.ColorR=1
+particles.Enabled=1
+particles.Topic=/hanse/localization/viz/particles
+position\ estimate.Alpha=1
+position\ estimate.ColorB=0
+position\ estimate.ColorG=1
+position\ estimate.ColorR=0
+position\ estimate.Enabled=1
+position\ estimate.Head\ Length=0.3
+position\ estimate.Head\ Radius=0.6
+position\ estimate.Shaft\ Length=0.6
+position\ estimate.Shaft\ Radius=0.3
+position\ estimate.Shape=0
+position\ estimate.Topic=/hanse/position/estimate
+scanning\ sonar\ debug.Enabled=1
+scanning\ sonar\ debug.Image\ Topic=/hanse/sonar/scan/wall_detection/debug/viz
+scanning\ sonar\ debug.Transport\ Hint=raw
+scanning\ sonar\ walls.Enabled=1
+scanning\ sonar\ walls.Image\ Topic=/hanse/sonar/scan/wall_detection/viz
+scanning\ sonar\ walls.Transport\ Hint=raw
+scanning\ sonar.Enabled=1
+scanning\ sonar.Image\ Topic=/hanse/sonar/scan/viz
+scanning\ sonar.Transport\ Hint=raw
+wall\ markers.Enabled=1
+wall\ markers.Marker\ Topic=/hanse/localization/viz/wall_markers
+[Display0]
+ClassName=rviz::ImageDisplay
+Name=scanning sonar
+Package=rviz_qt
+[Display1]
+ClassName=rviz::ImageDisplay
+Name=scanning sonar walls
+Package=rviz_qt
+[Display2]
+ClassName=rviz::MapDisplay
+Name=map
+Package=rviz_qt
+[Display3]
+ClassName=rviz::PoseArrayDisplay
+Name=particles
+Package=rviz_qt
+[Display4]
+ClassName=rviz::PoseDisplay
+Name=position estimate
+Package=rviz_qt
+[Display5]
+ClassName=rviz::MarkerDisplay
+Name=wall markers
+Package=rviz_qt
+[Display6]
+ClassName=rviz::GridDisplay
+Name=grid 1m
+Package=rviz_qt
+[Display7]
+ClassName=rviz::ImageDisplay
+Name=Image
+Package=rviz_qt
+[Display8]
+ClassName=rviz::PathDisplay
+Name=Path
+Package=rviz_qt
+[Display9]
+ClassName=rviz::ImageDisplay
+Name=scanning sonar debug
+Package=rviz_qt
