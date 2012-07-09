@@ -8,32 +8,21 @@ void PingerDetection::run()
     QEventLoop eventLoop;
     eventLoop.processEvents();
 
-    if(saveData){
-        outputFile = new QFile("pingerdetection.record");
-        outputFile->remove();
+    outputFile = new QFile("/tmp/pingerdetection"+QString::number(lognr)+".record");
+    outputFile->remove();
 
-        if (outputFile->open(QFile::WriteOnly | QIODevice::Append)) {
-            outputStream = new QTextStream(outputFile);
-            ROS_INFO("Created file %s", outputFile->fileName().toStdString().c_str());
-        } else {
-            ROS_INFO("Could not open file to write %s", outputFile->fileName().toStdString().c_str());
-        }
-
-        outputFileFSK = new QFile("pingerdetectionFSK.record");
-        outputFileFSK->remove();
-
-        if (outputFileFSK->open(QFile::WriteOnly | QIODevice::Append)) {
-            outputStreamFSK = new QTextStream(outputFileFSK);
-            ROS_INFO("Created file %s", outputFileFSK->fileName().toStdString().c_str());
-        } else {
-            ROS_INFO("Could not open file to write %s", outputFileFSK->fileName().toStdString().c_str());
-        }
+    if (outputFile->open(QFile::WriteOnly | QIODevice::Append)) {
+        outputStream = new QTextStream(outputFile);
+        ROS_INFO("Created file %s", outputFile->fileName().toStdString().c_str());
+    } else {
+        ROS_INFO("Could not open file to write %s", outputFile->fileName().toStdString().c_str());
     }
 
     ioDevice = audioInput->start();
 
+    ROS_INFO("Skip first samples...");
     // Komische Ausschlaege am Anfang einer Messung uebergehen
-    while(sampleCounter < 960000){
+    while(sampleCounter < 2000000 && ros::ok() && enabled){
         qint64 bytesReady = audioInput->bytesReady();
         qint64 l = ioDevice->read(audioBuffer.data(), bytesReady);
         Q_UNUSED(l)
@@ -62,17 +51,11 @@ void PingerDetection::run()
         qint64 l = newData.length();
 
         if(l > 0) {
-            // ROS_INFO("Samples %i", sampleCounter);
-
-            //            ROS_INFO("Bytes read %s", QString::number(l).toStdString().c_str());
-
             QList<int> decodeList;
             // Neue Daten von der Soundkarte decodieren
             decodeList.append(this->decodeData(newData.constData(),newData.length()));
 
             if(!decodeList.isEmpty()){
-
-                //                ROS_INFO("Decoded bytes %i", decodeList.length());
 
                 double zerolineLeft = 0.0;
                 double zerolineRight = 0.0;
@@ -84,15 +67,7 @@ void PingerDetection::run()
                     zerolineRight = ((double)decodeList.at(i+1)-(double)noiseRight)*scale;
 
                     if(plotRaw){
-                        //std_msgs::Float32 leftRawMessage;
-                        //leftRawMessage.data = zerolineLeft;
-                        //left_publisher.publish(leftMessage);
-
-                        //std_msgs::Float32 rightRawMessage;
-                        //rightRawMessage.data = zerolineRight;
-                        //right_publisher.publish(rightMessage);
-
-                        audioPlot.addSampleRaw(zerolineLeft, zerolineRight);
+                        audioPlotRaw.addSample(zerolineLeft, zerolineRight);
                     }
 
                     // ... und in Listen zur Verarbeitung speichern
@@ -100,14 +75,12 @@ void PingerDetection::run()
                     rightMicro.append(zerolineRight);
 
                     if(saveData){
-                        saveListTime.append(timestamp.elapsed());
-                        saveListLeftMicroInt.append(leftMicro.last());
-                        saveListRightMicroInt.append(rightMicro.last());
+                        *outputStream << (int)(100000 * leftMicro.last()) << ", " << (int)(100000 * rightMicro.last()) << "," << (int)(100000 *leftFSK)  << ", " << (int)(100000 *rightFSK) << ", " << (int)(100000 *angle) << "\r\n";
                     }
+
                     // Ermittelte Daten verarbeiten
                     this->audioProcessing();
                 }
-                //                ROS_INFO("Left micro %f - Right micro %f", zerolineLeft, zerolineRight);
 
             }
         }
@@ -116,38 +89,13 @@ void PingerDetection::run()
 
     ROS_INFO("Samples %i", sampleCounter);
 
-    if(saveData){
-        if(outputFile->isWritable()){
-            ROS_INFO("Write raw data...");
-            for(int i = 0; i < saveListTime.length(); i++){
-                *outputStream << saveListTime.at(i) << ", " << saveListLeftMicroInt.at(i)  << ", " << saveListRightMicroInt.at(i) << "\r\n";
-                outputStream->flush();
-            }
-            ROS_INFO("Finished raw data writing");
-        }
+    outputStream->flush();
 
-        if(outputFileFSK->isWritable()){
-            ROS_INFO("Write FSK data...");
 
-            for(int i = 0; i < saveListTime.length(); i++){
-                *outputStreamFSK << saveListTime.at(i)  << ", " << saveListLeftFSK.at(i)  << ", " << saveListRightFSK.at(i) << ", " << saveListAngle.at(i) << "\r\n";
-                outputStreamFSK->flush();
-            }
-            ROS_INFO("Finished FSK data writing");
-        }
-    }
-
-    saveListTime.clear();
-    saveListLeftFSK.clear();
-    saveListRightFSK.clear();
-    saveListLeftMicroInt.clear();
-    saveListRightMicroInt.clear();
-    saveListAngle.clear();
-
-    ROS_INFO("Finished");
+    ROS_INFO("Pingerdetection finished stop");
     audioInput->stop();
-
 }
+
 
 void PingerDetection::initVariables(){
     ROS_INFO("Init pinger detection variables");
@@ -315,12 +263,7 @@ void PingerDetection::audioProcessing(){
         rightFSK =  rightNonCoherentFSKDemodulator(rightMicro.last(), false);
 
         if(plotGoertzel){
-            //std_msgs::Float32 leftFSKMessage;
-            //leftFSKMessage.data = leftFSK;
-            //std_msgs::Float32 rightFSKMessage;
-            //rightFSKMessage.data = rightFSK;
-
-            audioPlot.addSampleGoertzel(leftFSK, rightFSK);
+            audioPlotGoertzel.addSample(leftFSK, rightFSK);
         }
 
         // Sin/Cos Zaehler erhhen
@@ -331,12 +274,6 @@ void PingerDetection::audioProcessing(){
 
         angle_publisher.publish(winkel);
 
-        if(saveData){
-            saveListLeftFSK.append(leftFSK);
-            saveListRightFSK.append(rightFSK);
-            saveListAngle.append(angle);
-        }
-
         // Erste Eintrge loeschen, da wir gleiten :)
         leftMicro.removeFirst();
         rightMicro.removeFirst();
@@ -346,11 +283,12 @@ void PingerDetection::audioProcessing(){
         leftNonCoherentFSKDemodulator(leftMicro.last(), true);
         rightNonCoherentFSKDemodulator(rightMicro.last(), true);
         inkrementSinCosCounter();
-        if(saveData){
+
+        /*if(saveData){
             saveListLeftFSK.append(0.0);
             saveListRightFSK.append(0.0);
             saveListAngle.append(0.0);
-        }
+        }*/
     }
 
     sampleCounter++;
@@ -675,9 +613,7 @@ void PingerDetection::pingerDetectionCallback(const std_msgs::StringConstPtr& ms
 
 void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::PingerdetectionNodeConfig &config, uint32_t level) {
 
-    //ROS_INFO("Got new parameters, level=%d", level);
-
-    //    this->config = config;
+    ROS_INFO("Dynamic reconfigure pingerdetection");
 
     publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
 
@@ -690,20 +626,19 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     noiseRight = config.noiseRight;
 
     int samplesPPRaw = config.samplesPerPixelRaw;
-    audioPlot.setSamplesPerPixelRaw(samplesPPRaw);
+    audioPlotRaw.setSamplesPerPixel(samplesPPRaw);
     int samplesPPGoertzel = config.samplesPerPixelGoertzel;
-    audioPlot.setSamplesPerPixelGoertzel(samplesPPGoertzel);
+    audioPlotGoertzel.setSamplesPerPixel(samplesPPGoertzel);
     int counterRaw = config.counterRaw;
-    audioPlot.setCounterRaw(counterRaw);
+    audioPlotRaw.setCounter(counterRaw);
     int counterGoertzel = config.counterGoertzel;
-    audioPlot.setCounterGoertzel(counterGoertzel);
+    audioPlotGoertzel.setCounter(counterGoertzel);
 
     plotRaw = config.plotRaw;
     plotGoertzel = config.plotGoertzel;
     saveData = config.saveData;
 
-    ROS_INFO("Dynamic reconfigure pingerdetection");
-
+    lognr = config.lognr;
     //ROS_INFO("omega %f", omega);
     //ROS_INFO("sampleRate %i", sampleRate);
     //ROS_INFO("window %i", window);
@@ -716,15 +651,14 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     //ROS_INFO("counterRaw %i", counterRaw);
     //ROS_INFO("counterGoertzel %i", counterGoertzel);
 
-    //ROS_INFO("plotRaw %d", plotRaw);
-    //ROS_INFO("plotGoertzel %d", plotGoertzel);
-    //ROS_INFO("saveData %d", saveData);
-    //ROS_INFO("detection %d", detection);
-
+    ROS_INFO("plotRaw %d", plotRaw);
+    ROS_INFO("plotGoertzel %d", plotGoertzel);
+    ROS_INFO("saveData %d", saveData);
 }
 
 PingerDetection::PingerDetection() :
-    audioPlot(nh, 640, 480)
+    audioPlotRaw(nh, 640, 480, "/pingerdetection/plotRaw"),
+    audioPlotGoertzel(nh, 640, 480, "/pingerdetection/plotGoertzel")
 {
     ROS_INFO("Starting PingerDetection");
 

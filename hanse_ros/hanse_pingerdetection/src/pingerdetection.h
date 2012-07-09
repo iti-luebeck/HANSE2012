@@ -78,7 +78,6 @@ private:
     ros::Publisher left_publisher;
     ros::Publisher right_publisher;
 
-
     //Dyn Reconfigure
 
     ros::Timer publishTimer;
@@ -95,7 +94,8 @@ private:
 
     // Plot
 
-    AudioPlot audioPlot;
+    AudioPlot audioPlotRaw;
+        AudioPlot audioPlotGoertzel;
 
     bool detection;
 
@@ -105,12 +105,15 @@ private:
     bool saveData;
 
     // Variables
+    int lognr;
 
     bool enabled;
 
     int noiseLeft;
     int noiseRight;
     double angle;
+
+    int timer;
 
         std_msgs::Float32 winkel;
 

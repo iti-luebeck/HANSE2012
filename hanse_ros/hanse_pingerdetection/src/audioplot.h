@@ -8,39 +8,29 @@
 class AudioPlot
 {
 public:
-    AudioPlot(ros::NodeHandle nh, int width, int height);
+    AudioPlot(ros::NodeHandle nh, int width, int height, const char *publisherName);
     ~AudioPlot();
 
-    void addSampleRaw(float left, float right);
-    void addSampleGoertzel(float left, float right);
+    void addSample(float left, float right);
 
-    void setSamplesPerPixelRaw(int samples) { samplesPerPixelRaw = samples; }
-    void setSamplesPerPixelGoertzel(int samples) { samplesPerPixelGoertzel = samples; }
+    void setSamplesPerPixel(int samples) { samplesPerPixel = samples; }
 
-    void setCounterRaw(int counter) { counterRaw = counter; }
-    void setCounterGoertzel(int counter) { counterGoertzel = counter; }
+    void setCounter(int counterNew) { counter = counterNew; }
+
 
 private:
-    ros::Publisher imgPubRaw;
-    ros::Publisher imgPubGoertzel;
+    ros::Publisher imgPub;
 
-    sensor_msgs::Image plotDataRaw();
-    sensor_msgs::Image plotDataGoertzel();
+    sensor_msgs::Image plotData();
 
-    int samplesPerPixelRaw;
-    int samplesPerPixelGoertzel;
+    int samplesPerPixel;
 
     int width, height;
 
-    char *dataRaw;
-    int counterRaw;
-    int counterPixelRaw;
-    int shiftRaw;
-
-    char *dataGoertzel;
-    int counterGoertzel;
-    int counterPixelGoertzel;
-    int shiftGoertzel;
+    char *data;
+    int counter;
+    int counterPixel;
+    int shift;
 };
 
 #endif // AUDIOPLOT_H
