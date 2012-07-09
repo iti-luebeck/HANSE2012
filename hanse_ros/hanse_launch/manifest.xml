@@ -21,6 +21,7 @@
   <depend package="hanse_srvs" />
   <depend package="hanse_wallfollowing" />
   <depend package="uvc_camera2" />
+  <depend package="uvc_camera_front" />
   <depend package="xsens_driver" />
   <depend package="automatic_color_equalization" />
 </package>
