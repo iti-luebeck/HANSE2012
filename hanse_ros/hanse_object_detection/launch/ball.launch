@@ -1,0 +1,11 @@
+<launch>
+  <node name="ace_node" type="ace" pkg="automatic_color_equalization">
+    <param name="image_topic" value="/hanse/camera/front" />
+    <rosparam file="$(find automatic_color_equalization)/cfg/ace.yaml"/>
+  </node>
+
+  <node name="ball_detection_node" type="object_detection_node" pkg="hanse_object_detection">
+    <param name="image_topic" value="/ace" />
+    <rosparam file="$(find hanse_object_detection)/cfg/ball.yaml"/>
+  </node>
+</launch>

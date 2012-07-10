@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "ace_node");
   ros::NodeHandle nh("~");
 
-  std::string image_topic = "/camera/rgb/image_color";
+  std::string image_topic = "/hanse/camera/front";
   nh.getParam("image_topic", image_topic);
   std::cout << image_topic << std::endl;
 

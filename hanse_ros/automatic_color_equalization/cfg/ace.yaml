@@ -1,5 +1,5 @@
 {
 step: 64,
-samples: 100,
+samples: 400,
 sigma: 0.4
 }

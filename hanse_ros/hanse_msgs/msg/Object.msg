@@ -3,3 +3,8 @@ float32 size
 float32 orientation
 float32 x
 float32 y
+float32 mu02
+float32 mu20
+float32 mu11
+float32 thresh
+bool is_seen

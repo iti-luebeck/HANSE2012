@@ -28,6 +28,9 @@ public:
         threshold = 127;
 
         cv::Mat meanImage = cv::imread("/home/hanse/frame0000.jpg");
+        if (meanImage.cols < 640) {
+            meanImage = cv::Mat::ones(480, 640, CV_8UC3);
+        }
         std::vector<cv::Mat> meanChannels;
         cv::split(meanImage, meanChannels);
         imgMat[0] = Eigen::MatrixXf(meanImage.rows, meanImage.cols);
@@ -189,6 +192,9 @@ public:
         float y = 0;
         float blobRatio = 1.0f;
 
+        hanse_msgs::Object objMsg;
+        objMsg.header = visual_img_msg->header;
+
         if (use_blobs) {            
             IplImage *thresh = new IplImage(binary);
             CBlobResult blobs(thresh, NULL, 0);
@@ -238,15 +244,29 @@ public:
             double mu20 = moment.mu20;
             double mu02 = moment.mu02;
             orientation = 0.5 * atan2( 2 * mu11 , ( mu20 - mu02 ) );
-            blobRatio = mu20 / mu02;
+
+            objMsg.mu02 = mu02 / size;
+            objMsg.mu20 = mu20 / size;
+            objMsg.mu11 = mu11 / size;
         }
 
         size /= (binary.rows * binary.cols);
 
         bool isGood = true;
-        isGood &= (size < 0.5);                                 // Criterium 1: size
-        isGood &= (blobRatio < 0.8f || (blobRatio > 1.2f));     // Criterium 2: ratio
-        isGood &= (thresh > 6);                                 // Criterium 3: threshold
+        isGood &= (objMsg.mu02 > 10000) || (objMsg.mu20 > 10000) || (objMsg.mu11 > 10000);
+        isGood &= (thresh > 6);
+
+        goodQueue.push_back(isGood);
+        int goodCount = 0;
+        for (int i = 0; i < goodQueue.size(); i++) {
+            if (goodQueue[i]) {
+                goodCount++;
+            }
+        }
+        isGood = (goodCount > 3);
+        if (goodQueue.size() > 5) {
+            goodQueue.erase(goodQueue.begin());
+        }
 
         if (isGood) {
             cv::line(binary, cv::Point(x, y),
@@ -267,12 +287,12 @@ public:
             orientation -= CV_PI;
         }
 
-        hanse_msgs::Object objMsg;
-        objMsg.header = visual_img_msg->header;
         objMsg.size = size;
         objMsg.x = x;
         objMsg.y = y;
         objMsg.orientation = orientation;
+        objMsg.thresh = thresh;
+        objMsg.is_seen = isGood;
         object_pub.publish(objMsg);
 
         cv_bridge::CvImage out_msg;
@@ -294,6 +314,8 @@ private:
     bool subtract_background;
     bool subtract_mean;
 
+    std::vector<bool> goodQueue;
+
     Eigen::MatrixXf imgMat[3];
 };
 
@@ -302,7 +324,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "object_detection_node");
   ros::NodeHandle nh("~");
 
-  std::string image_topic = "/hanse/camera/bottom";
+  std::string image_topic = "/hanse/camera/front";
   nh.getParam("image_topic", image_topic);
 
   ObjectDetection od(nh);
