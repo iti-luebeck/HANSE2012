@@ -14,6 +14,8 @@
   </group>
 
   <group ns="/hanse/commands">
-    <node name="cmd_vel_mux" pkg="topic_tools" type="mux" output="screen" args="cmd_vel cmd_vel_behaviour cmd_vel_joystick mux:=cmd_vel_mux" />
+    <node name="cmd_vel_mux" pkg="topic_tools" type="mux" output="screen" args="cmd_vel cmd_vel_behaviour 
+            cmd_vel_joystick cmd_vel_wallfollowing cmd_vel_pipefollowing cmd_vel_ballfollowing cmd_vel_pingerdetection 
+            cmd_vel_ mux:=cmd_vel_mux" />
   </group>
 </launch>
