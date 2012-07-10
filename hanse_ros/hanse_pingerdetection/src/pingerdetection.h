@@ -5,6 +5,7 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Int32.h>
+#include <hanse_msgs/PingerDetection.h>
 #include <sstream>
 #include <cmath>
 
@@ -75,8 +76,7 @@ private:
     ros::NodeHandle nh;
     ros::Subscriber input_subscriber;
     ros::Publisher angle_publisher;
-    ros::Publisher left_publisher;
-    ros::Publisher right_publisher;
+    ros::Publisher pinger_publisher;
 
     //Dyn Reconfigure
 
@@ -193,6 +193,7 @@ private:
     double leftFSK;
     double rightFSK;
 
+    int timeoutCounter;
 
     // Config
     double omega;

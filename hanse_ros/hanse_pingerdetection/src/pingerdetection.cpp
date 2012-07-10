@@ -318,9 +318,26 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
         rightMicroSignalDetected = 0;
     }
 
+
+    if (timeoutCounter != 0) {
+        timeoutCounter--;
+        if (timeoutCounter == 0) {
+            if (delayState == STATE_WAIT_FOR_LEFT_MICRO_SIGNAL ||
+                delayState == STATE_WAIT_FOR_RIGHT_MICRO_SIGNAL) {
+                delayState = STATE_WAIT_FOR_SIGNAL_FINISHED;
+            }
+        }
+    }
+
+
+
     if(delayState == STATE_WAIT_FOR_FIRST_SIGNAL){
 
         signalDetected = leftMicroSignalDetected + rightMicroSignalDetected;
+
+        if(signalDetected >= 1) {
+            timeoutCounter = sampleRate / 10;
+        }
 
         if(signalDetected == 2){
             // Beide Mikros haben ein Signal goersser als den Schwellwert detektiert
@@ -425,29 +442,52 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             // leftMircoSampleDelay < rightMicroSampleDelay => Der Pinger befindet sich links
             //      => calculateAngle erhält einen negativen Wert
             //////////////////////////////////////////////////////////////////////////////////////////////////
+            if (leftMicroAvgCounter == 0) {
+                leftMicroAverageMagnitude = 0;
+            } else {
+                leftMicroAverageMagnitude /= leftMicroAvgCounter;
+            }
 
-            leftMicroAverageMagnitude /= leftMicroAvgCounter;
-            rightMicroAverageMagnitude /= rightMicroAvgCounter;
+            if (rightMicroAvgCounter == 0) {
+                rightMicroAverageMagnitude = 0;
+            } else {
+                rightMicroAverageMagnitude /= rightMicroAvgCounter;
+            }
 
+            double delay;
 
             if(leftMicroSampleDelay > rightMicroSampleDelay){
                 if(plotAnalysis){
                     ROS_INFO("Verzoegerung %i -> Rechtsdrehung", leftMicroSampleDelay);
                 }
                 calculateAngle(leftMicroSampleDelay);
+                delay = -leftMicroSampleDelay / (double)sampleRate;
 
             } else if (leftMicroSampleDelay < rightMicroSampleDelay){
                 if(plotAnalysis){
                     ROS_INFO("Verzoegerung %i -> Linksdrehung", rightMicroSampleDelay*(-1));
                 }
                 calculateAngle(rightMicroSampleDelay*-1);
+                delay = rightMicroSampleDelay / (double)sampleRate;
 
             } else if (leftMicroSampleDelay == rightMicroSampleDelay){
                 if(plotAnalysis){
                     ROS_INFO("Keine Verzoegerung -> Geradeaus");
                 }
                 calculateAngle(0);
+                delay = 0;
             }
+
+            timeoutCounter = 0;
+
+            hanse_msgs::PingerDetection msg;
+            msg.header.stamp = ros::Time::now();
+            msg.leftAmplitude = leftMicroAverageMagnitude;
+            msg.rightAmplitude = rightMicroAverageMagnitude;
+            msg.timeDifference = delay;
+            msg.angle = angle;
+            
+            angle_publisher.publish(msg);
 
             delayState = STATE_WAIT_FOR_FIRST_SIGNAL;
             bothMicroSignalDetectedCount = 0;
@@ -675,7 +715,7 @@ PingerDetection::PingerDetection() :
 
     input_subscriber = nh.subscribe("/hanse/pingerdetection",1, &PingerDetection::pingerDetectionCallback, this);
     angle_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/angle", 100);
-    left_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/left_raw", 10);
+    pinger_publisher = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
     right_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/right_raw", 10);
 
     //    dynReconfigureCb = boost::bind(&PingerDetection::dynReconfigureCallback, this, _1, _2);
