@@ -41,6 +41,7 @@ class Config:
 	robCenterY = 240
 	maxDistance = 320
 	mirror = False
+	pipe_passed = 63.6
 
 class Global:
 	x = 0.0
@@ -51,6 +52,7 @@ class Global:
 	lastY = 0.0
 	isSizeTooSmall = False
 	currentPosition = Point()
+	state = " "
 
 
 #==============================================================================
@@ -118,7 +120,7 @@ class IsSeen(AbortableState):
 			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
 				#Coordiantes for end of pipe
-				if Global.currentPosition.y > 5:
+				if Global.currentPosition.y > Global.pipe_passed:
 					setMotorSpeed(0,0)
 					return Transitions.Passed
 			# lost
