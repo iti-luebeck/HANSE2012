@@ -45,11 +45,11 @@ class Global:
 	#target depth in cm
 	depth = 70
 	#waypoint middle line
-	waypt1 = Point(69,75,0)
+	waypt1 = Point(69,74,0)
 	#waypoint past validation gate
-	waypt2 = Point(77,75,1)
+	waypt2 = Point(77,74,1)
 	#waypoint 180 degree turn
-	waypt3 = Point(75,75,1)
+	waypt3 = Point(75,74,1)
 	#waypoint end of pipe
 	waypt4 = Point(1,1,1)
 	#waypoint midwater target
@@ -241,7 +241,7 @@ class surface(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv surfacing"
-	call_depth(0.0)
+	Global.call_depth(0.0)
 	rospy.sleep(10)
 	
 	return Transitions.Surfaced
@@ -323,7 +323,7 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.Surface, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.Surface, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
