@@ -431,15 +431,21 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
 
 
             if(leftMicroSampleDelay > rightMicroSampleDelay){
-                ROS_INFO("Verzoegerung %i -> Rechtsdrehung", leftMicroSampleDelay);
+                if(plotAnalysis){
+                    ROS_INFO("Verzoegerung %i -> Rechtsdrehung", leftMicroSampleDelay);
+                }
                 calculateAngle(leftMicroSampleDelay);
 
             } else if (leftMicroSampleDelay < rightMicroSampleDelay){
-                ROS_INFO("Verzoegerung %i -> Linksdrehung", rightMicroSampleDelay*(-1));
+                if(plotAnalysis){
+                    ROS_INFO("Verzoegerung %i -> Linksdrehung", rightMicroSampleDelay*(-1));
+                }
                 calculateAngle(rightMicroSampleDelay*-1);
 
             } else if (leftMicroSampleDelay == rightMicroSampleDelay){
-                ROS_INFO("Keine Verzoegerung -> Geradeaus");
+                if(plotAnalysis){
+                    ROS_INFO("Keine Verzoegerung -> Geradeaus");
+                }
                 calculateAngle(0);
             }
 
@@ -451,10 +457,6 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             leftMicroAverageMagnitude = rightMicroAverageMagnitude = 0.0;
             leftMicroAvgCounter = rightMicroAvgCounter = 0;
         }
-
-
-    } else {
-        //ROS_INFO("Pinger detection state error");
     }
 }
 
@@ -489,10 +491,10 @@ void PingerDetection::calculateAngle(int samplediff){
         double distdiff = 1500 / delta_t; // Berechnung der zurückgelegten Wegstrecke aus dem Zeitunterschied.
 
         angle = distdiff / baseline;
-
-
         winkel.data = angle;
-        ROS_INFO("Winkel %f", angle);
+        if(plotAnalysis){
+            ROS_INFO("Winkel %f", angle);
+        }
     }
 }
 
@@ -642,6 +644,7 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     plotRaw = config.plotRaw;
     plotGoertzel = config.plotGoertzel;
     saveData = config.saveData;
+    plotAnalysis = config.plotAnalysis;
 
     lognr = config.lognr;
     //ROS_INFO("omega %f", omega);

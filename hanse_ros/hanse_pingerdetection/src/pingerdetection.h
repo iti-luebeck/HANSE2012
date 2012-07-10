@@ -103,6 +103,7 @@ private:
     bool plotGoertzel;
     bool plotAngle;
     bool saveData;
+    bool plotAnalysis;
 
     // Variables
     int lognr;
