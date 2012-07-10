@@ -144,13 +144,15 @@ bool DepthEngine::incrementDepth(hanse_srvs::SetTarget::Request &req,
     {
         depth_target_ = 0;
     }
+
+    return true;
 }
 
 // Auswertung und Zwischenspeicherung der Ausgabedaten des Druck-PID-Reglers.
 void DepthEngine::depthOutputCallback(
-        const std_msgs::Float64::ConstPtr& depthOutput)
+        const std_msgs::Float64::ConstPtr& depth_output)
 {
-    this->depth_output_ = depthOutput->data;
+    depth_output_ = depth_output->data;
 }
 
 void DepthEngine::muxSelectedCallback(const std_msgs::String::ConstPtr &topic)
@@ -162,6 +164,7 @@ void DepthEngine::muxSelectedCallback(const std_msgs::String::ConstPtr &topic)
     }
     else
     {
+        gamepad_timeout_ = false;
         gamepad_running_ = false;
         gamepad_timer_.stop();
     }
