@@ -1,0 +1,10 @@
+{
+channel: 0,
+inverted: 0,
+use_blobs: 1,
+morph_iterations: 5,
+threshold: 190,
+automatic: 0,
+subtract_background: 0,
+subtract_mean: 0
+}

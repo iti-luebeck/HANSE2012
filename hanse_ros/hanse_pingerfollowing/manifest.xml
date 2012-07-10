@@ -1,0 +1,18 @@
+<package>
+  <description brief="hanse_pingerfollowing">
+
+     hanse_pingerfollowing
+
+  </description>
+  <author>Jannis Harder</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_pingerfollowing</url>
+  <depend package="rospy"/>
+  <depend package="geometry_msgs"/>
+  <depend package="hanse_msgs"/>
+  <depend package="dynamic_reconfigure"/>
+
+</package>
+
+

@@ -1,0 +1,6 @@
+<launch>
+  <node name="pipe_detection_node" type="object_detection_node" pkg="hanse_object_detection">
+    <param name="image_topic" value="/hanse/camera/bottom" />
+    <rosparam file="$(find hanse_object_detection)/cfg/pipe.yaml"/>
+  </node>
+</launch>

@@ -1,0 +1,10 @@
+<launch>
+  <group ns="/hanse">
+    <node name="hanse_loc_wall_markers" type="sonar_wall_markers" pkg="hanse_sonarlocalization" />
+  </group>
+  <group>
+    <remap from="/object" to="/ball" />
+    <remap from="/image_object_detection" to="/image_ball" />
+    <include ns="hanse" file="$(find hanse_object_detection)/launch/ball.launch" />
+  </group>
+</launch>

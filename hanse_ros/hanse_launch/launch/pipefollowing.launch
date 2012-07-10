@@ -1,4 +1,7 @@
 <launch>
+  <include file="$(find hanse_object_detection)/launch/pipe.launch" />
+
   <include file="$(find hanse_pipefollowing)/launch/pipefollowing.launch" />
+
   <node name="republish_object_detection_hanse" pkg="image_transport" type="republish" args="raw in:=/image_object_detection compressed out:=/image_object_detection/transport" />
 </launch>
