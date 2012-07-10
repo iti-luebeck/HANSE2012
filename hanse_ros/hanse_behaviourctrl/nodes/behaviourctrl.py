@@ -279,7 +279,7 @@ def create_nav_goal(x, y, z):
 
 #creates a logfile that is used for one mission
 def createfile(i):
-    Global.logfile = "hanselog_"+str(i)+".log"
+    Global.logfile = os.path.expanduser("~/hanselog_"+str(i)+".log")
     if os.path.isfile(Global.logfile):
 	createfile(i+1)
     else:
@@ -325,7 +325,7 @@ def main():
 	smach.StateMachine.add(States.Submerge, submerge(), 
                                transitions={Transitions.Submerged:States.Surface, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
-                               transitions={Transitions.Goal_passed:States.Surface, Transitions.Goal_failed:States.Surface})
+                               transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
