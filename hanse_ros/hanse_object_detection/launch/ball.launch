@@ -5,7 +5,7 @@
   </node>
 
   <node name="ball_detection_node" type="object_detection_node" pkg="hanse_object_detection">
-    <param name="image_topic" value="/ace" />
+    <param name="image_topic" value="/image_ace" />
     <rosparam file="$(find hanse_object_detection)/cfg/ball.yaml"/>
   </node>
 </launch>

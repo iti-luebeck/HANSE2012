@@ -1,0 +1,5 @@
+<launch>
+  <node name="ballfollowing" type="ballfollowing.py" pkg="hanse_ballfollowing" output="screen">    
+    <rosparam file="$(find hanse_ballfollowing)/cfg/ballfollowing.yaml"/>
+  </node>
+</launch>
