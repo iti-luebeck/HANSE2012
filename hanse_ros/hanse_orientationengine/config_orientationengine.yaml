@@ -1,5 +1,5 @@
 {
 publish_frequency: 10,
-gamepad_timeout: 4,
+gamepad_timeout: 10,
 orientation_pid_enabled_at_start: True
 }

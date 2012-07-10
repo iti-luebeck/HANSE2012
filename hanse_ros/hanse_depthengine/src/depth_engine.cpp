@@ -9,6 +9,8 @@ DepthEngine::DepthEngine() :
     pids_enabled_(true),
     depth_pid_enabled_(true),
     motors_enabled_(true),
+    gamepad_running_(false),
+    gamepad_timeout_(false),
     depth_output_(0)
 {
     // Initialisierung der Standard-Service Nachrichten.
@@ -18,41 +20,37 @@ DepthEngine::DepthEngine() :
     // Registrierung der Publisher und Subscriber.
     pub_depth_current_ = nh_.advertise<std_msgs::Float64>("/hanse/pid/depth/input", 1);
     pub_depth_target_ = nh_.advertise<std_msgs::Float64>("/hanse/pid/depth/target",1);
-
     pub_motor_up_ = nh_.advertise<hanse_msgs::sollSpeed>("/hanse/motors/up", 1);
 
+    sub_velocity_ = nh_.subscribe<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 10,
+                                                        &DepthEngine::velocityCallback, this);
     sub_pressure_ = nh_.subscribe<hanse_msgs::pressure>("/hanse/pressure/depth", 10,
                                                        &DepthEngine::pressureCallback, this);
-
-    sub_depth_output_ = nh_.subscribe<std_msgs::Float64>(
-                "/hanse/pid/depth/output", 10, &DepthEngine::depthOutputCallback, this);
+    sub_depth_output_ = nh_.subscribe<std_msgs::Float64>("/hanse/pid/depth/output", 10,
+                                                         &DepthEngine::depthOutputCallback, this);
 
     publish_timer_ = nh_.createTimer(ros::Duration(1),
                                     &DepthEngine::publishTimerCallback, this);
-
     gamepad_timer_ = nh_.createTimer(ros::Duration(300),
                                       &DepthEngine::gamepadTimerCallback, this);
+
     sub_mux_selected_ = nh_.subscribe<std_msgs::String>("/hanse/commands/cmd_vel_mux/selected",
                                                         1, &DepthEngine::muxSelectedCallback, this);
 
     // Registrierung der Services.
     srv_handle_engine_command_ = nh_.advertiseService("engine/depth/handleEngineCommand",
                                                    &DepthEngine::handleEngineCommand, this);
-
     srv_enable_depth_pid_ = nh_.advertiseService("engine/depth/enableDepthPid",
                                               &DepthEngine::enableDepthPid, this);
-
     srv_enable_motors_ = nh_.advertiseService("engine/depth/enableMotors",
                                             &DepthEngine::enableMotors, this);
-
     srv_reset_zero_pressure_ = nh_.advertiseService("engine/depth/resetZeroPressure",
                                                  &DepthEngine::resetZeroPressure, this);
-
     srv_set_emergency_stop_ = nh_.advertiseService("engine/depth/setEmergencyStop",
                                                 &DepthEngine::setEmergencyStop, this);
-
     srv_set_depth_ = nh_.advertiseService("engine/depth/setDepth", &DepthEngine::setDepth, this);
-    srv_increment_depth_ = nh_.advertiseService("engine/depth/incDepth", &DepthEngine::incrementDepth, this);
+    srv_increment_depth_ = nh_.advertiseService("engine/depth/incDepth",
+                                                &DepthEngine::incrementDepth, this);
 
     dyn_reconfigure_cb_ = boost::bind(&DepthEngine::dynReconfigureCallback, this, _1, _2);
     dyn_reconfigure_srv_.setCallback(dyn_reconfigure_cb_);
@@ -165,8 +163,8 @@ void DepthEngine::muxSelectedCallback(const std_msgs::String::ConstPtr &topic)
     }
     else
     {
-        gamepad_timeout_ = false;
         gamepad_running_ = false;
+        gamepad_timeout_ = false;
         gamepad_timer_.stop();
     }
 }
