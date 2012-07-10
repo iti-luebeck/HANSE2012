@@ -26,9 +26,37 @@ class Global:
 	currentPosition = Point()
 	pressure_initial = 0
 	pressure = 0
+	call_depth = rospy.ServiceProxy('/hanse/engine/depth/setDepth', SetTarget)
+	wf_client = actionlib.SimpleActionClient('/wallfollowing', WallFollowingAction)
+	nav_client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
+	pipe_client = actionlib.SimpleActionClient('/pipefollowing', PipeFollowingAction)
 	action = " "
 	action_state = " "
-	depth = 120
+	tries_valGate = 0
+	tries_pipeFollow = 0
+	tries_midwater = 0
+	tries_wallfollow = 0
+	tries_pinger = 0
+	###############
+	# variable settings
+	###############
+	#timer
+	timer = 10
+	#target depth in cm
+	depth = 40
+	#waypoint middle line
+	waypt1 = Point(1,1,1)
+	#waypoint past validation gate
+	waypt2 = Point(1,1,1)
+	#waypoint 180 degree turn
+	waypt3 = Point(1,1,1)
+	#waypoint end of pipe
+	waypt4 = Point(1,1,1)
+	#waypoint midwater target
+	waypt5 = Point(1,1,1)
+	#waypoint end of wall
+	waypt6 = Point(1,1,1)
+
 
 class States:
 	Init = 'Init'
@@ -44,10 +72,12 @@ class Transitions:
 	Init_Finished = 'Init_Finished'
 	Submerged = 'Submerged'
 	Submerge_failed = 'Submerged_failed'
-	Goal_failed = 'Goal_failed'
 	Goal_passed = 'Goad_passed'
+	Goal_failed = 'Goal_failed'
+	Goal_exit = 'Goal_exit'
 	Pipe_passed = 'Pipe_passed'
 	Pipe_failed = 'Pipe_failed'
+	Pipe_exit = 'Pipe_exit'
 	navigateToWall = 'navigateToWall'
 	navigatewall_passed = 'navigatewall_passed'
 	navigatewall_failed = 'navigatewall_failed'
@@ -66,6 +96,21 @@ class Init(smach.State):
     def execute(self, userdata):
 	rospy.loginfo('init')
 	createfile(0)
+	rospy.loginfo('Init: Waiting for depth_target service...')
+	rospy.wait_for_service('/hanse/engine/depth/setDepth')
+	rospy.loginfo('Init: Waiting for depth_target service... FINISHED')
+
+	rospy.loginfo("nav_client started and waiting")
+        Global.nav_client.wait_for_server()
+	rospy.loginfo("nav_server listening for goals")
+
+	rospy.loginfo("pipe_client started and waiting")
+        Global.pipe_client.wait_for_server()
+	rospy.loginfo("pipe_server listening for goals")
+
+	rospy.loginfo("wf_client started and waiting")
+        Global.wf_client.wait_for_server()
+	rospy.loginfo("wf_server listening for goals")
         return Transitions.Init_Finished
 
 
@@ -78,15 +123,10 @@ class submerge(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv submerging"
-	# Auf Service warten und PID-Regler aktivieren
-	rospy.loginfo('Init: Waiting for depth_target service...')
-	rospy.wait_for_service('/hanse/engine/depth/setDepth')
-	rospy.loginfo('Init: Waiting for depth_target service... FINISHED')
-	call_submerge = rospy.ServiceProxy('/hanse/engine/depth/setDepth', SetTarget)
-	call_submerge(depth)
+	Global.call_depth(Global.depth)
 	while Global.duration.secs < 60:
 		#rospy.loginfo(str(Global.pressure-Global.pressure_initial))
-		if (Global.pressure-Global.pressure_initial) > 80:
+		if (Global.pressure-Global.pressure_initial) > Global.depth/2:
 			rospy.loginfo('success')
 			return Transitions.Submerged
 	return Transitions.Submerge_failed			
@@ -103,28 +143,17 @@ class validationGate(smach.State):
 
     def execute(self, userdata):
 	Global.action = "navigate to validation gate"
-	client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
-	rospy.loginfo("client started and waiting")
-        # Waits until the action server has started up and started listening for goals.
-        client.wait_for_server()
-	rospy.loginfo("server listening for goals")
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
-	##############
-	# enter nav goal
-	##############
-	goal = create_nav_goal(-4.0, 6.0, 0.0)
-	state = client.send_goal_and_wait(goal, rospy.Duration(5))
+	goal = create_nav_goal(Global.waypt1.x, Global.waypt1.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(180))
         if state == GoalStatus.SUCCEEDED and Global.duration.secs < 360:
 		rospy.loginfo('navigation succeeded')
-		goal = create_nav_goal(4.0, 6.0, 0.0)
-		state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+		goal = create_nav_goal(Global.waypt2.x, Global.waypt2.y, 0.0)
+		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 		if state == GoalStatus.SUCCEEDED:
-			##############
-			# enter nav goal
-			##############
 			rospy.loginfo('navigation succeeded')
-			goal = create_nav_goal(2.0, 6.0, 0.0)
-			state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+			goal = create_nav_goal(Global.waypt3.x, Global.waypt3.y, 0.0)
+			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 			return Transitions.Goal_passed
 		else:
 			rospy.loginfo('navigation failed: ' + GoalStatus.to_string(state))
@@ -143,13 +172,8 @@ class PipeFollowing(smach.State):
     def execute(self, userdata):
 	start_time = Global.duration.secs
 	Global.action = "follow pipe"
-	client = actionlib.SimpleActionClient('pipefollowing', PipeFollowingAction)
-	rospy.loginfo("client started and waiting")
-        # Waits until the action server has started up and started listening for goals.
-        client.wait_for_server()
-	rospy.loginfo("server listening for goals")
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
-        state = client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(500))
+        state = Global.pipe_client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(300))
 
         goalStatusDict = {
             GoalStatus.PENDING : "PENDING",
@@ -176,17 +200,12 @@ class navigateToWall(smach.State):
 
     def execute(self, userdata):
 	Global.action = "navigate to wallfollowing"
-	client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
-	rospy.loginfo("client started and waiting")
-        # Waits until the action server has started up and started listening for goals.
-        client.wait_for_server()
-	rospy.loginfo("server listening for goals")
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	############
 	# enter nav goal for wall
 	############
-	goal = create_nav_goal(8, -11.0, 0.0)
-	state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(240))
+	goal = create_nav_goal(Global.waypt5.x-1, Global.waypt5.y-8, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(240))
         if state == GoalStatus.SUCCEEDED:
 		return Transitions.navigatewall_passed
 	else:
@@ -202,21 +221,12 @@ class WallFollowing(smach.State):
     def execute(self, userdata):
 	start_time = Global.duration.secs
 	Global.action = "follow wall"
-	# Creates the SimpleActionClient, passing the type of the action
-        # (FibonacciAction) to the constructor.
-        client = actionlib.SimpleActionClient('/wallfollowing', WallFollowingAction)
-	rospy.loginfo("client started and waiting")
-        # Waits until the action server has started up and started listening for goals.
-        client.wait_for_server()
-	rospy.loginfo("server listening for goals")
-	
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
-
 	#Setting the time limit for wallfollowing
 	while Global.duration.secs-start_time < 360:
-		state = client.send_goal_and_wait(WallFollowingGoal(),rospy.Duration(5))
+		state = Global.wf_client.send_goal_and_wait(WallFollowingGoal(),rospy.Duration(5))
 		#client.cancel_goal()
-		if(Global.currentPosition.y > 15):
+		if(Global.currentPosition.y > Global.waypt6.x) :
 			return Transitions.Wall_passed 	
 	
 	return Transitions.Wall_failed
@@ -231,12 +241,7 @@ class surface(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv surfacing"
-	# Auf Service warten und PID-Regler aktivieren
-	rospy.loginfo('Init: Waiting for depth_target service...')
-	rospy.wait_for_service('/hanse/engine/depth/setDepth')
-	rospy.loginfo('Init: Waiting for depth_target service... FINISHED')
-	call_surface = rospy.ServiceProxy('/hanse/engine/depth/setDepth', SetTarget)
-	call_surface(0.0)
+	call_depth(0.0)
 	rospy.sleep(10)
 	
 	return Transitions.Surfaced
@@ -244,6 +249,8 @@ class surface(smach.State):
 #timerCallback calls the routine for creating the logfile
 def timerCallback(event): 
     Global.duration = rospy.Time.now() - Global.time_initial
+    if Global.duration.secs > Global.timer:
+	Global.call_depth(0.0)
     f = open(Global.logfile,"a")
     f.write('('+str(Global.duration.secs)+','+str(round(Global.currentPosition.x,2))+','
 	+str(round(Global.currentPosition.y,2))+','+str(Global.pressure-Global.pressure_initial)+','+Global.action+')\n')
@@ -301,6 +308,7 @@ def main():
 		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
     rospy.Subscriber('/hanse/pressure/depth', pressure, pressureCallback)
     rospy.Subscriber('/hanse/actionstate', String, actionstateCallback)
+    
 	
 
 
