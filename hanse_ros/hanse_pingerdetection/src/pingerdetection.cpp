@@ -34,6 +34,19 @@ void PingerDetection::run()
     QTime timestamp;
     timestamp.restart();
 
+
+    leftMicroSin.reserve(window);
+    leftMicroCos.reserve(window);
+    rightMicroSin.reserve(window);
+    rightMicroCos.reserve(window);
+
+    for(int i = 0; i < window; i++){
+        leftMicroSin.append(0);
+        leftMicroCos.append(0);
+        rightMicroSin.append(0);
+        rightMicroCos.append(0);
+    }
+
     while (ros::ok() && enabled) {
 
         if(!audioInput){
@@ -42,49 +55,53 @@ void PingerDetection::run()
         }
 
         // Bereitstehende Daten ermitteln und anschließend ggf. lesen
-        qint64 bytesReady = audioInput->bytesReady();
-        if(bytesReady > sampleRate){
-            bytesReady = sampleRate;
+        QByteArray newData;
+        qint64 l = 0;
+
+        while((int)l == 0) {
+            usleep(1000 / 400);
+            ros::spinOnce();
+            newData = ioDevice->readAll();
+            l = newData.length();
         }
 
-        QByteArray newData = ioDevice->readAll();
-        qint64 l = newData.length();
+        //ROS_INFO("l %i", (int)l);
+        // Neue Daten von der Soundkarte decodieren
+        QList<int> decodeList;
+        decodeList.append(this->decodeData(newData.constData(), l));
+        //ROS_INFO("decodeList.length %i", decodeList.length());
 
-        if(l > 0) {
-            QList<int> decodeList;
-            // Neue Daten von der Soundkarte decodieren
-            decodeList.append(this->decodeData(newData.constData(),newData.length()));
+        if(!decodeList.isEmpty()){
 
-            if(!decodeList.isEmpty()){
+            double zerolineLeft = 0.0;
+            double zerolineRight = 0.0;
 
-                double zerolineLeft = 0.0;
-                double zerolineRight = 0.0;
+            for(int i = 0; i < decodeList.length()-2; i+=2){
 
-                for(int i = 0; i < decodeList.length()-2; i+=2){
+                // Decodierte Daten von Rauschen befreien...
+                zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale;
+                zerolineRight = ((double)decodeList.at(i+1)-(double)noiseRight)*scale;
 
-                    // Decodierte Daten von Rauschen befreien...
-                    zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale;
-                    zerolineRight = ((double)decodeList.at(i+1)-(double)noiseRight)*scale;
-
-                    if(plotRaw){
-                        audioPlotRaw.addSample(zerolineLeft, zerolineRight);
-                    }
-
-                    // ... und in Listen zur Verarbeitung speichern
-                    leftMicro.append(zerolineLeft);
-                    rightMicro.append(zerolineRight);
-
-                    if(saveData){
-                        *outputStream << (int)(100000 * leftMicro.last()) << ", " << (int)(100000 * rightMicro.last()) << "," << (int)(100000 *leftFSK)  << ", " << (int)(100000 *rightFSK) << ", " << (int)(100000 *angle) << "\r\n";
-                    }
-
-                    // Ermittelte Daten verarbeiten
-                    this->audioProcessing();
+                if(plotRaw){
+                    audioPlotRaw.addSample(zerolineLeft, zerolineRight);
                 }
 
+                if(saveData){
+                    *outputStream << (int)(100000 * zerolineLeft) << ", " << (int)(100000 * zerolineRight) << "," << (int)(100000 *leftFSK)  << ", " << (int)(100000 *rightFSK) << ", " << (int)(100000 *angle) << "\r\n";
+                }
+
+                sampleCounter++;
+
+                // Ermittelte Daten verarbeiten (auf Reihenfolge der Counter achten!)
+                this->audioProcessing(zerolineLeft, zerolineRight);
+
+                listCounter++;
+                if(listCounter == window){
+                    listCounter = 0;
+                }
             }
+
         }
-        ros::spinOnce();
     }
 
     ROS_INFO("Samples %i", sampleCounter);
@@ -104,6 +121,8 @@ void PingerDetection::initVariables(){
 
     integralSinLeft = integralCosLeft = integralSinRight = integralCosRight = 0.0;
 
+    listCounter = 0;
+
     delayAverageElements = 0;
     leftAverageThreshold = rightAverageThreshold = 0.0;
 
@@ -121,15 +140,13 @@ void PingerDetection::initVariables(){
 
     angle = 0.0;
 
-    leftMicro.clear();
-    rightMicro.clear();
-
     leftMicroSin.clear();
     leftMicroCos.clear();
     rightMicroSin.clear();
     rightMicroCos.clear();
 
-
+    leftMicroAverageMagnitude = rightMicroAverageMagnitude = 0.0;
+    leftMicroAvgCounter = rightMicroAvgCounter = 0;
 }
 
 void PingerDetection::configAudio(){
@@ -210,9 +227,9 @@ void PingerDetection::setRecordSource(QString n){
 }
 
 QList<int> PingerDetection::decodeData(const char *data, qint64 len){
-    // Wilde decodierung des PCM Signals
+    // Decodierung des PCM Signals
 
-    QList<int> decodeList;
+    QList<int> decodeDataList;
 
     Q_ASSERT(audioFormat.sampleSize() % 8 == 0);
     const int channelBytes = audioFormat.sampleSize() / 8;
@@ -242,25 +259,25 @@ QList<int> PingerDetection::decodeData(const char *data, qint64 len){
                     value = qAbs(qFromBigEndian<qint16>(ptr));
             }
 
-            decodeList.append(value);
+            decodeDataList.append(value);
 
             ptr += channelBytes;
         }
 
 
     }
-    return decodeList;
+    return decodeDataList;
 }
 
-void PingerDetection::audioProcessing(){
+void PingerDetection::audioProcessing(double leftRaw, double rightRaw){
     ROS_DEBUG("Audio processing");
 
-    if(leftMicro.length() > window && rightMicro.length() > window){
+    if(sampleCounter >= window){
         // Gewnschte Fensterlnge wurde erreicht
 
         // Daten verarbeiten
-        leftFSK =  leftNonCoherentFSKDemodulator(leftMicro.last(), false);
-        rightFSK =  rightNonCoherentFSKDemodulator(rightMicro.last(), false);
+        leftFSK =  leftNonCoherentFSKDemodulator(leftRaw, false);
+        rightFSK =  rightNonCoherentFSKDemodulator(rightRaw, false);
 
         if(plotGoertzel){
             audioPlotGoertzel.addSample(leftFSK, rightFSK);
@@ -274,28 +291,20 @@ void PingerDetection::audioProcessing(){
 
         angle_publisher.publish(winkel);
 
-        // Erste Eintrge loeschen, da wir gleiten :)
-        leftMicro.removeFirst();
-        rightMicro.removeFirst();
-
     } else {
         // Integral schrittweise bilden
-        leftNonCoherentFSKDemodulator(leftMicro.last(), true);
-        rightNonCoherentFSKDemodulator(rightMicro.last(), true);
+        leftNonCoherentFSKDemodulator(leftRaw, true);
+        rightNonCoherentFSKDemodulator(rightRaw, true);
         inkrementSinCosCounter();
 
-        /*if(saveData){
-            saveListLeftFSK.append(0.0);
-            saveListRightFSK.append(0.0);
-            saveListAngle.append(0.0);
-        }*/
     }
-
-    sampleCounter++;
 }
 
 void PingerDetection::signalDelayAnalysis(double left, double right){
 
+    // Ueberpruefen, ob ein Mikro ein Signal groesser als den Schwellwert aufweist
+    // 1 = true
+    // 0 = false
     if(left > threshold){
         leftMicroSignalDetected = 1;
 
@@ -314,17 +323,13 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
         signalDetected = leftMicroSignalDetected + rightMicroSignalDetected;
 
         if(signalDetected == 2){
-            // Beide Mikros haben ein Signal grer als den Schwellwert detektiert
-            // Keine messbare Zeitverzgerung
+            // Beide Mikros haben ein Signal goersser als den Schwellwert detektiert
+            // Keine messbare Zeitverzoegerung
 
             bothMicroSignalDetectedCount++;
 
-            if(left > leftMicroMaxMagnitude){
-                leftMicroMaxMagnitude = left;
-            }
-            if(right > rightMicroMaxMagnitude){
-                rightMicroMaxMagnitude = right;
-            }
+            leftMicroMagnitudeCalculation(left);
+            rightMicroMagnitudeCalculation(right);
 
             delayState = STATE_WAIT_FOR_SIGNAL_FINISHED;
 
@@ -334,9 +339,8 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
                 // Linkes Mikro hat ein Signal grer als den Schwellwert
                 delayState = STATE_WAIT_FOR_SIGNAL_FINISHED;
 
-                if(left > leftMicroMaxMagnitude){
-                    leftMicroMaxMagnitude = left;
-                }
+                leftMicroMagnitudeCalculation(left);
+
                 // Rechtes Mikro hat ein Delay
                 rightMicroSampleDelay++;
 
@@ -344,14 +348,11 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
                 // Rechtes Mikro hat ein Signal grer als den Schwellwert
                 delayState = STATE_WAIT_FOR_LEFT_MICRO_SIGNAL;
 
-                if(right > rightMicroMaxMagnitude){
-                    rightMicroMaxMagnitude = right;
-                }
+                rightMicroMagnitudeCalculation(right);
+
                 // Linkes Mikro hat ein Delay
                 leftMicroSampleDelay++;
 
-            } else {
-                //ROS_INFO("State error");
             }
         }
     } else if(delayState == STATE_WAIT_FOR_LEFT_MICRO_SIGNAL){
@@ -359,9 +360,7 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
         if(left > threshold){
             leftMicroSignalDetected = 1;
 
-            if(left > leftMicroMaxMagnitude){
-                leftMicroMaxMagnitude = left;
-            }
+            leftMicroMagnitudeCalculation(left);
 
             bothMicroSignalDetectedCount++;
             delayState = STATE_WAIT_FOR_SIGNAL_FINISHED;
@@ -372,18 +371,15 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             leftMicroSampleDelay++;
         }
 
-        if(right > rightMicroMaxMagnitude){
-            rightMicroMaxMagnitude = right;
-        }
+        rightMicroMagnitudeCalculation(right);
+
 
     } else if(delayState == STATE_WAIT_FOR_RIGHT_MICRO_SIGNAL){
 
         if(right > threshold){
             rightMicroSignalDetected = 1;
 
-            if(right > rightMicroMaxMagnitude){
-                rightMicroMaxMagnitude = right;
-            }
+            rightMicroMagnitudeCalculation(right);
 
             bothMicroSignalDetectedCount++;
             delayState = STATE_WAIT_FOR_SIGNAL_FINISHED;
@@ -394,15 +390,11 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             rightMicroSampleDelay++;
         }
 
-        if(left > leftMicroMaxMagnitude){
-            leftMicroMaxMagnitude = left;
-        }
-
-
+        leftMicroMagnitudeCalculation(left);
 
     } else if(delayState == STATE_WAIT_FOR_SIGNAL_FINISHED){
 
-        // Bisschen Toleranz um leichte Schwingungen nicht ins Gewicht fallen zu lassen.
+        // Bisschen Toleranz bei der Abklingzeit um leichte Schwingungen nicht ins Gewicht fallen zu lassen.
         if(left < threshold*0.8){
             leftMicroSignalDetected = 0;
         } else {
@@ -417,13 +409,9 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
 
         signalDetected = leftMicroSignalDetected + rightMicroSignalDetected;
 
-        if(left > leftMicroMaxMagnitude){
-            leftMicroMaxMagnitude = left;
-        }
+        leftMicroMagnitudeCalculation(left);
 
-        if(right > rightMicroMaxMagnitude){
-            rightMicroMaxMagnitude = right;
-        }
+        rightMicroMagnitudeCalculation(right);
 
         if(signalDetected == 2){
 
@@ -438,21 +426,30 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
             //      => calculateAngle erhält einen negativen Wert
             //////////////////////////////////////////////////////////////////////////////////////////////////
 
+            leftMicroAverageMagnitude /= leftMicroAvgCounter;
+            rightMicroAverageMagnitude /= rightMicroAvgCounter;
+
+
             if(leftMicroSampleDelay > rightMicroSampleDelay){
-                ROS_INFO("Verzögerungswert [%i]", leftMicroSampleDelay);
+                ROS_INFO("Verzoegerung %i -> Rechtsdrehung", leftMicroSampleDelay);
                 calculateAngle(leftMicroSampleDelay);
-            }else if (leftMicroSampleDelay < rightMicroSampleDelay){
-                ROS_INFO("Verzögerungswert [%i]", rightMicroSampleDelay*(-1));
+
+            } else if (leftMicroSampleDelay < rightMicroSampleDelay){
+                ROS_INFO("Verzoegerung %i -> Linksdrehung", rightMicroSampleDelay*(-1));
                 calculateAngle(rightMicroSampleDelay*-1);
-            }else if (leftMicroSampleDelay == rightMicroSampleDelay){
+
+            } else if (leftMicroSampleDelay == rightMicroSampleDelay){
+                ROS_INFO("Keine Verzoegerung -> Geradeaus");
                 calculateAngle(0);
             }
-
 
             delayState = STATE_WAIT_FOR_FIRST_SIGNAL;
             bothMicroSignalDetectedCount = 0;
             leftMicroSampleDelay = rightMicroSampleDelay = 0;
             leftMicroMaxMagnitude = rightMicroMaxMagnitude = 0.0;
+
+            leftMicroAverageMagnitude = rightMicroAverageMagnitude = 0.0;
+            leftMicroAvgCounter = rightMicroAvgCounter = 0;
         }
 
 
@@ -461,12 +458,29 @@ void PingerDetection::signalDelayAnalysis(double left, double right){
     }
 }
 
+void PingerDetection::leftMicroMagnitudeCalculation(double left){
+    if(left > leftMicroMaxMagnitude){
+        leftMicroMaxMagnitude = left;
+    }
+    leftMicroAverageMagnitude += left;
+    leftMicroAvgCounter++;
+}
+
+void PingerDetection::rightMicroMagnitudeCalculation(double right){
+    if(right > rightMicroMaxMagnitude){
+        rightMicroMaxMagnitude = right;
+    }
+    rightMicroAverageMagnitude += right;
+    rightMicroAvgCounter++;
+}
+
 void PingerDetection::calculateAngle(int samplediff){
 
     ROS_DEBUG("Calcualte angle");
     if(samplediff == 0){
         winkel.data = 0.0;
-    }else{
+
+    } else {
 
         double baseline = 0.4; // Distanz zwischen den Hydrophonen in m
 
@@ -478,6 +492,7 @@ void PingerDetection::calculateAngle(int samplediff){
 
 
         winkel.data = angle;
+        ROS_INFO("Winkel %f", angle);
     }
 }
 
@@ -503,10 +518,6 @@ void PingerDetection::periodicSinCos(){
         double cosTemp = cos(2.0*M_PI*omega*(double)i/(double)sampleRate);
         cosLUT.append(cosTemp);
     }
-
-    //  //qDebug() << "sinLUT.length " << sinLUT.length() << " cosLUT.length  " << cosLUT.length();
-    //  //qDebug() << "sinLUT.first " << sinLUT.first() << " cosLUT.first  " << cosLUT.first();
-    // //qDebug() << "sinLUT.last " << sinLUT.last() << " cosLUT.last  " << cosLUT.last();
 
     //    for(int x = 0; x < 70;  x){
     //        //qDebug() << "x= "<< x;
@@ -535,21 +546,18 @@ double PingerDetection::leftNonCoherentFSKDemodulator(double x, bool skipPop){
 
     double sinLeftPush = sinLUT.at(sinCounter)*x;
     double cosLeftPush = cosLUT.at(cosCounter)*x;
-    leftMicroSin.append(sinLeftPush);
-    leftMicroCos.append(cosLeftPush);
+    leftMicroSin.replace(listCounter, sinLeftPush);
+    leftMicroCos.replace(listCounter, cosLeftPush);
 
     integralSinLeft = sinLeftPush;
     integralCosLeft = cosLeftPush;
 
     if(!skipPop){
-        double sinLeftPop = leftMicroSin.first();
-        double cosLeftPop = leftMicroCos.first();
+        double sinLeftPop = leftMicroSin.at(window-1-listCounter);
+        double cosLeftPop = leftMicroCos.at(window-1-listCounter);
 
         integralSinLeft -= sinLeftPop;
         integralCosLeft -= cosLeftPop;
-
-        leftMicroSin.removeFirst();
-        leftMicroCos.removeFirst();
 
         // Magnitude
         return pow(integralSinLeft, 2.0)+pow(integralCosLeft, 2.0);
@@ -565,21 +573,18 @@ double PingerDetection::rightNonCoherentFSKDemodulator(double y, bool skipPop){
 
     double sinRightPush = sinLUT.at(sinCounter)*y;
     double cosRightPush = cosLUT.at(cosCounter)*y;
-    rightMicroSin.append(sinRightPush);
-    rightMicroCos.append(cosRightPush);
+    rightMicroSin.replace(listCounter, sinRightPush);
+    rightMicroCos.replace(listCounter, cosRightPush);
 
     integralSinRight = sinRightPush;
     integralCosRight = cosRightPush;
 
     if(!skipPop){
-        double sinRightPop = rightMicroSin.first();
-        double cosRightPop = rightMicroCos.first();
+        double sinRightPop = rightMicroSin.at(window-1-listCounter);
+        double cosRightPop = rightMicroCos.at(window-1-listCounter);
 
         integralSinRight -= sinRightPop;
         integralCosRight -= cosRightPop;
-
-        rightMicroSin.removeFirst();
-        rightMicroCos.removeFirst();
 
         return pow(integralSinRight, 2.0)+pow(integralCosRight, 2.0);
     } else {
