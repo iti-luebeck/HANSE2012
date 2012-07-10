@@ -79,7 +79,7 @@ void PingerDetection::run()
             for(int i = 0; i < decodeList.length()-2; i+=2){
 
                 // Decodierte Daten von Rauschen befreien...
-                zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale;
+                zerolineLeft = ((double)decodeList.at(i)-(double)noiseLeft)*scale*fetteSkalierung;
                 zerolineRight = ((double)decodeList.at(i+1)-(double)noiseRight)*scale;
 
                 if(plotRaw){
@@ -699,6 +699,8 @@ void PingerDetection::dynReconfigureCallback(hanse_pingerdetection::Pingerdetect
     //ROS_INFO("counterRaw %i", counterRaw);
     //ROS_INFO("counterGoertzel %i", counterGoertzel);
 
+    fetteSkalierung = config.fetteSkalierung;
+
     ROS_INFO("plotRaw %d", plotRaw);
     ROS_INFO("plotGoertzel %d", plotGoertzel);
     ROS_INFO("saveData %d", saveData);
@@ -716,7 +718,6 @@ PingerDetection::PingerDetection() :
     input_subscriber = nh.subscribe("/hanse/pingerdetection",1, &PingerDetection::pingerDetectionCallback, this);
     angle_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/angle", 100);
     pinger_publisher = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
-    right_publisher = nh.advertise<std_msgs::Float32>("/hanse/pingerdetection/right_raw", 10);
 
     //    dynReconfigureCb = boost::bind(&PingerDetection::dynReconfigureCallback, this, _1, _2);
     //    dynReconfigureSrv.setCallback(dynReconfigureCb);

@@ -201,5 +201,6 @@ private:
     int window;
     double scale;
     double threshold;
+    double fetteSkalierung;
 };
 }

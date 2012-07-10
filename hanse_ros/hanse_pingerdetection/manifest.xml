@@ -16,11 +16,12 @@
   <depend package="qt_build"/>
   <depend package="roscpp"/>
   <depend package="dynamic_reconfigure"/>
-  
+  <depend package="hanse_msgs"/>  
   <rosbuild2>
     <depend package="qt_build"/>
     <depend package="roscpp"/>
     <depend package="dynamic_reconfigure"/>
+    <depend package="hanse_msgs"/>
   </rosbuild2>
   
 </package>
