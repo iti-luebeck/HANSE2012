@@ -111,12 +111,12 @@ class Seen(AbortableState):
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
 				angularSpeed = Config.kpAngle * (IMAGE_COLS / 2 - Global.x) / (IMAGE_COLS / 2)
-				rospy.loginfo('angular speed: '+angularSpeed)
+				rospy.loginfo('angular speed: '+str(angularSpeed))
 				setMotorSpeed(Config.fwSpeed, angularSpeed)
 				rospy.sleep(0.1)
 			# lost
 			else:
-				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / lostFactor)
+				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / Config.lostFactor)
 				rospy.sleep(0.1)
 				return Transitions.Lost
 				
