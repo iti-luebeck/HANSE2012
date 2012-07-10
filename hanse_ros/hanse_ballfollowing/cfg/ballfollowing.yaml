@@ -1,0 +1,6 @@
+{
+minSize: 0.01,
+maxSize: 0.4,
+fwSpeed: 0.5,
+knAngle: 0.2
+}

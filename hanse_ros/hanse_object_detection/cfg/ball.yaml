@@ -1,10 +1,10 @@
 {
 channel: 0,
-inverted: 0,
-use_blobs: 1,
+inverted: False,
+use_blobs: True,
 morph_iterations: 5,
 threshold: 190,
-automatic: 0,
-subtract_background: 0,
-subtract_mean: 0
+automatic: False,
+subtract_background: False,
+subtract_mean: False
 }
