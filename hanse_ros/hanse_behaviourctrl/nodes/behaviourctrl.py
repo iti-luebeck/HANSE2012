@@ -19,7 +19,7 @@ from hanse_srvs.srv import *
 
 
 class Global:
-	SIMULATOR = True
+	SIMULATOR = False
 	time_initial = 0.0
 	duration = rospy.Duration(0,0)
 	logfile = " "
@@ -41,15 +41,15 @@ class Global:
 	# variable settings
 	###############
 	#timer
-	timer = 10
+	timer = 360
 	#target depth in cm
-	depth = 40
+	depth = 70
 	#waypoint middle line
-	waypt1 = Point(1,1,1)
+	waypt1 = Point(69,75,0)
 	#waypoint past validation gate
-	waypt2 = Point(1,1,1)
+	waypt2 = Point(77,75,1)
 	#waypoint 180 degree turn
-	waypt3 = Point(1,1,1)
+	waypt3 = Point(75,75,1)
 	#waypoint end of pipe
 	waypt4 = Point(1,1,1)
 	#waypoint midwater target
@@ -126,7 +126,7 @@ class submerge(smach.State):
 	Global.call_depth(Global.depth)
 	while Global.duration.secs < 60:
 		#rospy.loginfo(str(Global.pressure-Global.pressure_initial))
-		if (Global.pressure-Global.pressure_initial) > Global.depth/2:
+		if (Global.pressure-Global.pressure_initial) > Global.depth/3:
 			rospy.loginfo('success')
 			return Transitions.Submerged
 	return Transitions.Submerge_failed			
@@ -325,7 +325,7 @@ def main():
 	smach.StateMachine.add(States.Submerge, submerge(), 
                                transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
-                               transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
+                               transitions={Transitions.Goal_passed:States.Surface, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
