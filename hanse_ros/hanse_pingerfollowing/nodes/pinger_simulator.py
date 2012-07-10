@@ -52,6 +52,6 @@ if __name__ == '__main__':
     rospy.init_node('pingersim')
     dynamic_reconfigure.server.Server(PingerSimulatorConfig, configCallback)
     rospy.Subscriber('/hanse/posemeter', PoseStamped, posemeterCallback)
-    rospy.Subscriber('/hoal', PoseStamped, goalCallback)
+    rospy.Subscriber('/goal', PoseStamped, goalCallback)
     Node.publisher = rospy.Publisher('/hanse/pinger', PingerDetection)
     rospy.spin()
