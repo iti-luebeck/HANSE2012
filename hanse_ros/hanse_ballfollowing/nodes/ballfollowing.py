@@ -34,6 +34,7 @@ class Config:
 	maxSize = 0.4
 	fwSpeed = 0.8
 	kpAngle = 1.0
+	lostFactor = 3
 
 class Global:
 	x = 0.0
@@ -84,7 +85,7 @@ class NotSeenYet(AbortableState):
 				Global.startHeading = Global.currentHeading
 				return Transitions.Seen
 
-			# setMotorSpeed(Config.fwSpeed, 0.0)
+			setMotorSpeed(0.0, Config.fwSpeed / Config.lostFactor)
 			rospy.sleep(0.2)
 
 		return self.abort()
@@ -109,13 +110,14 @@ class Seen(AbortableState):
 
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
-				angularSpeed = Config.kpAngle * (IMAGE_COLS - Global.x) / (math.pi/2)
+				angularSpeed = Config.kpAngle * (IMAGE_COLS / 2 - Global.x) / (IMAGE_COLS / 2)
+				rospy.loginfo('angular speed: '+angularSpeed)
 				setMotorSpeed(Config.fwSpeed, angularSpeed)
-				rospy.sleep(0.2)
+				rospy.sleep(0.1)
 			# lost
 			else:
-				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / 3)
-				rospy.sleep(0.2)
+				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / lostFactor)
+				rospy.sleep(0.1)
 				return Transitions.Lost
 				
 		return self.abort()
@@ -155,6 +157,7 @@ def configCallback(config, level):
 	Config.maxSize = config['maxSize']
 	Config.fwSpeed = config['fwSpeed']
 	Config.kpAngle = config['kpAngle']
+	Config.lostFactor = config['lostFactor']
 	return config
 
 def positionCallback(msg):	
