@@ -13,7 +13,8 @@ const std::string input_topic_ = "input";
 const std::string target_topic_ = "target";
 const std::string output_topic_ = "output";
 
-class PIDControl {
+class PIDControl
+{
 private:
 
 	// **** ros-related variables
@@ -27,7 +28,7 @@ private:
 	ros::ServiceServer enable_srv_;
 	ros::ServiceServer get_output_srv_;
 
-    ros::Timer publishTimer;
+    ros::Timer publish_timer_;
 
 	// **** state variables
 
@@ -62,14 +63,14 @@ private:
 
     // **** dynamic reconfigure
 
-    void dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config, uint32_t level);
-    hanse_pidcontrol::PidcontrolConfig config;
+    void dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config_, uint32_t level);
+    hanse_pidcontrol::PidcontrolConfig config_;
 
     /** \brief dynamic_reconfigure interface */
-    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig> dynReconfigureSrv;
+    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig> dyn_reconfigure_srv_;
 
     /** \brief dynamic_reconfigure call back */
-    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig>::CallbackType dynReconfigureCb;
+    dynamic_reconfigure::Server<hanse_pidcontrol::PidcontrolConfig>::CallbackType dyn_reconfigure_cb_;
 
 public:
 
@@ -77,7 +78,8 @@ public:
 	virtual ~PIDControl();
 };
 
-PIDControl::PIDControl() {
+PIDControl::PIDControl()
+{
 	ROS_INFO("Starting PIDControl");
 
 	output_msg_ = boost::make_shared<std_msgs::Float64>();
@@ -87,8 +89,8 @@ PIDControl::PIDControl() {
 	received_input_ = false;
 	enabled_ = false;
 
-    dynReconfigureCb = boost::bind(&PIDControl::dynReconfigureCallback, this, _1, _2);
-    dynReconfigureSrv.setCallback(dynReconfigureCb);
+    dyn_reconfigure_cb_ = boost::bind(&PIDControl::dynReconfigureCallback, this, _1, _2);
+    dyn_reconfigure_srv_.setCallback(dyn_reconfigure_cb_);
 
     // initParams();
 
@@ -103,7 +105,7 @@ PIDControl::PIDControl() {
 
 	output_publisher_ = nh_.advertise<std_msgs::Float64>(output_topic_, 1);
 	// TODO: Do we need to publish in a loop here? or would 1 time suffice
-    ros::Timer publishTimer = nh_.createTimer(ros::Duration(1),
+    publish_timer_ = nh_.createTimer(ros::Duration(1),
 			&PIDControl::publishCallback, this);
 
 	// **** services
@@ -113,35 +115,40 @@ PIDControl::PIDControl() {
 			this);
 }
 
-PIDControl::~PIDControl() {
+PIDControl::~PIDControl()
+{
 	std::cout << "Destroying PIDControl." << std::endl;
 }
 
-void PIDControl::dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config, uint32_t level) {
-
+void PIDControl::dynReconfigureCallback(hanse_pidcontrol::PidcontrolConfig &config, uint32_t level)
+{
     ROS_INFO("got new parameters, level=%d", level);
 
-    this->config = config;
+    config_ = config;
 
     target_ = 0.0;
     i_ = 0.0;
     received_input_ = false;
     prev_error_ = 0.0;
 
-    publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
+    publish_timer_.setPeriod(ros::Duration(1.0/config.publish_frequency));
 }
 
-void PIDControl::targetCallback(const std_msgs::Float64Ptr& target_msg) {
+void PIDControl::targetCallback(const std_msgs::Float64Ptr& target_msg)
+{
 	boost::mutex::scoped_lock(mutex_);
 	target_ = target_msg->data;
 
 	ROS_DEBUG("PID Target: %f", target_);
 }
 
-void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
+void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg)
+{
 	boost::mutex::scoped_lock(mutex_);
 	if (!enabled_)
+    {
 		return;
+    }
 
 	double input = input_msg->data;
 
@@ -154,7 +161,7 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 
 	double error = target_ - input;
 
-    if (config.angular) // wrap the error to (-pi, pi]
+    if (config_.angular) // wrap the error to (-pi, pi]
 	{
 		while (error > M_PI)
 			error -= M_PI * 2.0;
@@ -165,25 +172,31 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 	// **** calculate P, I, D terms
 
 	double p_term, i_term, d_term;
-    p_term = config.k_p * error;
+    p_term = config_.k_p * error;
 
-	if (received_input_) {
+    if (received_input_)
+    {
 		double dt = (input_stamp - prev_input_stamp_).toSec();
 
 		i_ += error * dt;
-        if (i_ > config.i_max) {
+        if (i_ > config_.i_max)
+        {
             //ROS_WARN("PID Control integral wind-up: clamping to %f", config.i_max);
-            i_ = config.i_max;
+            i_ = config_.i_max;
 		}
-        if (i_ < -config.i_max) {
+
+        if (i_ < -config_.i_max)
+        {
             //ROS_WARN("PID Control integral wind-down: clamping to %f", -config.i_max);
-            i_ = -config.i_max;
+            i_ = -config_.i_max;
 		}
 
-        i_term = config.k_i * i_;
+        i_term = config_.k_i * i_;
 
-        d_term = config.k_d * (error - prev_error_) / dt;
-	} else {
+        d_term = config_.k_d * (error - prev_error_) / dt;
+    }
+    else
+    {
 		received_input_ = true;
 		i_term = 0.0;
 		d_term = 0.0;
@@ -191,18 +204,16 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 
 	// **** calculate output
 
-    double output = p_term + i_term + d_term + config.bias;
-    if (output < config.output_min) {
-        //ROS_WARN(
-        //        "PID Control output too small, clamping to to %f", config.output_min);
-        output = config.output_min; // clamp to min value
-	}
-    if (output > config.output_max) {
-        //ROS_WARN("PID Control output too big, clamping to to %f", config.output_max);
-        output = config.output_max; // clamp to max value
+    double output = p_term + i_term + d_term + config_.bias;
+    if (output < config_.output_min)
+    {
+        output = config_.output_min; // clamp to min value
 	}
 
-	//ROS_INFO("PID: Output: %f (%f + %f + %f + %f)", output, p_term, i_term, d_term, bias_);
+    if (output > config_.output_max)
+    {
+        output = config_.output_max; // clamp to max value
+	}
 
 	output_msg_->data = output;
 	output_publisher_.publish(output_msg_);
@@ -213,27 +224,24 @@ void PIDControl::inputCallback(const std_msgs::Float64Ptr& input_msg) {
 	prev_error_ = error;
 }
 
-void PIDControl::publishCallback(const ros::TimerEvent& event) {
+void PIDControl::publishCallback(const ros::TimerEvent& event)
+{
 	boost::mutex::scoped_lock(mutex_);
 	if (!enabled_)
+    {
 		return;
-
-	ROS_INFO("Publishing %f", output_msg_->data);
+    }
 
 	output_publisher_.publish(output_msg_);
-
 }
 
 bool PIDControl::enable(hanse_srvs::Bool::Request &req,
-        hanse_srvs::Bool::Response &res) {
-    // ROS_INFO("Service call: hanse_pidcontrol");
-
+        hanse_srvs::Bool::Response &res)
+{
 	boost::mutex::scoped_lock(mutex_);
 	if (req.enable) {
-        // ROS_INFO("Enabling hanse_pidcontrol");
 		enabled_ = true;
 	} else {
-        // ROS_INFO("Disabling hanse_pidcontrol");
         target_ = 0.0;
         i_ = 0.0;
         received_input_ = false;
@@ -241,12 +249,12 @@ bool PIDControl::enable(hanse_srvs::Bool::Request &req,
         enabled_ = false;
 	}
 
-    // ROS_INFO("Service leave: hanse_pidcontrol");
 	return true;
 }
 
 bool PIDControl::getOutput(hanse_srvs::GetOutput::Request &req,
-        hanse_srvs::GetOutput::Response &res) {
+        hanse_srvs::GetOutput::Response &res)
+{
 	boost::mutex::scoped_lock(mutex_);
 	res.output = output_msg_->data;
 	return true;

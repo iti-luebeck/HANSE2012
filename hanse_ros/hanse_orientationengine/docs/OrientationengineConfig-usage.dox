@@ -1,0 +1,9 @@
+\subsubsection usage Usage
+\verbatim
+<node name="orientationEngine" pkg="hanse_orientationengine" type="orientationEngine">
+  <param name="publish_frequency" type="double" value="10.0" />
+  <param name="gamepad_timeout" type="int" value="4" />
+  <param name="orientation_pid_enabled_at_start" type="bool" value="True" />
+</node>
+\endverbatim
+

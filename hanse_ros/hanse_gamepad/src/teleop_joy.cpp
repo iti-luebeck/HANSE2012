@@ -1,256 +1,289 @@
 #include "hanse_gamepad/teleop_joy.h"
 
-TeleopHanse::TeleopHanse():
-    linearValue(0),
-    angularValue(0),
-    depthValue(0),
-    depthLastValue(0),
-    motorsEnabled(true),
-    pidsEnabled(true),
-    emergencyStop(false),
-    gamepadEnabled(false),
-    depthUpLast(false),
-    depthDownLast(false)
+TeleopHanse::TeleopHanse() :
+    linear_value_(0),
+    angular_value_(0),
+    motors_enabled_(true),
+    pids_enabled_(true),
+    emergency_stop_(false),
+    gamepad_enabled_(false),
+    trig_(),
+    depth_cmd_h_("/hanse/engine/depth/handleEngineCommand"),
+    orientation_cmd_h_("/hanse/engine/orientation/handleEngineCommand")
 {
-
-    pubCmdVel = node.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel_joystick", 1);
-    subJoyInput = node.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
+    // Publisher for command velocity messages
+    pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel_joystick", 1);
+    // Subscriber for joystick events
+    sub_joy_input_ = nh_.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
 
     // will be set to actual value once config is loaded
-    publishTimer = node.createTimer(ros::Duration(1), &TeleopHanse::timerCallback, this);
+    publish_timer_ = nh_.createTimer(ros::Duration(5), &TeleopHanse::timerCallback, this);
 
-    ros::Rate r(10);
-
-    trig = new FlankTrigger();
-
-    while(ros::Time::now().toSec() == 0.0) {
-        r.sleep();
+    // wait for ros time to give values != 0
+    ros::Rate loop_rate(10);
+    while(ros::Time::now().toSec() == 0.0)
+    {
+        loop_rate.sleep();
     }
 
-    ignoreTime = ros::Time::now() + ros::Duration(0.25);
+    // initial delay for receiving joystick events, effectivly ignoring these
+    ignore_time_ = ros::Time::now() + ros::Duration(0.25);
 
-    dynReconfigureCb = boost::bind(&TeleopHanse::dynReconfigureCallback, this, _1, _2);
-    dynReconfigureSrv.setCallback(dynReconfigureCb);
+    // initialize dynamic reconfigure
+    dyn_reconfigure_cb_ = boost::bind(&TeleopHanse::dynReconfigureCallback, this, _1, _2);
+    dyn_reconfigure_srv_.setCallback(dyn_reconfigure_cb_);
     // from this point on we can assume a valid config
 
-    srvClEngineCommandDepth = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/depth/handleEngineCommand");
-    srvClEngineCommandOrientation = node.serviceClient<hanse_srvs::EngineCommand>("/hanse/engine/orientation/handleEngineCommand");
-    srvClEngineSetDepth = node.serviceClient<hanse_srvs::SetTarget>("/hanse/engine/depth/setDepth");
-    srvClCmdVelMuxSelect = node.serviceClient<topic_tools::MuxSelect>("/hanse/commands/cmd_vel_select");
+    // service for setting depth in depth engine
+    srv_client_engine_inc_depth_ = nh_.serviceClient<hanse_srvs::SetTarget>("/hanse/engine/depth/incDepth");
+    // service for muxing command velocity messages
+    srv_vel_mux_select_ = nh_.serviceClient<topic_tools::MuxSelect>("/hanse/commands/cmd_vel_mux/select");
 
     ROS_INFO("teleop_joy started");
     ROS_INFO("Gamepad disabled");
 }
 
-void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &config, uint32_t level) {
-
+void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &config, uint32_t level)
+{
     ROS_INFO("got new parameters, level=%d", level);
 
-    this->config = config;
+    config_ = config;
 
-    publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
+    // refresh publish timer frequency
+    publish_timer_.setPeriod(ros::Duration(1.0/config.publish_frequency));
 }
 
-void TeleopHanse::timerCallback(const ros::TimerEvent &e) {
-
-    if (gamepadEnabled && (ros::Time::now() > ignoreTime)) {
+void TeleopHanse::timerCallback(const ros::TimerEvent &e)
+{
+    // only send messages if gamepad is enabled and delay is over
+    if (gamepad_enabled_ && (ros::Time::now() > ignore_time_))
+    {
         // publish data on topic.
-        geometry_msgs::Twist velocityMsg;
+        geometry_msgs::Twist velocity_msg;
+        velocity_msg.angular.z = angular_value_;
+        velocity_msg.linear.x = linear_value_;
 
-        velocityMsg.angular.z = angularValue;
-
-        velocityMsg.linear.x = linearValue;
-
-        // ROS_INFO("Current target depth: %f cm - FF %f - ANG %f - ORI %f", depthValue, linearValue, rotationSpeedValue, orientationValue);
-
-        pubCmdVel.publish(velocityMsg);
+        pub_cmd_vel_.publish(velocity_msg);
     }
 }
 
-void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
-
-    int8_t count = 0;
-    ros::Rate loopRate(4);
-
-    if (ros::Time::now() < ignoreTime) {
+void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+{
+    // ignore initial events
+    if (ros::Time::now() < ignore_time_)
+    {
         return;
     }
 
-    trig->setActual(joy->buttons);
+    // do rising flank triggering of buttons
+    trig_.setActual(joy->buttons);
 
-    hanse_srvs::EngineCommand commandMsg;
-    commandMsg.request.enableDepthPid = true;
-    commandMsg.request.enableMotors = motorsEnabled;
-    commandMsg.request.enableOrientationPid = true;
-    commandMsg.request.enableRotationSpeedPid = false;
-    commandMsg.request.resetZeroPressure = false;
-    commandMsg.request.setEmergencyStop = false;
-    bool changed = false;
-
-    if (trig->isSet(config.emergency_stop_button)) {
-        changed = true;
-        emergencyStop = !emergencyStop;
-        commandMsg.request.setEmergencyStop = emergencyStop;
-
-        if(emergencyStop) {
-            ROS_INFO("Emergency stop! Gamepad disabled, depth is set to 0");
-            gamepadEnabled = false;
-            depthValue = 0;
-            angularValue = 0;
-            linearValue = 0;
-        } else {
-            ROS_INFO("Emergency stop disabled");
-        }
+    // handle emergency stop
+    if (trig_.isSet(config_.emergency_stop_button) &&
+            !EngineCommandHandle::isEmergencyStopChanged())
+    {
+        EngineCommandHandle::toggleEmergencyStop();
     }
 
-    if (trig->isSet(config.motor_switch_button) && !emergencyStop) {
-        changed = true;
-        motorsEnabled = !motorsEnabled;
-        commandMsg.request.enableMotors = motorsEnabled;
-
-        if(motorsEnabled) {
-            ROS_INFO("Motors enabled.");
-        } else {
-            ROS_INFO("Motors disabled.");
-        }
+    // handle motor switch button
+    if (trig_.isSet(config_.motor_switch_button) && !EngineCommandHandle::isEmergencyStopSet())
+    {
+        EngineCommandHandle::toggleMotors();
     }
 
-    if (trig->isSet(config.pid_switch_button) && !emergencyStop) {
-        changed = true;
-        pidsEnabled = !pidsEnabled;
-        commandMsg.request.enableDepthPid = pidsEnabled;
-
-        if (pidsEnabled) {
-            ROS_INFO("PIDs enabled.");
-            commandMsg.request.enableOrientationPid = true;
-        } else {
-            ROS_INFO("PIDs disabled.");
-            commandMsg.request.enableOrientationPid = false;
-        }
-    }
-
-    if (trig->isSet(config.zero_depth_reset_button) && !emergencyStop) {
-        changed = true;
-        commandMsg.request.resetZeroPressure = true;
+    // handle resetting zero pressure
+    if (trig_.isSet(config_.zero_depth_reset_button) && !EngineCommandHandle::isEmergencyStopSet())
+    {
+        EngineCommandHandle::resetZeroPressure();
         ROS_INFO("Resetted pressure zero value.");
     }
 
-    if (trig->isSet(config.gamepad_switch_button) && !emergencyStop) {
-        topic_tools::MuxSelect selectMsg;
-
-        if(!gamepadEnabled) {
-            selectMsg.request.topic = "/hanse/commands/cmd_vel_joystick";
-
-            // Aktivierung Gamepad
-            while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-                if (srvClCmdVelMuxSelect.call(selectMsg)) {
-                    count = 0;
-                    gamepadEnabled = !gamepadEnabled;
-                    ROS_INFO("Gamepad enabled.");
-                    break;
-                } else {
-                    ROS_INFO("Command velocity mux couldn't be called. Retry.");
-                }
-
-                count++;
-                loopRate.sleep();
+    // handle gamepad enabling and disabling
+    if (trig_.isSet(config_.gamepad_switch_button) && !EngineCommandHandle::isEmergencyStopSet())
+    {
+        if(!gamepad_enabled_)
+        {
+            if (switchGamepadUsage("/hanse/commands/cmd_vel_joystick"))
+            {
+                ROS_INFO("Gamepad enabled.");
             }
-        } else {
-            selectMsg.request.topic = "/hanse/commands/cmd_vel_behaviour";
-
-            // Deaktivierung Gamepad
-            while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-                if (srvClCmdVelMuxSelect.call(selectMsg)) {
-                    count = 0;
-                    gamepadEnabled = !gamepadEnabled;
-                    ROS_INFO("Gamepad disabled.");
-                    break;
-                } else {
-                    ROS_INFO("Command velocity mux couldn't be called. Retry.");
-                }
-
-                count++;
-                loopRate.sleep();
+            else
+            {
+                ROS_INFO("Command velocity mux couldn't be called.");
+            }
+        }
+        else
+        {
+            if (switchGamepadUsage("/hanse/commands/cmd_vel_behaviour"))
+            {
+                ROS_INFO("Gamepad disabled.");
+            }
+            else
+            {
+                ROS_INFO("Command velocity mux couldn't be called.");
             }
         }
     }
 
-    if (gamepadEnabled) {
-        if (fabs(joy->axes[config.linear_axis]) < config.joy_deadzone) {
-            linearValue = 0;
-        } else {
-            linearValue = config.linear_scale * joy->axes[config.linear_axis];
-        }
-
-        if (fabs(joy->axes[config.angular_axis]) < config.joy_deadzone) {
-            angularValue = 0;
-        } else {
-            angularValue = config.angular_scale * joy->axes[config.angular_axis];
-        }
-
-        if (trig->isSet(config.depth_up_button)) {
-            depthValue -= config.depth_delta;
-        }
-
-        if (trig->isSet(config.depth_down_button)) {
-            depthValue += config.depth_delta;
-        }
-
-        if (depthValue < 0) {
-            depthValue = 0;
-        }
-
-        if (depthValue != depthLastValue) {
-            hanse_srvs::SetTarget depthMsg;
-            depthMsg.request.target = depthValue;
-            depthLastValue = depthValue;
-
-            // Setzen der Tiefe
-            while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-                if (srvClEngineSetDepth.call(depthMsg)) {
-                    count = 0;
-                    break;
-                } else {
-                    ROS_INFO("Target depth couldn't be set. Retry.");
-                }
-
-                count++;
-                loopRate.sleep();
-            }
-        }
+    // handle movement if gamepad enabled
+    if (gamepad_enabled_)
+    {
+        handleGamepadMove(joy->axes);
     }
 
-    if (changed) {
-        // Senden der Engine-Nachrichten
-        while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-            if (srvClEngineCommandDepth.call(commandMsg)) {
-                count = 0;
-                break;
-            } else {
-                ROS_INFO("Depth engine couldn't be called. Retry.");
-            }
+    // send engine command to depth and orientation engine
+    sendEngineCommands();
+}
 
-            count++;
-            loopRate.sleep();
+bool TeleopHanse::switchGamepadUsage(const char *commandVelocityTopic)
+{
+    uint8_t counter = 0;
+    ros::Rate loop_rate(4);
+
+    // select message for command velocity muxing
+    topic_tools::MuxSelect select_msg;
+    select_msg.request.topic = commandVelocityTopic;
+
+    // loop and try to call the command velocity mux to switch input
+    while(ros::ok() && counter < NUM_SERVICE_LOOPS)
+    {
+        if (srv_vel_mux_select_.call(select_msg))
+        {
+            gamepad_enabled_ = !gamepad_enabled_;
+            return true;
         }
 
-        while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-            if (srvClEngineCommandOrientation.call(commandMsg)) {
-                count = 0;
-                break;
-            } else {
-                ROS_INFO("Orientation engine couldn't be called. Retry.");
-            }
+        counter++;
+        loop_rate.sleep();
+    }
 
-            count++;
-            loopRate.sleep();
-        }
+    return false;
+}
+
+void TeleopHanse::handleGamepadMove(std::vector<float> axes)
+{
+    double depth = 0;
+
+    // handle linear movement
+    if (fabs(axes[config_.linear_axis]) < config_.joy_deadzone)
+    {
+        linear_value_ = 0;
+    }
+    else
+    {
+        linear_value_ = config_.linear_scale * axes[config_.linear_axis];
+    }
+
+    // handle angular movement
+    if (fabs(axes[config_.angular_axis]) < config_.joy_deadzone)
+    {
+        angular_value_ = 0;
+    }
+    else
+    {
+        angular_value_ = config_.angular_scale * axes[config_.angular_axis];
+    }
+
+    // handle going up
+    if (trig_.isSet(config_.depth_up_button))
+    {
+        depth = -config_.depth_delta;
+    }
+
+    // handle going deeper
+    if (trig_.isSet(config_.depth_down_button))
+    {
+        depth = config_.depth_delta;
+    }
+
+    // call depth engine to set the target depth
+    if (depth != 0.0)
+    {
+        sendTargetDepth(depth);
     }
 }
 
+bool TeleopHanse::sendTargetDepth(const double increment)
+{
+    uint8_t counter = 0;
+    ros::Rate loop_rate(4);
 
+    hanse_srvs::SetTarget depth_msg;
+    depth_msg.request.target = increment;
 
-int main(int argc, char** argv) {
+    // Setzen der Tiefe
+    while(ros::ok() && counter < NUM_SERVICE_LOOPS)
+    {
+        if (srv_client_engine_inc_depth_.call(depth_msg))
+        {
+            return true;
+        }
+
+        counter++;
+        loop_rate.sleep();
+    }
+
+    return false;
+}
+
+void TeleopHanse::sendEngineCommands()
+{   
+    // send depth and orientation command message
+    bool depth_sent = depth_cmd_h_.sendMsg();
+    bool sent = depth_sent && orientation_cmd_h_.sendMsg();
+
+    // if depth could be sent and was emergency stop, print changes and
+    // setting target depth to 0
+    if (depth_sent)
+    {
+        if (EngineCommandHandle::isEmergencyStopSet())
+        {
+            EngineCommandHandle::printChanges();
+
+            ROS_INFO("Depth is set to 0.");
+        }
+    }
+    // reset message if it couldn't be send
+    else
+    {
+        EngineCommandHandle::recoverState();
+        ROS_INFO("Depth engine couldn't be called.");
+    }
+
+    // if both messages could be sent and was emergency stop, disable
+    // movement and gamepad
+    if (sent)
+    {
+        if (EngineCommandHandle::isEmergencyStopSet())
+        {
+            angular_value_ = 0;
+            linear_value_ = 0;
+            ROS_INFO("Movement is stopped.");
+            gamepad_enabled_ = false;
+            ROS_INFO("Gamepad disabled.");
+        }
+
+        // print changes and reset message
+        EngineCommandHandle::printChanges();
+        EngineCommandHandle::resetMsg();
+    }
+    // if orientation message could not be send, and was not emergency stop,
+    // reset message to previous state
+    // if emergency stop, send this message again next time until both calls
+    // succeed or none of them
+    else
+    {
+        if (!EngineCommandHandle::isEmergencyStopSet())
+        {
+            EngineCommandHandle::recoverState();
+        }
+
+        ROS_INFO("Orientation engine couldn't be called.");
+    }
+}
+
+int main(int argc, char** argv)
+{
 
     ros::init(argc, argv, "teleop_hanse");
     ros::start();

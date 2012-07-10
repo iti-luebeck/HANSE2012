@@ -1,0 +1,8 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~publish_frequency" : \b [double] how often to send data to server min: 0.0, default: 10.0, max: 1000.0
+- \b "~gamepad_timeout" : \b [int] timeout in seconds for gamepad min: 0, default: 4, max: 300
+- \b "~orientation_pid_enabled_at_start" : \b [bool] rotation speed pid enabled at start min: False, default: True, max: True
+
