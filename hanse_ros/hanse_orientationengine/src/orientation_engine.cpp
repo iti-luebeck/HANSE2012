@@ -3,62 +3,72 @@
 #include "hanse_orientationengine/orientation_engine.h"
 
 OrientationEngine::OrientationEngine() :
-    linearSpeed(0),
-    angularSpeed(0),
-    orientationCurrent(0),
-    orientationTarget(0),
-    orientationInit(false),
-    emergencyStop(false),
-    pidsEnabled(true),
-    orientationPidEnabled(false),
-    motorsEnabled(true),
-    orientationOutput(0)
+    linear_speed_(0),
+    angular_speed_(0),
+    orientation_current_(0),
+    orientation_target_(0),
+    orientation_init_(false),
+    emergency_stop_(false),
+    pids_enabled_(true),
+    orientation_pid_enabled_(false),
+    motors_enabled_(true),
+    gamepad_running_(false),
+    orientation_output_(0)
 {
     // Initialisierung der Standard-Service Nachrichten.
-    enableMsg.request.enable = true;
-    disableMsg.request.enable = false;
+    enable_msg_.request.enable = true;
+    disable_msg_.request.enable = false;
 
     // Registrierung der Publisher und Subscriber.
-    pubOrientationCurrent = node.advertise<std_msgs::Float64>("/hanse/pid/orientation/input", 1);
+    pub_orientation_current_ = nh_.advertise<std_msgs::Float64>("/hanse/pid/orientation/input", 1);
 
-    pubMotorLeft = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/left", 1);
-    pubMotorRight = node.advertise<hanse_msgs::sollSpeed>("/hanse/motors/right", 1);
+    pub_motor_left_ = nh_.advertise<hanse_msgs::sollSpeed>("/hanse/motors/left", 1);
+    pub_motor_right_ = nh_.advertise<hanse_msgs::sollSpeed>("/hanse/motors/right", 1);
 
-    subVelocity = node.subscribe<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 10,
+    sub_velocity_ = nh_.subscribe<geometry_msgs::Twist>("/hanse/commands/cmd_vel", 10,
                                                        &OrientationEngine::velocityCallback, this);
-    subXsens = node.subscribe<sensor_msgs::Imu>(
+    sub_xsens_ = nh_.subscribe<sensor_msgs::Imu>(
                 "/hanse/imu", 10, &OrientationEngine::xsensCallback, this);
 
-    subOrientationOutput = node.subscribe<std_msgs::Float64>(
+    sub_orientation_output_ = nh_.subscribe<std_msgs::Float64>(
                 "/hanse/pid/orientation/output", 10, &OrientationEngine::orientationOutputCallback, this);
 
-    publishTimer = node.createTimer(ros::Duration(1),
+    publish_timer_ = nh_.createTimer(ros::Duration(1),
                                     &OrientationEngine::publishTimerCallback, this);
 
+    gamepad_timer_ = nh_.createTimer(ros::Duration(300),
+                                      &OrientationEngine::gamepadTimerCallback, this);
+    sub_mux_selected_ = nh_.subscribe<std_msgs::String>("/hanse/commands/cmd_vel_mux/selected",
+                                                         1, &OrientationEngine::muxSelectedCallback, this);
+
     // Registrierung der Services.
-    srvHandleEngineCommand = node.advertiseService("engine/orientation/handleEngineCommand",
+    srv_handle_engine_command_ = nh_.advertiseService("engine/orientation/handleEngineCommand",
                                                    &OrientationEngine::handleEngineCommand, this);
 
-    srvEnableOrientationPid = node.advertiseService("engine/orientation/enableOrientationPid",
+    srv_enable_orientation_pid_ = nh_.advertiseService("engine/orientation/enableOrientationPid",
                                                     &OrientationEngine::enableOrientationPid, this);
 
-    srvEnableMotors = node.advertiseService("engine/orientation/enableMotors",
+    srv_enable_motors_ = nh_.advertiseService("engine/orientation/enableMotors",
                                             &OrientationEngine::enableMotors, this);
 
-    srvSetEmergencyStop = node.advertiseService("engine/orientation/setEmergencyStop",
+    srv_set_emergency_stop_ = nh_.advertiseService("engine/orientation/setEmergencyStop",
                                                 &OrientationEngine::setEmergencyStop, this);
 
-    dynReconfigureCb = boost::bind(&OrientationEngine::dynReconfigureCallback, this, _1, _2);
-    dynReconfigureSrv.setCallback(dynReconfigureCb);
+    dyn_reconfigure_cb_ = boost::bind(&OrientationEngine::dynReconfigureCallback, this, _1, _2);
+    dyn_reconfigure_srv_.setCallback(dyn_reconfigure_cb_);
 
     // Registrierung der Service Clients.
-    srvClOrientationPid  = node.serviceClient<hanse_srvs::Bool>("/hanse/pid/orientation/enable");
+    srv_client_orientation_pid_  = nh_.serviceClient<hanse_srvs::Bool>("/hanse/pid/orientation/enable");
 
-    if (config.orientation_pid_enabled_at_start) {
-        if (callOrientationPidEnableService(true)) {
+    if (config_.orientation_pid_enabled_at_start)
+    {
+        if (callOrientationPidEnableService(true))
+        {
             ROS_INFO("Orientation PID enabled.");
-            orientationPidEnabled = true;
-        } else {
+            orientation_pid_enabled_ = true;
+        }
+        else
+        {
             ROS_ERROR("Orientation PID couldn't be enabled. Shutdown.");
             ros::shutdown();
         }
@@ -67,38 +77,53 @@ OrientationEngine::OrientationEngine() :
     ROS_INFO("Orientation engine started.");
 }
 
-void OrientationEngine::dynReconfigureCallback(hanse_orientationengine::OrientationengineConfig &config, uint32_t level) {
+void OrientationEngine::dynReconfigureCallback(hanse_orientationengine::OrientationengineConfig &config, uint32_t level)
+{
     ROS_INFO("got new parameters, level=%d", level);
 
-    this->config = config;
+    config_ = config;
 
-    publishTimer.setPeriod(ros::Duration(1.0/config.publish_frequency));
+    publish_timer_.setPeriod(ros::Duration(1.0/config.publish_frequency));
+    gamepad_timer_.setPeriod(ros::Duration(config.gamepad_timeout));
 }
 
 // Auswertung und Zwischenspeicherung der cmd_vel Nachricht.
 void OrientationEngine::velocityCallback(
-        const geometry_msgs::Twist::ConstPtr& twist) {
+        const geometry_msgs::Twist::ConstPtr& twist)
+{
+    if (gamepad_running_) {
+        gamepad_timer_.stop();
+    }
 
-    linearSpeed = twist->linear.x;
-    angularSpeed = twist->angular.z;
 
-    if (angularSpeed == 0 && !orientationPidEnabled) {
+    linear_speed_ = twist->linear.x;
+    angular_speed_ = twist->angular.z;
+
+    if (angular_speed_ == 0 && !orientation_pid_enabled_)
+    {
         callOrientationPidEnableService(true);
-        orientationPidEnabled = true;
-    } else if (angularSpeed != 0 && orientationPidEnabled) {
+        orientation_pid_enabled_ = true;
+    }
+    else if (angular_speed_ != 0 && orientation_pid_enabled_)
+    {
         callOrientationPidEnableService(false);
-        orientationPidEnabled = false;
+        orientation_pid_enabled_ = false;
+    }
+
+    if (gamepad_running_) {
+        gamepad_timer_.start();
     }
 }
 
 // Auswertung und Zwischenspeicherung der XSens Eingabedaten.
 void OrientationEngine::xsensCallback(
-        const sensor_msgs::Imu::ConstPtr& xsensData) {
+        const sensor_msgs::Imu::ConstPtr& imu)
+{
 
-    Eigen::Quaternionf flipped(xsensData->orientation.w,
-                               xsensData->orientation.x,
-                               xsensData->orientation.y,
-                               xsensData->orientation.z);
+    Eigen::Quaternionf flipped(imu->orientation.w,
+                               imu->orientation.x,
+                               imu->orientation.y,
+                               imu->orientation.z);
 
     // This undos the rotation of the xsens (180 deg around the y
     // axis) this is why: we first (right side) put the xsens into hanse the
@@ -108,142 +133,206 @@ void OrientationEngine::xsensCallback(
     Eigen::Quaternionf orientation = flipped * Eigen::AngleAxis<float>(M_PI, Eigen::Vector3f(0, 1, 0));
     Eigen::Vector3f direction = orientation * Eigen::Vector3f(1, 0, 0);
 
-    orientationCurrent = atan2(direction.y(), direction.x());
+    orientation_current_ = atan2(direction.y(), direction.x());
 
-//    ROS_INFO("Angle: %f", orientationCurrent);
+    ROS_INFO("Angle: %f", orientation_current_);
 
-    if (angularSpeed != 0 || !orientationInit) {
-        orientationInit = true;
-        orientationTarget = orientationCurrent;
+    if (angular_speed_ != 0 || !orientation_init_)
+    {
+        orientation_init_ = true;
+        orientation_target_ = orientation_current_;
     }
 }
 
 // Auswertung und Zwischenspeicherung der Ausgabedaten des Orientierungs-PID-Reglers.
 void OrientationEngine::orientationOutputCallback(
-        const std_msgs::Float64::ConstPtr& orientationOutput) {
+        const std_msgs::Float64::ConstPtr& orientation_output)
+{
+    orientation_output_ = orientation_output->data;
+}
 
-    this->orientationOutput = orientationOutput->data;
+void OrientationEngine::muxSelectedCallback(const std_msgs::String::ConstPtr &topic)
+{
+    if (topic->data.find("cmd_vel_joystick") != std::string::npos)
+    {
+        gamepad_running_ = true;
+        gamepad_timer_.start();
+    }
+    else
+    {
+        gamepad_running_ = false;
+        gamepad_timer_.stop();
+    }
+}
+
+void OrientationEngine::gamepadTimerCallback(const ros::TimerEvent &e)
+{
+    gamepad_timer_.stop();
+    linear_speed_ = 0;
+    angular_speed_ = 0;
+    ROS_INFO("Gamepad connection lost. Stop movement.");
 }
 
 // Ausführung jeweils nach Ablauf des Timers. Wird verwendet, um sämtliche
 // Ausgaben auf die vorgesehenen Topics zu schreiben.
-void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e) {
+void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e)
+{
 
-    hanse_msgs::sollSpeed motorLeftMsg;
-    hanse_msgs::sollSpeed motorRightMsg;
-    motorLeftMsg.data = 0;
-    motorRightMsg.data = 0;
+    hanse_msgs::sollSpeed motor_left_msg;
+    hanse_msgs::sollSpeed motor_right_msg;
+    motor_left_msg.data = 0;
+    motor_right_msg.data = 0;
 
-    if(!emergencyStop && motorsEnabled) {
+    if(!emergency_stop_ && motors_enabled_)
+    {
          // Orientierungssteuerung.
-         std_msgs::Float64 orientationMsg;
+         std_msgs::Float64 orientation_msg;
          double rotation;
-         //double absoluteDistance = std::abs(orientationTarget) + std::abs(orientationCurrent);
 
-         rotation = - (orientationTarget - orientationCurrent);
+         rotation = - (orientation_target_ - orientation_current_);
 
-         if(rotation < -M_PI) {
+         if(rotation < -M_PI)
+         {
              rotation = rotation + 2 * M_PI;
-         } else if (rotation >= M_PI){
+         }
+         else if (rotation >= M_PI)
+         {
              rotation = rotation - 2 * M_PI;
          }
 
-         orientationMsg.data = rotation;
-         pubOrientationCurrent.publish(orientationMsg);
+         orientation_msg.data = rotation;
+         pub_orientation_current_.publish(orientation_msg);
 
          // Motorsteuerung
-         int16_t motorLeft = 0;
-         int16_t motorRight = 0;
+         int16_t motor_left = 0;
+         int16_t motor_right = 0;
 
          // Berechnung der Ansteuerungsstärke der seitlichen Motoren.
-         if (angularSpeed == 0) {
-             motorLeft = linearSpeed * 127 - orientationOutput;
-             motorRight = linearSpeed * 127 + orientationOutput;
-         } else {
-             motorLeft = linearSpeed * 127 - angularSpeed * 127;
-             motorRight = linearSpeed * 127 + angularSpeed * 127;
+         if (angular_speed_ == 0)
+         {
+             motor_left = linear_speed_ * 127 - orientation_output_;
+             motor_right = linear_speed_ * 127 + orientation_output_;
+         }
+         else
+         {
+             motor_left = linear_speed_ * 127 - angular_speed_ * 127;
+             motor_right = linear_speed_ * 127 + angular_speed_ * 127;
          }
 
          // Beschränkung der Ansteuerungsstärke auf -127 bis 127.
-         if(motorLeft > 127) {
-             motorLeft = 127;
-         } else if(motorLeft < -127) {
-             motorLeft = -127;
+         if(motor_left > 127)
+         {
+             motor_left = 127;
+         }
+         else if(motor_left < -127)
+         {
+             motor_left = -127;
          }
 
-         if(motorRight > 127) {
-             motorRight = 127;
-         } else if(motorRight < -127) {
-             motorRight = -127;
+         if(motor_right > 127)
+         {
+             motor_right = 127;
+         }
+         else if(motor_right < -127)
+         {
+             motor_right = -127;
          }
 
-         motorLeftMsg.data = motorLeft;
-         motorRightMsg.data = motorRight;
+         motor_left_msg.data = motor_left;
+         motor_right_msg.data = motor_right;
     }
 
-    pubMotorLeft.publish(motorLeftMsg);
-    pubMotorRight.publish(motorRightMsg);
+    pub_motor_left_.publish(motor_left_msg);
+    pub_motor_right_.publish(motor_right_msg);
 }
 
 bool OrientationEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &req,
-                                        hanse_srvs::EngineCommand::Response &res) {
+                                        hanse_srvs::EngineCommand::Response &res)
+{
 
-    if (req.setEmergencyStop && !emergencyStop) {
-        emergencyStop = true;
-        pidsEnabled = false;
+    if (req.setEmergencyStop && !emergency_stop_)
+    {
+        emergency_stop_ = true;
+        pids_enabled_ = false;
 
         // Deaktivierung aller PID-Regler.
-        if(orientationPidEnabled) {
-            if (callOrientationPidEnableService(false)) {
+        if(orientation_pid_enabled_)
+        {
+            if (callOrientationPidEnableService(false))
+            {
                 ROS_INFO("Orientation PID disabled.");
-            } else {
+            }
+            else
+            {
                 ROS_ERROR("Orientation PID couldn't be disabled.");
             }
         }
 
         // Bewegung auf 0 setzen
-        linearSpeed = 0;
-        angularSpeed = 0;
-    } else if (!req.setEmergencyStop) {
-        if (emergencyStop) {
-            emergencyStop = false;
-            pidsEnabled = true;
+        linear_speed_ = 0;
+        angular_speed_ = 0;
+    }
+    else if (!req.setEmergencyStop)
+    {
+        if (emergency_stop_)
+        {
+            emergency_stop_ = false;
+            pids_enabled_ = true;
 
-            if (req.enableOrientationPid) {
-                if (callOrientationPidEnableService(true)) {
+            if (req.enableOrientationPid)
+            {
+                if (callOrientationPidEnableService(true))
+                {
                     ROS_INFO("Orientation PID enabled.");
-                    orientationPidEnabled = true;
-                } else {
+                    orientation_pid_enabled_ = true;
+                }
+                else
+                {
                     ROS_ERROR("Orientation PID couldn't be enabled.");
-                    orientationPidEnabled = false;
+                    orientation_pid_enabled_ = false;
                 }
             }
-        } else {
-            if (!orientationPidEnabled && req.enableOrientationPid) {
-                if (callOrientationPidEnableService(true)) {
+        }
+        else
+        {
+            if (!orientation_pid_enabled_ && req.enableOrientationPid)
+            {
+                if (callOrientationPidEnableService(true))
+                {
                     ROS_INFO("Orientation PID enabled.");
-                    orientationPidEnabled = true;
-                } else {
+                    orientation_pid_enabled_ = true;
+                }
+                else
+                {
                     ROS_ERROR("Orientation PID couldn't be enabled.");
                 }
-            } else if (orientationPidEnabled && !req.enableOrientationPid) {
-                if (callOrientationPidEnableService(false)) {
+            }
+            else if (orientation_pid_enabled_ && !req.enableOrientationPid)
+            {
+                if (callOrientationPidEnableService(false))
+                {
                     ROS_INFO("Orientation PID disabled.");
-                    orientationPidEnabled = false;
-                } else {
+                    orientation_pid_enabled_ = false;
+                }
+                else
+                {
                     ROS_ERROR("Orientation PID couldn't be disabled.");
                 }
             }
         }
 
-        if (motorsEnabled != req.enableMotors) {
-            if (req.enableMotors) {
+        if (motors_enabled_ != req.enableMotors)
+        {
+            if (req.enableMotors)
+            {
                 ROS_INFO("Motors enabled.");
-            } else {
+            }
+            else
+            {
                 ROS_INFO("Motors disabled.");
             }
 
-            motorsEnabled = req.enableMotors;
+            motors_enabled_ = req.enableMotors;
         }
     }
 
@@ -251,65 +340,91 @@ bool OrientationEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &
 }
 
 bool OrientationEngine::enableOrientationPid(hanse_srvs::Bool::Request &req,
-                                         hanse_srvs::Bool::Response &res) {
+                                         hanse_srvs::Bool::Response &res)
+{
 
-    if (pidsEnabled) {
-        if (!orientationPidEnabled && req.enable) {
-            if (callOrientationPidEnableService(true)) {
+    if (pids_enabled_)
+    {
+        if (!orientation_pid_enabled_ && req.enable)
+        {
+            if (callOrientationPidEnableService(true))
+            {
                 ROS_INFO("Orientation PID enabled.");
-                orientationPidEnabled = true;
-            } else {
+                orientation_pid_enabled_ = true;
+            }
+            else
+            {
                 ROS_ERROR("Orientation PID couldn't be enabled.");
             }
-        } else if (orientationPidEnabled && !req.enable) {
-            if (callOrientationPidEnableService(false)) {
+        }
+        else if (orientation_pid_enabled_ && !req.enable)
+        {
+            if (callOrientationPidEnableService(false))
+            {
                 ROS_INFO("Orientation PID disabled.");
-                orientationPidEnabled = false;
-            } else {
+                orientation_pid_enabled_ = false;
+            }
+            else
+            {
                 ROS_ERROR("Orientation PID couldn't be disabled.");
             }
         }
-    } else {
-        orientationPidEnabled = req.enable;
+    }
+    else
+    {
+        orientation_pid_enabled_ = req.enable;
     }
 
     return true;
 }
 
 bool OrientationEngine::enableMotors(hanse_srvs::Bool::Request &req,
-                                 hanse_srvs::Bool::Response &res) {
-    motorsEnabled = req.enable;
+                                 hanse_srvs::Bool::Response &res)
+{
+    motors_enabled_ = req.enable;
 
     return true;
 }
 
 bool OrientationEngine::setEmergencyStop(hanse_srvs::Bool::Request &req,
-                                     hanse_srvs::Bool::Response &res) {
+                                     hanse_srvs::Bool::Response &res)
+{
 
-    if (req.enable && !emergencyStop) {
-        emergencyStop = true;
-        pidsEnabled = false;
+    if (req.enable && !emergency_stop_)
+    {
+        emergency_stop_ = true;
+        pids_enabled_ = false;
 
         // Deaktivierung aller PID-Regler.
-        if(orientationPidEnabled) {
-            if (callOrientationPidEnableService(false)) {
+        if(orientation_pid_enabled_)
+        {
+            if (callOrientationPidEnableService(false))
+            {
                 ROS_INFO("Orientation PID disabled.");
-            } else {
+            }
+            else
+            {
                 ROS_ERROR("Orientation PID couldn't be disabled.");
             }
         }
 
         // Bewegung auf 0 setzen
-        linearSpeed = 0;
-        angularSpeed = 0;
-    } else if (!req.enable && emergencyStop) {
-        emergencyStop = false;
-        pidsEnabled = true;
+        linear_speed_ = 0;
+        angular_speed_ = 0;
+    }
+    else if (!req.enable && emergency_stop_)
+    {
+        emergency_stop_ = false;
+        pids_enabled_ = true;
 
-        if(orientationPidEnabled) {
-            if (callOrientationPidEnableService(true)) {
+        if(orientation_pid_enabled_)
+        {
+            if (callOrientationPidEnableService(true))
+            {
                 ROS_INFO("Orientation PID enabled.");
-            } else {
+            }
+            else
+            {
                 ROS_ERROR("Orientation PID couldn't be enabled.");
             }
         }
@@ -318,25 +433,30 @@ bool OrientationEngine::setEmergencyStop(hanse_srvs::Bool::Request &req,
     return true;
 }
 
-bool OrientationEngine::callOrientationPidEnableService(const bool msg) {
-    int8_t count = 0;
-    ros::Rate loopRate(4);
+bool OrientationEngine::callOrientationPidEnableService(const bool msg)
+{
+    int8_t counter = 0;
+    ros::Rate loop_rate(4);
     bool success = false;
 
-    while(ros::ok() && count < NUM_SERVICE_LOOPS) {
-        if ((msg && srvClOrientationPid.call(enableMsg)) || (!msg && srvClOrientationPid.call(disableMsg))) {
+    while(ros::ok() && counter < NUM_SERVICE_LOOPS)
+    {
+        if ((msg && srv_client_orientation_pid_.call(enable_msg_)) ||
+                (!msg && srv_client_orientation_pid_.call(disable_msg_)))
+        {
             success = true;
             break;
         }
 
-        count++;
-        loopRate.sleep();
+        counter++;
+        loop_rate.sleep();
     }
 
     return success;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     ros::init(argc, argv, "engine_control");
 
     ros::start();

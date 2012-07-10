@@ -4,6 +4,7 @@
   <param name="publish_frequency" type="double" value="10.0" />
   <param name="min_depth_pressure" type="int" value="950" />
   <param name="max_depth_pressure" type="int" value="1500" />
+  <param name="gamepad_timeout" type="int" value="60" />
   <param name="depth_pid_enabled_at_start" type="bool" value="True" />
 </node>
 \endverbatim

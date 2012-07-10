@@ -2,5 +2,6 @@
 publish_frequency: 10,
 min_depth_pressure: 950,
 max_depth_pressure: 2000,
+gamepad_timeout: 60,
 depth_pid_enabled_at_start: True
 }

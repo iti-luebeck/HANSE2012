@@ -65,8 +65,6 @@ sensor_msgs::Image AudioPlot::plotData()
     plot.is_bigendian = false;
     plot.data.resize(width * height * 3);
 
-   ROS_INFO("Plot data...");
-
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             plot.data[3 * (x + width * y) + 0] = data[3 * ((x + shift) % width + width * y) + 0];

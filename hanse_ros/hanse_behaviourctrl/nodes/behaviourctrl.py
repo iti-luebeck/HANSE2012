@@ -19,7 +19,7 @@ from hanse_srvs.srv import *
 
 
 class Global:
-	SIMULATOR = True
+	SIMULATOR = False
 	time_initial = 0.0
 	duration = rospy.Duration(0,0)
 	logfile = " "
@@ -41,15 +41,15 @@ class Global:
 	# variable settings
 	###############
 	#timer
-	timer = 10
+	timer = 360
 	#target depth in cm
-	depth = 40
+	depth = 70
 	#waypoint middle line
-	waypt1 = Point(1,1,1)
+	waypt1 = Point(69,74,0)
 	#waypoint past validation gate
-	waypt2 = Point(1,1,1)
+	waypt2 = Point(77,74,1)
 	#waypoint 180 degree turn
-	waypt3 = Point(1,1,1)
+	waypt3 = Point(75,74,1)
 	#waypoint end of pipe
 	waypt4 = Point(1,1,1)
 	#waypoint midwater target
@@ -126,7 +126,7 @@ class submerge(smach.State):
 	Global.call_depth(Global.depth)
 	while Global.duration.secs < 60:
 		#rospy.loginfo(str(Global.pressure-Global.pressure_initial))
-		if (Global.pressure-Global.pressure_initial) > Global.depth/2:
+		if (Global.pressure-Global.pressure_initial) > Global.depth/3:
 			rospy.loginfo('success')
 			return Transitions.Submerged
 	return Transitions.Submerge_failed			
@@ -241,7 +241,7 @@ class surface(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv surfacing"
-	call_depth(0.0)
+	Global.call_depth(0.0)
 	rospy.sleep(10)
 	
 	return Transitions.Surfaced
@@ -279,7 +279,7 @@ def create_nav_goal(x, y, z):
 
 #creates a logfile that is used for one mission
 def createfile(i):
-    Global.logfile = "hanselog_"+str(i)+".log"
+    Global.logfile = os.path.expanduser("~/hanselog_"+str(i)+".log")
     if os.path.isfile(Global.logfile):
 	createfile(i+1)
     else:
@@ -323,7 +323,7 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.Surface, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 

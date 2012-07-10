@@ -5,6 +5,7 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Int32.h>
+#include <hanse_msgs/PingerDetection.h>
 #include <sstream>
 #include <cmath>
 
@@ -59,7 +60,7 @@ private:
     void initVariables();
     void configAudio();
 
-    void audioProcessing();
+    void audioProcessing(double leftRaw, double rightRaw);
 
     double leftNonCoherentFSKDemodulator(double x, bool skipPop);
     double rightNonCoherentFSKDemodulator(double y, bool skipPop);
@@ -75,8 +76,7 @@ private:
     ros::NodeHandle nh;
     ros::Subscriber input_subscriber;
     ros::Publisher angle_publisher;
-    ros::Publisher left_publisher;
-    ros::Publisher right_publisher;
+    ros::Publisher pinger_publisher;
 
     //Dyn Reconfigure
 
@@ -103,6 +103,7 @@ private:
     bool plotGoertzel;
     bool plotAngle;
     bool saveData;
+    bool plotAnalysis;
 
     // Variables
     int lognr;
@@ -118,6 +119,11 @@ private:
         std_msgs::Float32 winkel;
 
 
+        double leftMicroAverageMagnitude;
+        int leftMicroAvgCounter;
+        double rightMicroAverageMagnitude;
+        int rightMicroAvgCounter;
+
     QAudioInput *audioInput;
     QIODevice *ioDevice;
 
@@ -131,19 +137,6 @@ private:
     QFile *inputFile;
     QTextStream* inputStream;
 
-    QList<double> saveListLeftMicroInt;
-    QList<double> saveListRightMicroInt;
-    QList<int> saveListTime;
-
-    QList<double> saveListLeftFSK;
-    QList<double> saveListRightFSK;
-
-    QList<double> saveListAngle;
-
-    QList<int> inputTime;
-    QList<double> inputLeftMicroInt;
-    QList<double> inputRightMicroInt;
-
     QString recordSource;
 
     QByteArray audioBuffer;
@@ -155,16 +148,13 @@ private:
 
     int sampleCounter;
 
-    QList<double> leftMicro;
-    QList<double> rightMicro;
+    int listCounter;
 
     QList<double> leftMicroCos;
     QList<double> leftMicroSin;
 
     QList<double> rightMicroCos;
     QList<double> rightMicroSin;
-
-
 
     double integralSinLeft;
     double integralCosLeft;
@@ -177,6 +167,8 @@ private:
     int cosCounter;
     int sinCounter;
 
+    void leftMicroMagnitudeCalculation(double left);
+    void rightMicroMagnitudeCalculation(double right);
 
 
     int delayAverageElements;
@@ -201,6 +193,7 @@ private:
     double leftFSK;
     double rightFSK;
 
+    int timeoutCounter;
 
     // Config
     double omega;
@@ -208,5 +201,6 @@ private:
     int window;
     double scale;
     double threshold;
+    double fetteSkalierung;
 };
 }

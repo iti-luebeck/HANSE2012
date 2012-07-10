@@ -8,8 +8,6 @@
 class FlankTrigger
 {
 public:
-    FlankTrigger();
-
     void setActual(std::vector<int32_t> actualButtons);
     bool isSet(uint8_t button);
 

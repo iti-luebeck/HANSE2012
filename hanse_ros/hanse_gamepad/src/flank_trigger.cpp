@@ -1,7 +1,4 @@
-
 #include "hanse_gamepad/flank_trigger.h"
-
-FlankTrigger::FlankTrigger() {}
 
 void FlankTrigger::setActual(std::vector<int32_t> actualButtons)
 {
