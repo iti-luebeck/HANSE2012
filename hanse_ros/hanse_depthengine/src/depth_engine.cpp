@@ -160,6 +160,7 @@ void DepthEngine::muxSelectedCallback(const std_msgs::String::ConstPtr &topic)
     if (topic->data.find("cmd_vel_joystick") != std::string::npos)
     {
         gamepad_running_ = true;
+        gamepad_timeout_ = false;
         gamepad_timer_.start();
     }
     else
