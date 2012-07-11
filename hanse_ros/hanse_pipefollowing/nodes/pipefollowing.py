@@ -9,6 +9,7 @@ import smach_ros
 import numpy
 from geometry_msgs.msg import PoseStamped, Point, Twist, Vector3
 from hanse_msgs.msg import Object, sollSpeed
+from std_msgs.msg import  String
 from hanse_pipefollowing.cfg import PipeFollowingConfig
 from hanse_pipefollowing.msg import PipeFollowingAction
 
@@ -41,6 +42,7 @@ class Config:
 	robCenterY = 240
 	maxDistance = 320
 	mirror = False
+	pipe_passed = 63.6
 
 class Global:
 	x = 0.0
@@ -52,6 +54,8 @@ class Global:
 	isSizeTooSmall = False
 	currentPosition = Point()
 	is_seen = True
+	state = " "
+	distance = 0
 
 
 #==============================================================================
@@ -119,7 +123,7 @@ class IsSeen(AbortableState):
 			if Global.is_seen:
 				# end of pipe reached?
 				#Coordiantes for end of pipe
-				if Global.currentPosition.y > 5:
+				if Global.currentPosition.y > Global.pipe_passed:
 					setMotorSpeed(0,0)
 					return Transitions.Passed
 			# lost
@@ -270,6 +274,10 @@ def setMotorSpeed(lin, ang):
 	#pub_motor_left.publish(sollSpeed(data = left))
 	#pub_motor_right.publish(sollSpeed(data = right))
 
+def timerCallback(event):
+    pub_behaviour_info.publish(String(data = 'Orientation:  '+str(Global.orientation)+ ' x-Distance to pipe:  '+str(Global.distance)))
+
+
 
 #==============================================================================
 # main
@@ -289,6 +297,8 @@ if __name__ == '__main__':
 	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
 	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
+	pub_behaviour_info = rospy.Publisher('/hanse/behaviour/pipefollow_info', String)
+	rospy.Timer(rospy.Duration(1.0 / 10), timerCallback)
 
 	# Create a SMACH state machine
 	sm = smach.StateMachine(outcomes=[Transitions.Passed, Transitions.Aborted])

@@ -15,7 +15,7 @@ public:
 
     void setSamplesPerPixel(int samples) { samplesPerPixel = samples; }
 
-    void setCounter(int counterNew) { counter = counterNew; }
+    void setCounter(int counterNew) { counterMax = counterNew; }
 
 
 private:
@@ -29,6 +29,7 @@ private:
 
     char *data;
     int counter;
+    int counterMax;
     int counterPixel;
     int shift;
 };

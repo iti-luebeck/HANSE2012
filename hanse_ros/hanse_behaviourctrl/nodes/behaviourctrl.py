@@ -31,6 +31,8 @@ class Global:
 	nav_client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
 	pipe_client = actionlib.SimpleActionClient('/pipefollowing', PipeFollowingAction)
 	action = " "
+	wf_action = " "
+	pf_action = " "
 	action_state = " "
 	tries_valGate = 0
 	tries_pipeFollow = 0
@@ -122,9 +124,9 @@ class submerge(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.Submerged,Transitions.Submerge_failed])
         
     def execute(self, userdata):
-	Global.action = "auv submerging"
+	Global.action = "auv submerging "
 	Global.call_depth(Global.depth)
-	while Global.duration.secs < 60:
+	while Global.duration.secs < 30:
 		#rospy.loginfo(str(Global.pressure-Global.pressure_initial))
 		if (Global.pressure-Global.pressure_initial) > Global.depth/3:
 			rospy.loginfo('success')
@@ -142,18 +144,20 @@ class validationGate(smach.State):
         
 
     def execute(self, userdata):
-	Global.action = "navigate to validation gate"
+	Global.action = "navigate to validation gate : waypoint ("+str(waypt1.x-50)+","+str(waypt1.y-50)+")"
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	goal = create_nav_goal(Global.waypt1.x, Global.waypt1.y, 0.0)
-	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(180))
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
         if state == GoalStatus.SUCCEEDED and Global.duration.secs < 360:
+		Global.action = "navigate to validation gate : waypoint ("+str(waypt2.x-50)+","+str(waypt2.y-50)+")"
 		rospy.loginfo('navigation succeeded')
 		goal = create_nav_goal(Global.waypt2.x, Global.waypt2.y, 0.0)
-		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 		if state == GoalStatus.SUCCEEDED:
+			Global.action = "navigate to validation gate : waypoint ("+str(waypt3.x-50)+","+str(waypt3.y-50)+")"
 			rospy.loginfo('navigation succeeded')
 			goal = create_nav_goal(Global.waypt3.x, Global.waypt3.y, 0.0)
-			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 			return Transitions.Goal_passed
 		else:
 			rospy.loginfo('navigation failed: ' + GoalStatus.to_string(state))
@@ -171,7 +175,7 @@ class PipeFollowing(smach.State):
 
     def execute(self, userdata):
 	start_time = Global.duration.secs
-	Global.action = "follow pipe"
+	Global.action = "follow pipe" + Global.pf_action
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
         state = Global.pipe_client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(300))
 
@@ -199,7 +203,7 @@ class navigateToWall(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.navigatewall_passed,Transitions.navigatewall_failed])
 
     def execute(self, userdata):
-	Global.action = "navigate to wallfollowing"
+	Global.action = "navigate to wall following : waypoint ("+str(waypt5.x-58)+","+str(waypt5.y-51)+")"
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	############
 	# enter nav goal for wall
@@ -220,13 +224,13 @@ class WallFollowing(smach.State):
 
     def execute(self, userdata):
 	start_time = Global.duration.secs
-	Global.action = "follow wall"
+	Global.action = "follow wall" + Global.wf_action
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	#Setting the time limit for wallfollowing
 	while Global.duration.secs-start_time < 360:
 		state = Global.wf_client.send_goal_and_wait(WallFollowingGoal(),rospy.Duration(5))
 		#client.cancel_goal()
-		if(Global.currentPosition.y > Global.waypt6.x) :
+		if(Global.currentPosition.x > Global.waypt6.x) :
 			return Transitions.Wall_passed 	
 	
 	return Transitions.Wall_failed
@@ -252,8 +256,8 @@ def timerCallback(event):
     if Global.duration.secs > Global.timer:
 	Global.call_depth(0.0)
     f = open(Global.logfile,"a")
-    f.write('('+str(Global.duration.secs)+','+str(round(Global.currentPosition.x,2))+','
-	+str(round(Global.currentPosition.y,2))+','+str(Global.pressure-Global.pressure_initial)+','+Global.action+')\n')
+    f.write('('+str(Global.duration.secs)+','+str(round(Global.currentPosition.x-50,2))+','
+	+str(round(Global.currentPosition.y-50,2))+','+str(Global.pressure-Global.pressure_initial)+','+Global.action+')\n')
     f.close()
 
 def actionstateCallback(msg): 
@@ -268,6 +272,12 @@ def pressureCallback(msg):
 #getting the position from the localisation
 def positionCallback(msg):	
 	Global.currentPosition = msg.pose.position
+
+def wallfollow_infoCallback(msg):
+	Global.wf_action = msg.data
+
+def pipefollow_infoCallback(msg):
+	Global.pf_action = msg.data
 
 #creating a goal that can be used as a target for the navigation with absolute coordinates x,y and z
 #(z may be set by directly using depth_control	
@@ -308,6 +318,8 @@ def main():
 		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
     rospy.Subscriber('/hanse/pressure/depth', pressure, pressureCallback)
     rospy.Subscriber('/hanse/actionstate', String, actionstateCallback)
+    rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
+    rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
     
 	
 
@@ -323,9 +335,9 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.Surface, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
-                               transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
+                               transitions={Transitions.Goal_passed:States.Surface, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 

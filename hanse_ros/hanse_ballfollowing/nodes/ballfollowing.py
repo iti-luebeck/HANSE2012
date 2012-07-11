@@ -110,7 +110,11 @@ class Seen(AbortableState):
 
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
-				angularSpeed = Config.kpAngle * (IMAGE_COLS / 2 - Global.x) / (IMAGE_COLS / 2)
+				rospy.loginfo(str(Global.x)+ ' ' + str(IMAGE_COLS/2)) 
+				################
+				# gegebenenfalls an die kamera anpassen (division factor)
+				################
+				angularSpeed = Config.kpAngle * (IMAGE_COLS / 4 - Global.x) / (IMAGE_COLS / 2)
 				rospy.loginfo('angular speed: '+str(angularSpeed))
 				setMotorSpeed(Config.fwSpeed, angularSpeed)
 				rospy.sleep(0.1)
@@ -147,6 +151,7 @@ def objectCallback(msg):
 	# rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
 	Global.size = msg.size
 	Global.x = msg.x
+	#rospy.loginfo('HIER WURDE X GEAENDERT' + str(Global.x))
 	Global.y = msg.y
 	#rospy.loginfo('distY: '+repr(distanceY / Config.maxDistance))
 

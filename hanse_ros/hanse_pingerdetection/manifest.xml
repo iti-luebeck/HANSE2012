@@ -4,24 +4,15 @@
      hanse_pingerdetection
 
   </description>
-  <author>Patri(c)k</author>
+  <author>Jannis Harder</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/hanse_pinger</url>
-
-
-  <rosdep name="qt4"/>
-
-  <!-- rosbuild1 -->
-  <depend package="qt_build"/>
+  <url>http://ros.org/wiki/hanse_pingerdetection</url>
   <depend package="roscpp"/>
   <depend package="dynamic_reconfigure"/>
-  <depend package="hanse_msgs"/>  
-  <rosbuild2>
-    <depend package="qt_build"/>
-    <depend package="roscpp"/>
-    <depend package="dynamic_reconfigure"/>
-    <depend package="hanse_msgs"/>
-  </rosbuild2>
-  
+  <depend package="hanse_msgs"/>
+  <depend package="sensor_msgs"/>
+
 </package>
+
+
