@@ -53,6 +53,7 @@ class Global:
 	lastY = 0.0
 	isSizeTooSmall = False
 	currentPosition = Point()
+	is_seen = True
 	state = " "
 	distance = 0
 
@@ -119,7 +120,7 @@ class IsSeen(AbortableState):
 		while not rospy.is_shutdown() and not self.preempt_requested():
 
 			# if size between min und max..
-			if Config.minSize < Global.size < Config.maxSize:
+			if Global.is_seen:
 				# end of pipe reached?
 				#Coordiantes for end of pipe
 				if Global.currentPosition.y > Global.pipe_passed:
@@ -206,6 +207,7 @@ def objectCallback(msg):
 	Global.lastX = Global.x
 	Global.lastY = Global.y
 	Global.size = msg.size
+	Global.is_seen = msg.is_seen
 	if Config.mirror:
 		Global.x = (IMAGE_COLS - msg.x)
 		Global.y = (IMAGE_ROWS - msg.y)
