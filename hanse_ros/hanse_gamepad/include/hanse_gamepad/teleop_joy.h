@@ -25,6 +25,7 @@ private:
     ros::NodeHandle nh_;
 
     ros::Timer publish_timer_;
+    ros::Timer delay_timer_;
 
     ros::ServiceClient srv_client_engine_inc_depth_;
     ros::ServiceClient srv_vel_mux_select_;
@@ -40,7 +41,7 @@ private:
     bool emergency_stop_;
     bool gamepad_enabled_;
 
-    ros::Time ignore_time_;
+    bool gamepad_delay_ended_;
 
     FlankTrigger trig_;
     EngineCommandHandle depth_cmd_h_;
@@ -48,6 +49,7 @@ private:
 
     void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
     void timerCallback(const ros::TimerEvent &e);
+    void delayCallback(const ros::TimerEvent &e);
     bool switchGamepadUsage(const char* commandVelocityTopic);
     void handleGamepadMove(std::vector<float> axes);
     bool sendTargetDepth(const double increment);
