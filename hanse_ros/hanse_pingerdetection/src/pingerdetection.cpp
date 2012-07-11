@@ -8,8 +8,8 @@ PingerDetection::PingerDetection() :
     currentState(WAIT_FOR_PING),
     audioInput(0),
     inputBuffer(0),
-    leftGoertzel(240, 15000),
-    rightGoertzel(240, 15000),
+    leftGoertzel(240, 15000, 480),
+    rightGoertzel(240, 15000, 480),
     rawPlot(nh, 320, 240, "/pingerdetection/plotRaw"),
     goertzelPlot(nh, 320, 240, "/pingerdetection/plotGoertzel"),
     minPlot(nh, 320, 240, "/pingerdetection/plotMin"),
@@ -138,7 +138,8 @@ void PingerDetection::processSample(float left, float right)
         bool leftSilent = leftMinSample < config.thresholdLow;
         bool rightSilent = rightMinSample < config.thresholdLow;
         if (leftSilent && rightSilent) {
-            int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
+            //int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
+            int sampleDifference = rightArrival - leftArrival;
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
             msg.leftAmplitude = leftMax;
@@ -186,8 +187,8 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 {
     this->config = config;
 
-    leftGoertzel.setParameters(config.window, config.frequency);
-    rightGoertzel.setParameters(config.window, config.frequency);
+    leftGoertzel.setParameters(config.window, config.frequency, config.averageWindow);
+    rightGoertzel.setParameters(config.window, config.frequency, config.averageWindow);
     leftMin.setWindow(config.minWindow);
     rightMin.setWindow(config.minWindow);
     rawPlot.setSamplesPerPixel(config.samplesPerPixelRaw);
