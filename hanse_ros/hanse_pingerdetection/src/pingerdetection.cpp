@@ -10,9 +10,9 @@ PingerDetection::PingerDetection() :
     inputBuffer(0),
     leftGoertzel(240, 15000),
     rightGoertzel(240, 15000),
-    rawPlot(nh, 640, 480, "/pingerdetection/plotRaw"),
-    goertzelPlot(nh, 640, 480, "/pingerdetection/plotGoertzel"),
-    minPlot(nh, 640, 480, "/pingerdetection/plotMin"),
+    rawPlot(nh, 320, 240, "/pingerdetection/plotRaw"),
+    goertzelPlot(nh, 320, 240, "/pingerdetection/plotGoertzel"),
+    minPlot(nh, 320, 240, "/pingerdetection/plotMin"),
     leftMin(240),
     rightMin(240),
     sampleCounter(0)
