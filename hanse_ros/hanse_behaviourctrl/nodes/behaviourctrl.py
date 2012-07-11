@@ -45,13 +45,13 @@ class Global:
 	#timer
 	timer = 360
 	#target depth in cm
-	depth = 180
+	depth = 180 # TODO change to 180
 	#waypoint middle line
 	waypt1 = Point(69,74,0)
 	#waypoint past validation gate
-	waypt2 = Point(77,74,1)
+	waypt2 = Point(76.5,74,1)
 	#waypoint 180 degree turn
-	waypt3 = Point(75,74,1)
+	waypt3 = Point(73,74,1)
 	#waypoint end of pipe
 	waypt4 = Point(1,1,1)
 	#waypoint midwater target
@@ -144,17 +144,17 @@ class validationGate(smach.State):
         
 
     def execute(self, userdata):
-	Global.action = "navigate to validation gate : waypoint ("+str(waypt1.x-50)+","+str(waypt1.y-50)+")"
+	Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt1.x-50)+","+str(Global.waypt1.y-50)+")"
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	goal = create_nav_goal(Global.waypt1.x, Global.waypt1.y, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
         if state == GoalStatus.SUCCEEDED and Global.duration.secs < 360:
-		Global.action = "navigate to validation gate : waypoint ("+str(waypt2.x-50)+","+str(waypt2.y-50)+")"
+		Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt2.x-50)+","+str(Global.waypt2.y-50)+")"
 		rospy.loginfo('navigation succeeded')
 		goal = create_nav_goal(Global.waypt2.x, Global.waypt2.y, 0.0)
 		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 		if state == GoalStatus.SUCCEEDED:
-			Global.action = "navigate to validation gate : waypoint ("+str(waypt3.x-50)+","+str(waypt3.y-50)+")"
+			Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt3.x-50)+","+str(Global.waypt3.y-50)+")"
 			rospy.loginfo('navigation succeeded')
 			goal = create_nav_goal(Global.waypt3.x, Global.waypt3.y, 0.0)
 			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
@@ -246,7 +246,7 @@ class surface(smach.State):
     def execute(self, userdata):
 	Global.action = "auv surfacing"
 	Global.call_depth(0.0)
-	goal = create_nav_goal(Global.waypt2.x, Global.waypt2.y, 0.0)
+	goal = create_nav_goal(Global.waypt1.x, Global.waypt1.y, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 	rospy.sleep(10)
 	
@@ -320,8 +320,8 @@ def main():
 		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
     rospy.Subscriber('/hanse/pressure/depth', pressure, pressureCallback)
     rospy.Subscriber('/hanse/actionstate', String, actionstateCallback)
-    rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
-    rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
+    #rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
+    #rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
     
 	
 
