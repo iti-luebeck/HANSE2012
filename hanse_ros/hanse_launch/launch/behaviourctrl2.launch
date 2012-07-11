@@ -1,0 +1,3 @@
+<launch>
+  <include file="$(find hanse_behaviourctrl)/launch/behaviourctrl2.launch" />
+</launch>
