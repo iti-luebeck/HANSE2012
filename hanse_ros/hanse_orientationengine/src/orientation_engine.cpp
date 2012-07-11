@@ -135,7 +135,7 @@ void OrientationEngine::xsensCallback(
 
     orientation_current_ = atan2(direction.y(), direction.x());
 
-    ROS_INFO("Angle: %f", orientation_current_);
+    //ROS_INFO("Angle: %f", orientation_current_);
 
     if (angular_speed_ != 0 || !orientation_init_)
     {
