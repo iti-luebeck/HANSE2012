@@ -37,7 +37,7 @@ OrientationEngine::OrientationEngine() :
                 "/hanse/pid/orientation/output", 10, &OrientationEngine::orientationOutputCallback, this);
 
     publish_timer_ = nh_.createTimer(ros::Duration(1),
-                                    &OrientationEngine::publishTimerCallback, this, false, false);
+                                    &OrientationEngine::publishTimerCallback, this);
     gamepad_timer_ = nh_.createTimer(ros::Duration(300),
                                       &OrientationEngine::gamepadTimerCallback, this);
     turn_timer_ = nh_.createTimer(ros::Duration(0.2),
