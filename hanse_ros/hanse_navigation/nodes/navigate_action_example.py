@@ -21,8 +21,8 @@ if __name__ == '__main__':
 
 	# Creates a goal to send to the action server.
 	# And wait for the server to finish performing the action.
-	goal = create_nav_goal(2.0, 1.0, 0.0)
-	state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(6))
+	goal = create_nav_goal(8.0, 0.0, 0.0)
+	state = client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(60))
 
 	# Prints out the result of executing the action
 	if state == GoalStatus.SUCCEEDED:

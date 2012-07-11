@@ -34,6 +34,7 @@ class Config:
 	maxSize = 0.4
 	fwSpeed = 0.8
 	kpAngle = 1.0
+	lostFactor = 3
 
 class Global:
 	x = 0.0
@@ -84,7 +85,7 @@ class NotSeenYet(AbortableState):
 				Global.startHeading = Global.currentHeading
 				return Transitions.Seen
 
-			# setMotorSpeed(Config.fwSpeed, 0.0)
+			setMotorSpeed(0.0, Config.fwSpeed / Config.lostFactor)
 			rospy.sleep(0.2)
 
 		return self.abort()
@@ -109,13 +110,18 @@ class Seen(AbortableState):
 
 			# if size between min und max..
 			if Config.minSize < Global.size < Config.maxSize:
-				angularSpeed = Config.kpAngle * (IMAGE_COLS - Global.x) / (math.pi/2)
+				rospy.loginfo(str(Global.x)+ ' ' + str(IMAGE_COLS/2)) 
+				################
+				# gegebenenfalls an die kamera anpassen (division factor)
+				################
+				angularSpeed = Config.kpAngle * (IMAGE_COLS / 4 - Global.x) / (IMAGE_COLS / 2)
+				rospy.loginfo('angular speed: '+str(angularSpeed))
 				setMotorSpeed(Config.fwSpeed, angularSpeed)
-				rospy.sleep(0.2)
+				rospy.sleep(0.1)
 			# lost
 			else:
-				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / 3)
-				rospy.sleep(0.2)
+				setMotorSpeed(Config.fwSpeed, Config.fwSpeed / Config.lostFactor)
+				rospy.sleep(0.1)
 				return Transitions.Lost
 				
 		return self.abort()
@@ -145,6 +151,7 @@ def objectCallback(msg):
 	# rospy.loginfo('objectCallback: size='+repr(msg.size)+'\t\t orientation='+repr(msg.orientation));
 	Global.size = msg.size
 	Global.x = msg.x
+	#rospy.loginfo('HIER WURDE X GEAENDERT' + str(Global.x))
 	Global.y = msg.y
 	#rospy.loginfo('distY: '+repr(distanceY / Config.maxDistance))
 
@@ -155,6 +162,7 @@ def configCallback(config, level):
 	Config.maxSize = config['maxSize']
 	Config.fwSpeed = config['fwSpeed']
 	Config.kpAngle = config['kpAngle']
+	Config.lostFactor = config['lostFactor']
 	return config
 
 def positionCallback(msg):	

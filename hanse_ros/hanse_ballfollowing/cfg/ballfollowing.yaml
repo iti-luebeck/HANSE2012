@@ -1,6 +1,7 @@
 {
-minSize: 0.01,
-maxSize: 0.4,
+minSize: 0.0,
+maxSize: 0.3,
 fwSpeed: 0.5,
-knAngle: 0.2
+kpAngle: 0.4,
+lostFactor: 3
 }

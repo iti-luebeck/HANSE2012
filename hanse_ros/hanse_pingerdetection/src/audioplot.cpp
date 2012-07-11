@@ -26,8 +26,8 @@ AudioPlot::~AudioPlot()
 void AudioPlot::addSample(float left, float right)
 {
     int px = width-1;
-    int ply = height - 1 - std::min(1.f, std::max(0.f, left)) * height;
-    int pry = height - 1 - std::min(1.f, std::max(0.f, right)) * height;
+    int ply = height - 1 - std::min(1.f, std::max(0.f, left)) * (height - 1);
+    int pry = height - 1 - std::min(1.f, std::max(0.f, right)) * (height - 1);
 
     data[3 * ((px + shift) % width + width * ply) + 0] = 255;
     data[3 * ((px + shift) % width + width * pry) + 1] = 255;
@@ -48,7 +48,7 @@ void AudioPlot::addSample(float left, float right)
     counterPixel--;
 
     if (counter == 0) {
-        counter = 48000 / 10;
+        counter = counterMax;
         imgPub.publish(plotData());
     }
     counter--;

@@ -10,7 +10,7 @@ from rospy.numpy_msg import numpy_msg
 from dynamic_reconfigure.server import Server
 from hanse_wallfollowing.cfg import WallFollowingConfig
 from hanse_wallfollowing.msg import WallFollowingAction
-from std_msgs.msg import Float64, Float32
+from std_msgs.msg import Float64, Float32, String
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist, Vector3
 from hanse_msgs.msg import ScanningSonar, sollSpeed
@@ -150,6 +150,7 @@ def configCallback(config, level):
 def timerCallback(event):
     pub_angular_target.publish(Float64(data = Config.desiredDistance))
     pub_angular_input.publish(Float64(data = Global.currentDistance))
+    pub_behaviour_info.publish(String(data = 'Desired distance:  '+str(Config.desiredDistance)+ ' Current distance:  '+str(Global.currentDistance)))
 
 def angularPidOutputCallback(msg):
 	Global.angularSpeedOutput = -msg.data
@@ -219,6 +220,7 @@ if __name__ == '__main__':
 #	rospy.Subscriber('sonar/scan', numpy_msg(ScanningSonar), scanningSonarCallback)
 #IMUTMP	rospy.Subscriber('imu', Imu, imuCallback)
 	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
+	pub_behaviour_info = rospy.Publisher('/hanse/behaviour/wallfollow_info', String)
 	#pub_motor_left = rospy.Publisher('/hanse/motors/left', sollSpeed)
 	#pub_motor_right = rospy.Publisher('/hanse/motors/right', sollSpeed)
 
