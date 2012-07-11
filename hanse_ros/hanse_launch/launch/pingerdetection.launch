@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find hanse_pingerdetection)/launch/pingerdetection.launch" />
+  <!--include file="$(find hanse_pingerdetection)/launch/pingerdetection.launch" /-->
   <node name="republish_pinger_raw_hanse" pkg="image_transport" type="republish" args="raw in:=/pingerdetection/plotRaw compressed out:=/pingerdetection/plotRaw/transport" />
   <node name="republish_pinger_goertzel_hanse" pkg="image_transport" type="republish" args="raw in:=/pingerdetection/plotGoertzel compressed out:=/pingerdetection/plotGoertzel/transport" />
 </launch>
