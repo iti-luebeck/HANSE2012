@@ -43,7 +43,7 @@ class Global:
 	# variable settings
 	###############
 	#timer
-	timer = 600
+	timer = 900
 	#target depth in cm
 	depth = 100 # TODO change to 180
 	#waypoint middle line
@@ -68,9 +68,9 @@ class States:
 	valGate = 'valGate'
 	pipeFollow = 'pipeFollow'
 	navigateToWall = 'navigateToWall'
-	midWater = 'midWater'
 	wallFollow = 'wallFollow'
 	Surface = 'Surface'
+	
 
 class Transitions:
 	Init_Finished = 'Init_Finished'
@@ -88,6 +88,7 @@ class Transitions:
 	Wall_passed = 'Wall_passed'
 	Wall_failed = 'Wall_failed'
 	Surfaced = 'Surfaced'
+	
 
 #################################
 # define state Init
@@ -115,6 +116,7 @@ class Init(smach.State):
 	rospy.loginfo("wf_client started and waiting")
         Global.wf_client.wait_for_server()
 	rospy.loginfo("wf_server listening for goals")
+
         return Transitions.Init_Finished
 
 
@@ -238,6 +240,7 @@ class WallFollowing(smach.State):
 	return Transitions.Wall_failed
 
 
+
 #################################
 # define state Surface
 #################################
@@ -248,7 +251,7 @@ class surface(smach.State):
     def execute(self, userdata):
 	Global.action = "auv surfacing"
 	Global.call_depth(0.0)
-	rospy.sleep(10)	
+	rosply.sleep(10)
 	goal = create_nav_goal(Global.wayptstart.x, Global.wayptstart.y, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 	rospy.sleep(10)
@@ -323,8 +326,8 @@ def main():
 		rospy.Subscriber('position/estimate', PoseStamped, positionCallback)
     rospy.Subscriber('/hanse/pressure/depth', pressure, pressureCallback)
     rospy.Subscriber('/hanse/actionstate', String, actionstateCallback)
-    #rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
-    #rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
+    rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
+    rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
     
 	
 
@@ -342,7 +345,7 @@ def main():
 	smach.StateMachine.add(States.Submerge, submerge(), 
                                transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
-                               transitions={Transitions.Goal_passed:States.Surface, Transitions.Goal_failed:States.Surface})
+                               transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
