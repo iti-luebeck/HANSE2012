@@ -1,9 +1,0 @@
-<launch>
-
-  <!-- PINGERDETECTION -->
-
-  <group ns="hanse">
-    <node name="pingerdetection" pkg="hanse_pingerdetection" type="hanse_pingerdetection" output="screen" />
-  </group>
-
-</launch>

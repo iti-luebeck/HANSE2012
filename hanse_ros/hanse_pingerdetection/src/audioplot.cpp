@@ -48,7 +48,7 @@ void AudioPlot::addSample(float left, float right)
     counterPixel--;
 
     if (counter == 0) {
-        counter = 48000 / 10;
+        counter = counterMax;
         imgPub.publish(plotData());
     }
     counter--;
