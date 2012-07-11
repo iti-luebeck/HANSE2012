@@ -45,7 +45,7 @@ class Global:
 	#timer
 	timer = 360
 	#target depth in cm
-	depth = 70
+	depth = 180
 	#waypoint middle line
 	waypt1 = Point(69,74,0)
 	#waypoint past validation gate
