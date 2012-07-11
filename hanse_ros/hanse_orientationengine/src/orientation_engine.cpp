@@ -13,6 +13,8 @@ OrientationEngine::OrientationEngine() :
     orientation_pid_enabled_(false),
     motors_enabled_(true),
     gamepad_running_(false),
+    turn_timer_started_(false),
+    turn_timer_ended_(false),
     orientation_output_(0)
 {
     // Initialisierung der Standard-Service Nachrichten.
@@ -20,7 +22,8 @@ OrientationEngine::OrientationEngine() :
     disable_msg_.request.enable = false;
 
     // Registrierung der Publisher und Subscriber.
-    pub_orientation_current_ = nh_.advertise<std_msgs::Float64>("/hanse/pid/orientation/input", 1);
+    pub_orientation_current_ = nh_.advertise<std_msgs::Float64>(
+                "/hanse/pid/orientation/input", 1);
 
     pub_motor_left_ = nh_.advertise<hanse_msgs::sollSpeed>("/hanse/motors/left", 1);
     pub_motor_right_ = nh_.advertise<hanse_msgs::sollSpeed>("/hanse/motors/right", 1);
@@ -34,10 +37,12 @@ OrientationEngine::OrientationEngine() :
                 "/hanse/pid/orientation/output", 10, &OrientationEngine::orientationOutputCallback, this);
 
     publish_timer_ = nh_.createTimer(ros::Duration(1),
-                                    &OrientationEngine::publishTimerCallback, this);
-
+                                    &OrientationEngine::publishTimerCallback, this, false, false);
     gamepad_timer_ = nh_.createTimer(ros::Duration(300),
                                       &OrientationEngine::gamepadTimerCallback, this);
+    turn_timer_ = nh_.createTimer(ros::Duration(0.2),
+                                  &OrientationEngine::turnTimerCallback, this, true, false);
+
     sub_mux_selected_ = nh_.subscribe<std_msgs::String>("/hanse/commands/cmd_vel_mux/selected",
                                                          1, &OrientationEngine::muxSelectedCallback, this);
 
@@ -85,6 +90,7 @@ void OrientationEngine::dynReconfigureCallback(hanse_orientationengine::Orientat
 
     publish_timer_.setPeriod(ros::Duration(1.0/config.publish_frequency));
     gamepad_timer_.setPeriod(ros::Duration(config.gamepad_timeout));
+    turn_timer_.setPeriod(ros::Duration(config.angular_pid_delay));
 }
 
 // Auswertung und Zwischenspeicherung der cmd_vel Nachricht.
@@ -95,19 +101,36 @@ void OrientationEngine::velocityCallback(
         gamepad_timer_.stop();
     }
 
-
     linear_speed_ = twist->linear.x;
     angular_speed_ = twist->angular.z;
 
     if (angular_speed_ == 0 && !orientation_pid_enabled_)
     {
-        callOrientationPidEnableService(true);
-        orientation_pid_enabled_ = true;
+        if (!turn_timer_started_ && !turn_timer_ended_)
+        {
+            turn_timer_started_ = true;
+            turn_timer_.start();
+        }
+
+        if (turn_timer_ended_)
+        {
+            callOrientationPidEnableService(true);
+            orientation_pid_enabled_ = true;
+
+            turn_timer_ended_ = false;
+        }
     }
-    else if (angular_speed_ != 0 && orientation_pid_enabled_)
+    else if (angular_speed_ != 0)
     {
-        callOrientationPidEnableService(false);
-        orientation_pid_enabled_ = false;
+        turn_timer_.stop();
+        turn_timer_started_ = false;
+        turn_timer_ended_ = false;
+
+        if (orientation_pid_enabled_)
+        {
+            callOrientationPidEnableService(false);
+            orientation_pid_enabled_ = false;
+        }
     }
 
     if (gamepad_running_) {
@@ -134,8 +157,6 @@ void OrientationEngine::xsensCallback(
     Eigen::Vector3f direction = orientation * Eigen::Vector3f(1, 0, 0);
 
     orientation_current_ = atan2(direction.y(), direction.x());
-
-    ROS_INFO("Angle: %f", orientation_current_);
 
     if (angular_speed_ != 0 || !orientation_init_)
     {
@@ -173,11 +194,16 @@ void OrientationEngine::gamepadTimerCallback(const ros::TimerEvent &e)
     ROS_INFO("Gamepad connection lost. Stop movement.");
 }
 
+void OrientationEngine::turnTimerCallback(const ros::TimerEvent &e)
+{
+    turn_timer_started_ = false;
+    turn_timer_ended_ = true;
+}
+
 // Ausführung jeweils nach Ablauf des Timers. Wird verwendet, um sämtliche
 // Ausgaben auf die vorgesehenen Topics zu schreiben.
 void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e)
 {
-
     hanse_msgs::sollSpeed motor_left_msg;
     hanse_msgs::sollSpeed motor_right_msg;
     motor_left_msg.data = 0;
@@ -220,23 +246,11 @@ void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e)
          }
 
          // Beschränkung der Ansteuerungsstärke auf -127 bis 127.
-         if(motor_left > 127)
-         {
-             motor_left = 127;
-         }
-         else if(motor_left < -127)
-         {
-             motor_left = -127;
-         }
+         motor_left = std::min(motor_left, (int16_t) 127);
+         motor_left = std::max(motor_left, (int16_t) -127);
 
-         if(motor_right > 127)
-         {
-             motor_right = 127;
-         }
-         else if(motor_right < -127)
-         {
-             motor_right = -127;
-         }
+         motor_right = std::min(motor_right, (int16_t) 127);
+         motor_right = std::max(motor_right, (int16_t) -127);
 
          motor_left_msg.data = motor_left;
          motor_right_msg.data = motor_right;
@@ -249,7 +263,6 @@ void OrientationEngine::publishTimerCallback(const ros::TimerEvent &e)
 bool OrientationEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &req,
                                         hanse_srvs::EngineCommand::Response &res)
 {
-
     if (req.setEmergencyStop && !emergency_stop_)
     {
         emergency_stop_ = true;
@@ -342,7 +355,6 @@ bool OrientationEngine::handleEngineCommand(hanse_srvs::EngineCommand::Request &
 bool OrientationEngine::enableOrientationPid(hanse_srvs::Bool::Request &req,
                                          hanse_srvs::Bool::Response &res)
 {
-
     if (pids_enabled_)
     {
         if (!orientation_pid_enabled_ && req.enable)
@@ -389,7 +401,6 @@ bool OrientationEngine::enableMotors(hanse_srvs::Bool::Request &req,
 bool OrientationEngine::setEmergencyStop(hanse_srvs::Bool::Request &req,
                                      hanse_srvs::Bool::Response &res)
 {
-
     if (req.enable && !emergency_stop_)
     {
         emergency_stop_ = true;

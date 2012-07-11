@@ -73,6 +73,9 @@ private:
 
     bool gamepad_running_;
 
+    bool turn_timer_started_;
+    bool turn_timer_ended_;
+
     // Standard-Nachrichten.
     hanse_srvs::Bool enable_msg_;
     hanse_srvs::Bool disable_msg_;
@@ -82,6 +85,7 @@ private:
 
     ros::Timer publish_timer_;
     ros::Timer gamepad_timer_;
+    ros::Timer turn_timer_;
 
     // Service-Methoden
     bool handleEngineCommand(hanse_srvs::EngineCommand::Request &req,
@@ -103,6 +107,8 @@ private:
 
     void muxSelectedCallback(const std_msgs::String::ConstPtr& topic);
     void gamepadTimerCallback(const ros::TimerEvent &e);
+
+    void turnTimerCallback(const ros::TimerEvent &e);
 
     bool callOrientationPidEnableService(const bool msg);
 

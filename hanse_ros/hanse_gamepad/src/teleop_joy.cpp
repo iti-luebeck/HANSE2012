@@ -12,12 +12,15 @@ TeleopHanse::TeleopHanse() :
     orientation_cmd_h_("/hanse/engine/orientation/handleEngineCommand")
 {
     // Publisher for command velocity messages
-    pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/hanse/commands/cmd_vel_joystick", 1);
+    pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>(
+                "/hanse/commands/cmd_vel_joystick", 1);
     // Subscriber for joystick events
-    sub_joy_input_ = nh_.subscribe<sensor_msgs::Joy>("/hanse/joy", 10, &TeleopHanse::joyCallback, this);
+    sub_joy_input_ = nh_.subscribe<sensor_msgs::Joy>(
+                "/hanse/joy", 10, &TeleopHanse::joyCallback, this);
 
     // will be set to actual value once config is loaded
-    publish_timer_ = nh_.createTimer(ros::Duration(5), &TeleopHanse::timerCallback, this);
+    publish_timer_ = nh_.createTimer(
+                ros::Duration(0.1), &TeleopHanse::timerCallback, this);
 
     // wait for ros time to give values != 0
     ros::Rate loop_rate(10);
@@ -27,23 +30,27 @@ TeleopHanse::TeleopHanse() :
     }
 
     // initial delay for receiving joystick events, effectivly ignoring these
-    ignore_time_ = ros::Time::now() + ros::Duration(0.25);
+    ignore_time_ = ros::Time::now() + ros::Duration(0.5);
 
     // initialize dynamic reconfigure
-    dyn_reconfigure_cb_ = boost::bind(&TeleopHanse::dynReconfigureCallback, this, _1, _2);
+    dyn_reconfigure_cb_ = boost::bind(
+                &TeleopHanse::dynReconfigureCallback, this, _1, _2);
     dyn_reconfigure_srv_.setCallback(dyn_reconfigure_cb_);
     // from this point on we can assume a valid config
 
     // service for setting depth in depth engine
-    srv_client_engine_inc_depth_ = nh_.serviceClient<hanse_srvs::SetTarget>("/hanse/engine/depth/incDepth");
+    srv_client_engine_inc_depth_ = nh_.serviceClient<hanse_srvs::SetTarget>(
+                "/hanse/engine/depth/incDepth");
     // service for muxing command velocity messages
-    srv_vel_mux_select_ = nh_.serviceClient<topic_tools::MuxSelect>("/hanse/commands/cmd_vel_mux/select");
+    srv_vel_mux_select_ = nh_.serviceClient<topic_tools::MuxSelect>(
+                "/hanse/commands/cmd_vel_mux/select");
 
     ROS_INFO("teleop_joy started");
     ROS_INFO("Gamepad disabled");
 }
 
-void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &config, uint32_t level)
+void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &config,
+                                         uint32_t level)
 {
     ROS_INFO("got new parameters, level=%d", level);
 
@@ -86,20 +93,23 @@ void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     }
 
     // handle motor switch button
-    if (trig_.isSet(config_.motor_switch_button) && !EngineCommandHandle::isEmergencyStopSet())
+    if (trig_.isSet(config_.motor_switch_button) &&
+            !EngineCommandHandle::isEmergencyStopSet())
     {
         EngineCommandHandle::toggleMotors();
     }
 
     // handle resetting zero pressure
-    if (trig_.isSet(config_.zero_depth_reset_button) && !EngineCommandHandle::isEmergencyStopSet())
+    if (trig_.isSet(config_.zero_depth_reset_button) &&
+            !EngineCommandHandle::isEmergencyStopSet())
     {
         EngineCommandHandle::resetZeroPressure();
         ROS_INFO("Resetted pressure zero value.");
     }
 
     // handle gamepad enabling and disabling
-    if (trig_.isSet(config_.gamepad_switch_button) && !EngineCommandHandle::isEmergencyStopSet())
+    if (trig_.isSet(config_.gamepad_switch_button) &&
+            !EngineCommandHandle::isEmergencyStopSet())
     {
         if(!gamepad_enabled_)
         {
