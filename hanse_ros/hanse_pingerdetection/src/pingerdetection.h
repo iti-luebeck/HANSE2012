@@ -1,206 +1,61 @@
+#ifndef PINGERDETECTION_H
+#define PINGERDETECTION_H
+
+#include "globals.h"
+
+#include <pulse/simple.h>
+#include "goertzel.h"
+#include "minfilter.h"
+#include "audioplot.h"
 #include <ros/ros.h>
-#include <ros/network.h>
-#include <QString>
-#include <string>
-#include <std_msgs/String.h>
-#include <std_msgs/Float32.h>
-#include <std_msgs/Int32.h>
-#include <hanse_msgs/PingerDetection.h>
-#include <sstream>
-#include <cmath>
 
-#include <QtCore>
-#include <QtMultimediaKit/QAudio>
-#include <QtMultimediaKit/QAudioFormat>
-#include <QtMultimediaKit/QAudioInput>
-#include <QtMultimediaKit/QAudioDeviceInfo>
-#include <QIODevice>
-
-#include "hanse_pingerdetection/PingerdetectionNodeConfig.h"
+#include "hanse_pingerdetection/PingerDetectionConfig.h"
 #include <dynamic_reconfigure/server.h>
 
-#include "audioplot.h"
-
-#define STATE_WAIT_FOR_FIRST_SIGNAL "Wait for signal"
-#define STATE_COUNT_DELAY "Count delay between both micros"
-#define STATE_WAIT_FOR_SIGNAL_FINISHED "Wait until no signal is detected"
-#define STATE_SAVE_DATA "Save data"
-
-#define STATE_WAIT_FOR_LEFT_MICRO_SIGNAL "Wait left micro signal"
-#define STATE_WAIT_FOR_RIGHT_MICRO_SIGNAL "Wait right micro signal"
-
-#define STATE_BOTH_MICRO_SIGNAL_DETECTED "Both micros got a signal at the same time"
-#define STATE_LEFT_MICRO_SIGNAL_DETECTED "Left micro got a signal first"
-#define STATE_RIGHT_MICRO_SIGNAL_DETECTED "Right micro got a signal first"
-
-using namespace QtMultimediaKit;
-
-namespace hanse_pingerdetection{
-
-class PingerDetection : public QThread {
-
+class PingerDetection {
 public:
+    static const int fps = 20;
+    static const int bufferFrames = sampleRate / fps;
     PingerDetection();
-    virtual ~PingerDetection();
-    void run();
-    void dynReconfigureCallback(hanse_pingerdetection::PingerdetectionNodeConfig &config, uint32_t level);
 
-public slots:
-    void receiveAudio();
+    ~PingerDetection();
+
+    void tick();
+
+
 
 private:
-    // Methods
+    void processSample(float left, float right);
 
-    void setEnabled(bool b);
+    void addRight(float sample);
+    void addLeft(float sample);
 
-    void setRecordSource(QString n);
+    float calculateAngle(int sampleDifference);
 
-    void pingerDetectionCallback(const std_msgs::StringConstPtr &msg);
+    void reconfigure(hanse_pingerdetection::PingerDetectionConfig &config, uint32_t level);
 
-    void initVariables();
-    void configAudio();
+    enum state {
+        WAIT_FOR_PING,
+        WAIT_FOR_SECOND_PING_LEFT,
+        WAIT_FOR_SECOND_PING_RIGHT,
+        WAIT_FOR_NO_PING
+    };
 
-    void audioProcessing(double leftRaw, double rightRaw);
-
-    double leftNonCoherentFSKDemodulator(double x, bool skipPop);
-    double rightNonCoherentFSKDemodulator(double y, bool skipPop);
-
-    void periodicSinCos();
-    void inkrementSinCosCounter();
-
-    void signalDelayAnalysis(double goertzelLeft, double goertzelRight);
-    void calculateAngle(int samplediff);
-
-    // ROS
-
+    state currentState;
     ros::NodeHandle nh;
-    ros::Subscriber input_subscriber;
-    ros::Publisher angle_publisher;
-    ros::Publisher pinger_publisher;
-
-    //Dyn Reconfigure
-
-    ros::Timer publishTimer;
-
-//    hanse_pingerdetection::PingerdetectionNodeConfig config;
-
-    /** \brief dynamic_reconfigure interface */
-//    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig> dynReconfigureSrv;
-
-    /** \brief dynamic_reconfigure call back */
-//    dynamic_reconfigure::Server<hanse_pingerdetection::PingerdetectionNodeConfig>::CallbackType dynReconfigureCb;
-
-    //End of dyn reconfigure stuff
-
-    // Plot
-
-    AudioPlot audioPlotRaw;
-        AudioPlot audioPlotGoertzel;
-
-    bool detection;
-
-    bool plotRaw;
-    bool plotGoertzel;
-    bool plotAngle;
-    bool saveData;
-    bool plotAnalysis;
-
-    // Variables
-    int lognr;
-
-    bool enabled;
-
-    int noiseLeft;
-    int noiseRight;
-    double angle;
-
-    int timer;
-
-        std_msgs::Float32 winkel;
-
-
-        double leftMicroAverageMagnitude;
-        int leftMicroAvgCounter;
-        double rightMicroAverageMagnitude;
-        int rightMicroAvgCounter;
-
-    QAudioInput *audioInput;
-    QIODevice *ioDevice;
-
-    QFile *outputFile;
-    QTextStream* outputStream;
-
-    QFile *outputFileFSK;
-    QTextStream* outputStreamFSK;
-
-
-    QFile *inputFile;
-    QTextStream* inputStream;
-
-    QString recordSource;
-
-    QByteArray audioBuffer;
-    QAudioFormat audioFormat;
-
-    QList<int> decodeData(const char *data, qint64 len);
-
-    quint16 audioMaxAmplitude;
-
+    pa_simple *audioInput;
+    float *inputBuffer;
+    Goertzel leftGoertzel, rightGoertzel;
+    AudioPlot rawPlot, goertzelPlot, minPlot;
+    MinFilter leftMin, rightMin;
+    hanse_pingerdetection::PingerDetectionConfig config;
+    dynamic_reconfigure::Server<hanse_pingerdetection::PingerDetectionConfig> reconfigureServer;
+    ros::Publisher pingerPub;
     int sampleCounter;
-
-    int listCounter;
-
-    QList<double> leftMicroCos;
-    QList<double> leftMicroSin;
-
-    QList<double> rightMicroCos;
-    QList<double> rightMicroSin;
-
-    double integralSinLeft;
-    double integralCosLeft;
-
-    double integralSinRight;
-    double integralCosRight;
-
-    QList<double> cosLUT;
-    QList<double> sinLUT;
-    int cosCounter;
-    int sinCounter;
-
-    void leftMicroMagnitudeCalculation(double left);
-    void rightMicroMagnitudeCalculation(double right);
-
-
-    int delayAverageElements;
-
-    QString delayState;
-    QString delaySubstate;
-    int leftMicroSampleDelay;
-
-    int leftMicroSignalDetected;
-    int rightMicroSignalDetected;
-    int signalDetected;
-
-    int rightMicroSampleDelay;
-    int bothMicroSignalDetectedCount;
-
-    double leftMicroMaxMagnitude;
-    double rightMicroMaxMagnitude;
-
-    double leftAverageThreshold;
-    double rightAverageThreshold;
-
-    double leftFSK;
-    double rightFSK;
-
-    int timeoutCounter;
-
-    // Config
-    double omega;
-    int sampleRate;
-    int window;
-    double scale;
-    double threshold;
-    double fetteSkalierung;
+    int leftArrival, rightArrival;
+    float leftSum, leftWeighted, rightSum, rightWeighted;
+    float leftMax, rightMax;
+    int timeout;
 };
-}
+
+#endif
