@@ -42,7 +42,7 @@ class Config:
 	robCenterY = 240
 	maxDistance = 320
 	mirror = False
-	pipe_passed = 63.6
+	
 
 class Global:
 	x = 0.0
@@ -56,6 +56,7 @@ class Global:
 	is_seen = True
 	state = " "
 	distance = 0
+	pipe_passed = 63.6
 
 
 #==============================================================================
