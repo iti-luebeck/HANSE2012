@@ -34,5 +34,6 @@ rosbuild_add_executable(pingerdetection
   src/goertzel.cpp
   src/audioplot.cpp
   src/minfilter.cpp
+  src/average.cpp
 )
 target_link_libraries(pingerdetection pulse pulse-simple)
