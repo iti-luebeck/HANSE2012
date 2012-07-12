@@ -47,7 +47,7 @@ class Global:
 	#timer
 	timer = 400
 	#target depth in cm
-	depth = 180 # TODO change to 180
+	depth = 100 # TODO change to 180
 	#waypoint middle line
 	waypt_middle = Point(69,74,0)
 	#waypoint past validation gate
@@ -231,7 +231,7 @@ class navigateToWall(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.navigatewall_passed,Transitions.navigatewall_failed])
 
     def execute(self, userdata):
-	Global.action = "navigate to wall following : waypoint ("+str(waypt_midwater.x-6)+","+str(waypt_midwater.y-6)+")"
+	Global.action = "navigate to wall following : waypoint ("+str(Global.waypt_midwater.x-6)+","+str(Global.waypt_midwater.y-6)+")"
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	############
 	# enter nav goal for wall
@@ -255,7 +255,7 @@ class WallFollowing(smach.State):
 	Global.action = "follow wall" + Global.wf_action
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	#Setting the time limit for wallfollowing
-	while Global.duration.secs-start_time < 360:
+	while Global.duration.secs-start_time < 60:
 		state = Global.wf_client.send_goal_and_wait(WallFollowingGoal(),rospy.Duration(5))
 		#client.cancel_goal()
 		if(Global.currentPosition.x > Global.waypt_endwall.x) :
@@ -367,7 +367,7 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.navigateToWall, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.wallFollow, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 

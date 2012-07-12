@@ -367,7 +367,7 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.pipeFollow, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
