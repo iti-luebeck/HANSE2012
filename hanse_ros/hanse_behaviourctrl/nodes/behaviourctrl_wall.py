@@ -236,7 +236,7 @@ class navigateToWall(smach.State):
 	############
 	# enter nav goal for wall
 	############
-	goal = create_nav_goal(Global.waypt_midwater.x-6, Global.waypt_midwater.y-6, 0.0)
+	goal = create_nav_goal(54, 69, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
         if state == GoalStatus.SUCCEEDED:
 		return Transitions.navigatewall_passed
@@ -375,7 +375,7 @@ def main():
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 
                               transitions={Transitions.ball_passed:States.navigateToWall})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
-                               transitions={Transitions.navigatewall_passed:States.wallFollow, Transitions.navigatewall_failed : States.navigateToWall})
+                               transitions={Transitions.navigatewall_passed:States.wallFollow, Transitions.navigatewall_failed : States.Surface})
 	smach.StateMachine.add(States.wallFollow, WallFollowing(), 
                                transitions={Transitions.Wall_passed:States.Surface, Transitions.Wall_failed : States.Surface})
 	smach.StateMachine.add(States.Surface, surface(), 

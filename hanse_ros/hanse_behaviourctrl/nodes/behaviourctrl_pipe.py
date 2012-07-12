@@ -276,8 +276,8 @@ class surface(smach.State):
 	Global.action = "auv surfacing"
 	Global.call_depth(0.0)
 	#rosply.sleep(10)
-	#goal = create_nav_goal(Global.waypt_start.x, Global.waypt_start.y, 0.0)
-	#state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
+	goal = create_nav_goal(Global.waypt_midwater.x, Global.waypt_midwater.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 	rospy.sleep(10)
 	
 	return Transitions.Surfaced
