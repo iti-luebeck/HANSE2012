@@ -231,7 +231,7 @@ class navigateToWall(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.navigatewall_passed,Transitions.navigatewall_failed])
 
     def execute(self, userdata):
-	Global.action = "navigate to wall following : waypoint ("+str(waypt_midwater.x-6)+","+str(waypt_midwater.y-6)+")"
+	Global.action = "navigate to wall following : waypoint ("+str(waypt_midwater.x)+","+str(waypt_midwater.y)+")"
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	############
 	# enter nav goal for wall
