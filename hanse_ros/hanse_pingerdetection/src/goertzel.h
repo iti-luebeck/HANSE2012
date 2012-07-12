@@ -7,9 +7,9 @@
 
 class Goertzel {
 public:
-    Goertzel(int window, float frequency, int averageWindow);
+    Goertzel(int window, float frequency);
 
-    void setParameters(int window, float frequency, int averageWindow);
+    void setParameters(int window, float frequency);
 
     float filter(float sample);
 
@@ -21,10 +21,7 @@ private:
     int listCounter;
     int sampleCounter;
 
-    std::vector<float> averageVector;
-    int averageCount;
-    int averageWindow;
-    float averageTemp;
+
 };
 
 #endif

@@ -8,13 +8,15 @@ PingerDetection::PingerDetection() :
     currentState(WAIT_FOR_PING),
     audioInput(0),
     inputBuffer(0),
-    leftGoertzel(240, 15000, 480),
-    rightGoertzel(240, 15000, 480),
+    leftGoertzel(240, 15000),
+    rightGoertzel(240, 15000),
     rawPlot(nh, 320, 240, "/pingerdetection/plotRaw"),
     goertzelPlot(nh, 320, 240, "/pingerdetection/plotGoertzel"),
     minPlot(nh, 320, 240, "/pingerdetection/plotMin"),
+    goertzelAveragePlot(nh, 320, 240,  "/pingerdetection/plotGoertzelAverage"),
     leftMin(240),
     rightMin(240),
+    goertzelAverage(500),
     sampleCounter(0)
 {
 
@@ -64,16 +66,28 @@ void PingerDetection::processSample(float left, float right)
 
     left *= config.stereoAdjustment;
 
-    if (config.plotRaw)
+    if (config.plotRaw){
         rawPlot.addSample(left / 2 + 0.5f, right / 2 + 0.5f);
+    }
     float leftGoertzelSample = leftGoertzel.filter(left);
     float rightGoertzelSample = rightGoertzel.filter(right);
-    if (config.plotGoertzel)
+
+    float averageLeftGoertzel = goertzelAverage.filter(leftGoertzelSample);
+    float averageRightGoertzel = goertzelAverage.filter(rightGoertzelSample);
+
+    if(config.plotGoertzelAverage){
+        goertzelAveragePlot.addSample(averageLeftGoertzel, averageRightGoertzel);
+    }
+
+    if (config.plotGoertzel){
         goertzelPlot.addSample(leftGoertzelSample / config.plotScaleGoertzel, rightGoertzelSample / config.plotScaleGoertzel);
+    }
+
     float leftMinSample = leftMin.filter(leftGoertzelSample);
     float rightMinSample = rightMin.filter(rightGoertzelSample);
-    if (config.plotMin)
+    if (config.plotMin){
         minPlot.addSample(leftMinSample / config.plotScaleMin, rightMinSample / config.plotScaleMin);
+    }
 
     sampleCounter++;
 
@@ -84,6 +98,7 @@ void PingerDetection::processSample(float left, float right)
         }
     }
 
+    // Now we calculate the TOA
 
     switch (currentState) {
     case WAIT_FOR_PING: {
@@ -187,16 +202,21 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 {
     this->config = config;
 
-    leftGoertzel.setParameters(config.window, config.frequency, config.averageWindow);
-    rightGoertzel.setParameters(config.window, config.frequency, config.averageWindow);
+    leftGoertzel.setParameters(config.window, config.frequency) ;
+    rightGoertzel.setParameters(config.window, config.frequency);
+    goertzelAverage.setWindow(config.averageWindow);
     leftMin.setWindow(config.minWindow);
     rightMin.setWindow(config.minWindow);
-    rawPlot.setSamplesPerPixel(config.samplesPerPixelRaw);
-    goertzelPlot.setSamplesPerPixel(config.samplesPerPixelGoertzel);
-    minPlot.setSamplesPerPixel(config.samplesPerPixelMin);
-    rawPlot.setCounter(config.counterRaw);
-    goertzelPlot.setCounter(config.counterGoertzel);
-    minPlot.setCounter(config.counterMin);
+    rawPlot.setSamplesPerPixel(config.samplesPerPixel);
+    goertzelPlot.setSamplesPerPixel(config.samplesPerPixel);
+    minPlot.setSamplesPerPixel(config.samplesPerPixel);
+    goertzelAveragePlot.setSamplesPerPixel(config.samplesPerPixel);
+    rawPlot.setCounter(config.counter);
+    goertzelPlot.setCounter(config.counter);
+    minPlot.setCounter(config.counter);
+    goertzelAveragePlot.setCounter(config.counter);
+
+
 }
 
 
