@@ -20,7 +20,7 @@ from hanse_srvs.srv import *
 
 
 class Global:
-	SIMULATOR = False
+	SIMULATOR = True
 	time_initial = 0.0
 	duration = rospy.Duration(0,0)
 	logfile = " "
@@ -48,21 +48,21 @@ class Global:
 	#target depth in cm
 	depth = 100 # TODO change to 180
 	#waypoint middle line
-	waypt_middle = Point(69,74,0)
+	waypt_middle = Point(70,-74,0)
 	#waypoint past validation gate
-	waypt_past_valgate = Point(79.0,74.25,1)
+	waypt_past_valgate = Point(79.0,-74.25,1)
 	#waypoint 180 degree turn
-	waypt_180_valgate = Point(73,74.25,1)
+	waypt_180_valgate = Point(73,-74.25,1)
 	#waypoint end of pipe
-	waypy_eop = Point(60,74,1)
+	waypt_eop = Point(60,-74,1)
 	#waypoint midwater
-	waypy_midwater = Point(57.5,68,1)
+	waypy_midwater = Point(57.5,-68,1)
 	#waypoint wallstart
-	waypt_wallstart = Point(54,65,1)
+	waypt_wallstart = Point(54,-65,1)
 	#waypoint end of wall
-	waypt_endwall = Point(65,60,1)
+	waypt_endwall = Point(65,-60,1)
 	#waypoint start
-	waypt_start = Point(70,55,1)
+	waypt_start = Point(70,-55,1)
 
 
 class States:
@@ -173,12 +173,12 @@ class validationGate(smach.State):
 		Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt_past_valgate.x-50)+","+str(Global.waypt_past_valgate.y-50)+")"
 		rospy.loginfo('navigation succeeded')
 		goal = create_nav_goal(Global.waypt_past_valgate.x, Global.waypt_past_valgate.y, 0.0)
-		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
+		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 		if state == GoalStatus.SUCCEEDED:
 			Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt_180_valgate.x-50)+","+str(Global.waypt_180_valgate.y-50)+")"
 			rospy.loginfo('navigation succeeded')
 			goal = create_nav_goal(Global.waypt_180_valgate.x, Global.waypt_180_valgate.y, 0.0)
-			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
+			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
 			return Transitions.Goal_passed
 		else:
 			rospy.loginfo('navigation failed: ' + GoalStatus.to_string(state))
@@ -406,7 +406,7 @@ def main():
 
 
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate,
+                               transitions={Transitions.Submerged:States.pipeFollow,
 						 Transitions.Submerge_failed:States.Surface})
 
 
@@ -417,17 +417,17 @@ def main():
 
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall,
-						 Transitions.Pipe_failed : States.valGate})
+						 Transitions.Pipe_failed : States.Surface})
 
 
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
                                transitions={Transitions.navigatewall_passed:States.wallFollow,
-						 Transitions.navigatewall_failed : States.navigateToWall})
+						 Transitions.navigatewall_failed : States.Surface})
 
 
 	smach.StateMachine.add(States.wallFollow, WallFollowing(), 
                                transitions={Transitions.Wall_passed:States.Surface,
-						 Transitions.Wall_failed : States.navigateToWall})
+						 Transitions.Wall_failed : States.Surface})
 
 
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 

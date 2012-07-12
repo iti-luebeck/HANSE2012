@@ -124,7 +124,7 @@ class IsSeen(AbortableState):
 			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
 				#Coordiantes for end of pipe
-				if Global.currentPosition.y > Global.pipe_passed:
+				if Global.currentPosition.x < abs(Global.pipe_passed):
 					setMotorSpeed(0,0)
 					return Transitions.Passed
 			# lost
