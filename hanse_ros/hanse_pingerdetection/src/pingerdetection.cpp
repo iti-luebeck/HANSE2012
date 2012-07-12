@@ -80,7 +80,7 @@ void PingerDetection::processSample(float left, float right)
     if (timeout != 0) {
         timeout--;
         if (timeout == 0) {
-            currentState = WAIT_FOR_PING;
+            currentState = WAIT_FOR_NO_PING;
         }
     }
 
@@ -142,8 +142,8 @@ void PingerDetection::processSample(float left, float right)
             int sampleDifference = rightArrival - leftArrival;
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
-            msg.leftAmplitude = leftMax;
-            msg.rightAmplitude = rightMax;
+            msg.leftAmplitude = leftSum;
+            msg.rightAmplitude = rightSum;
             msg.timeDifference = sampleDifference / (float)sampleRate;
             msg.angle = calculateAngle(sampleDifference);
             currentState = WAIT_FOR_PING;
