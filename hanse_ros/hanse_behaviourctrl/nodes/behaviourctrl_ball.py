@@ -45,9 +45,9 @@ class Global:
 	# variable settings
 	###############
 	#timer
-	timer = 900
+	timer = 400
 	#target depth in cm
-	depth = 100 # TODO change to 180
+	depth = 180 # TODO change to 180
 	#waypoint middle line
 	waypt_middle = Point(69,74,0)
 	#waypoint past validation gate
@@ -236,7 +236,7 @@ class navigateToWall(smach.State):
 	############
 	# enter nav goal for wall
 	############
-	goal = create_nav_goal(Global.waypt_midwater.x-6, Global.waypt_midwater.y-6, 0.0)
+	goal = create_nav_goal(Global.waypt_midwater.x, Global.waypt_midwater.y, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
         if state == GoalStatus.SUCCEEDED:
 		return Transitions.navigatewall_passed
@@ -367,17 +367,17 @@ def main():
 	smach.StateMachine.add(States.Init, Init(), 
                                transitions={Transitions.Init_Finished:States.Submerge})
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate, Transitions.Submerge_failed:States.Surface})
+                               transitions={Transitions.Submerged:States.navigateToWall, Transitions.Submerge_failed:States.Surface})
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
-                              transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
+                              transitions={Transitions.Pipe_passed:States.Surface, Transitions.Pipe_failed : States.valGate})
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 
                               transitions={Transitions.ball_passed:States.navigateToWall})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
-                               transitions={Transitions.navigatewall_passed:States.wallFollow, Transitions.navigatewall_failed : States.navigateToWall})
+                               transitions={Transitions.navigatewall_passed:States.ballFollow, Transitions.navigatewall_failed : States.Surface})
 	smach.StateMachine.add(States.wallFollow, WallFollowing(), 
-                               transitions={Transitions.Wall_passed:States.Surface, Transitions.Wall_failed : States.navigateToWall})
+                               transitions={Transitions.Wall_passed:States.Surface, Transitions.Wall_failed : States.Surface})
 	smach.StateMachine.add(States.Surface, surface(), 
                                transitions={Transitions.Surfaced:'outcome'})
 

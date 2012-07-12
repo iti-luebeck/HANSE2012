@@ -45,9 +45,9 @@ class Global:
 	# variable settings
 	###############
 	#timer
-	timer = 900
+	timer = 400
 	#target depth in cm
-	depth = 100 # TODO change to 180
+	depth = 180 # TODO change to 180
 	#waypoint middle line
 	waypt_middle = Point(69,74,0)
 	#waypoint past validation gate
@@ -371,7 +371,7 @@ def main():
         smach.StateMachine.add(States.valGate, validationGate(), 
                                transitions={Transitions.Goal_passed:States.pipeFollow, Transitions.Goal_failed:States.Surface})
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
-                              transitions={Transitions.Pipe_passed:States.navigateToWall, Transitions.Pipe_failed : States.valGate})
+                              transitions={Transitions.Pipe_passed:States.Surface, Transitions.Pipe_failed : States.Surface})
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 
                               transitions={Transitions.ball_passed:States.navigateToWall})
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
