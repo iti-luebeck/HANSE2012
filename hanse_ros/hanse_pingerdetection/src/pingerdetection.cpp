@@ -14,9 +14,10 @@ PingerDetection::PingerDetection() :
     goertzelPlot(nh, 320, 240, "/pingerdetection/plotGoertzel"),
     minPlot(nh, 320, 240, "/pingerdetection/plotMin"),
     goertzelAveragePlot(nh, 320, 240,  "/pingerdetection/plotGoertzelAverage"),
-    leftMin(240),
-    rightMin(240),
-    goertzelAverage(500),
+    leftMinFilter(240),
+    rightMinFilter(240),
+    leftAverageGoertzel(500),
+    rightAverageGoertzel(500),
     sampleCounter(0)
 {
 
@@ -69,24 +70,29 @@ void PingerDetection::processSample(float left, float right)
     if (config.plotRaw){
         rawPlot.addSample(left / 2 + 0.5f, right / 2 + 0.5f);
     }
+
+    // Goertzel
     float leftGoertzelSample = leftGoertzel.filter(left);
     float rightGoertzelSample = rightGoertzel.filter(right);
-
-    float averageLeftGoertzel = goertzelAverage.filter(leftGoertzelSample);
-    float averageRightGoertzel = goertzelAverage.filter(rightGoertzelSample);
-
-    if(config.plotGoertzelAverage){
-        goertzelAveragePlot.addSample(averageLeftGoertzel, averageRightGoertzel);
-    }
 
     if (config.plotGoertzel){
         goertzelPlot.addSample(leftGoertzelSample / config.plotScaleGoertzel, rightGoertzelSample / config.plotScaleGoertzel);
     }
 
-    float leftMinSample = leftMin.filter(leftGoertzelSample);
-    float rightMinSample = rightMin.filter(rightGoertzelSample);
+    // Average Goertzel
+    float leftAverageGoertzelSample = leftAverageGoertzel.filter(leftGoertzelSample);
+    float rightAverageGoertzelSample = rightAverageGoertzel.filter(rightGoertzelSample);
+
+    if(config.plotGoertzelAverage){
+        goertzelAveragePlot.addSample(leftAverageGoertzelSample / config.plotScaleAverageGoertzel, rightAverageGoertzelSample / config.plotScaleAverageGoertzel);
+    }
+
+    // Minimum-filter
+    float leftMinFilterSample = leftMinFilter.filter(leftGoertzelSample);
+    float rightMinFilterSample = rightMinFilter.filter(rightGoertzelSample);
+
     if (config.plotMin){
-        minPlot.addSample(leftMinSample / config.plotScaleMin, rightMinSample / config.plotScaleMin);
+        minPlot.addSample(leftMinFilterSample / config.plotScaleMin, rightMinFilterSample / config.plotScaleMin);
     }
 
     sampleCounter++;
@@ -100,6 +106,24 @@ void PingerDetection::processSample(float left, float right)
 
     // Now we calculate the TOA
 
+    float leftSample = 0.0f;
+    float rightSample = 0.0f;
+
+    // Calulation source
+    if(config.analyseEnum == 3){
+        // AverageGoertzel
+        leftSample = leftAverageGoertzelSample;
+        rightSample = rightAverageGoertzelSample;
+    } else if(config.analyseEnum == 2){
+        // Min
+        leftSample = leftMinFilterSample;
+        rightSample = rightMinFilterSample;
+    } else {
+        // Goertzel
+        leftSample = leftGoertzelSample;
+        rightSample = rightGoertzelSample;
+    }
+
     switch (currentState) {
     case WAIT_FOR_PING: {
 
@@ -110,48 +134,48 @@ void PingerDetection::processSample(float left, float right)
         leftWeighted = 0.0f;
         rightSum = 0.0f;
         rightWeighted = 0.0f;
-        bool leftDetected = leftMinSample > config.thresholdHigh;
-        bool rightDetected = rightMinSample > config.thresholdHigh;
+        bool leftDetected = leftSample > config.thresholdHigh;
+        bool rightDetected = rightSample > config.thresholdHigh;
         if (leftDetected) {
             leftArrival = sampleCounter;
             currentState = WAIT_FOR_SECOND_PING_RIGHT;
-            addLeft(leftMinSample);
+            addLeft(leftSample);
         }
         if (rightDetected) {
             rightArrival = sampleCounter;
             currentState = WAIT_FOR_SECOND_PING_LEFT;
-            addRight(rightMinSample);
+            addRight(rightSample);
         }
         if (leftDetected && rightDetected) {
             currentState = WAIT_FOR_NO_PING;
         }
     } break;
     case WAIT_FOR_SECOND_PING_LEFT: {
-        addRight(rightMinSample);
-        bool leftDetected = leftMinSample > config.thresholdHigh;
+        addRight(rightSample);
+        bool leftDetected = leftSample > config.thresholdHigh;
         if (leftDetected) {
             leftArrival = sampleCounter;
             currentState = WAIT_FOR_NO_PING;
-            addLeft(leftMinSample);
+            addLeft(leftSample);
         }
     } break;
     case WAIT_FOR_SECOND_PING_RIGHT: {
-        addLeft(leftMinSample);
-        if (leftMax == leftMinSample)
+        addLeft(leftSample);
+        if (leftMax == leftSample)
             leftArrival = sampleCounter;
-        bool rightDetected = rightMinSample > config.thresholdHigh;
+        bool rightDetected = rightSample > config.thresholdHigh;
         if (rightDetected) {
             rightArrival = sampleCounter;
             currentState = WAIT_FOR_NO_PING;
-            addRight(rightMinSample);
+            addRight(rightSample);
         }
     } break;
     case WAIT_FOR_NO_PING: {
 
-        addRight(rightMinSample);
-        addLeft(leftMinSample);
-        bool leftSilent = leftMinSample < config.thresholdLow;
-        bool rightSilent = rightMinSample < config.thresholdLow;
+        addRight(rightSample);
+        addLeft(leftSample);
+        bool leftSilent = leftSample < config.thresholdLow;
+        bool rightSilent = rightSample < config.thresholdLow;
         if (leftSilent && rightSilent) {
             //int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
             int sampleDifference = rightArrival - leftArrival;
@@ -204,9 +228,10 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 
     leftGoertzel.setParameters(config.window, config.frequency) ;
     rightGoertzel.setParameters(config.window, config.frequency);
-    goertzelAverage.setWindow(config.averageWindow);
-    leftMin.setWindow(config.minWindow);
-    rightMin.setWindow(config.minWindow);
+    leftAverageGoertzel.setWindow(config.averageWindow);
+    rightAverageGoertzel.setWindow(config.averageWindow);
+    leftMinFilter.setWindow(config.minWindow);
+    rightMinFilter.setWindow(config.minWindow);
     rawPlot.setSamplesPerPixel(config.samplesPerPixel);
     goertzelPlot.setSamplesPerPixel(config.samplesPerPixel);
     minPlot.setSamplesPerPixel(config.samplesPerPixel);

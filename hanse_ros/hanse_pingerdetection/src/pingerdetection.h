@@ -48,8 +48,10 @@ private:
     float *inputBuffer;
     Goertzel leftGoertzel, rightGoertzel;
     AudioPlot rawPlot, goertzelPlot, minPlot, goertzelAveragePlot;
-    MinFilter leftMin, rightMin;
-    Average goertzelAverage;
+    MinFilter leftMinFilter, rightMinFilter;
+    Average leftAverageGoertzel;
+    Average rightAverageGoertzel;
+
     hanse_pingerdetection::PingerDetectionConfig config;
     dynamic_reconfigure::Server<hanse_pingerdetection::PingerDetectionConfig> reconfigureServer;
     ros::Publisher pingerPub;
