@@ -18,6 +18,7 @@
   <depend package="hanse_navigation"/>
   <depend package="hanse_pipefollowing"/>
   <depend package="hanse_wallfollowing"/>
+  <depend package="hanse_ballfollowing"/>	
 
 </package>
 

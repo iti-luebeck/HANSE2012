@@ -7,6 +7,7 @@ TeleopHanse::TeleopHanse() :
     pids_enabled_(true),
     emergency_stop_(false),
     gamepad_enabled_(false),
+    gamepad_delay_ended_(false),
     trig_(),
     depth_cmd_h_("/hanse/engine/depth/handleEngineCommand"),
     orientation_cmd_h_("/hanse/engine/orientation/handleEngineCommand")
@@ -22,15 +23,8 @@ TeleopHanse::TeleopHanse() :
     publish_timer_ = nh_.createTimer(
                 ros::Duration(0.1), &TeleopHanse::timerCallback, this);
 
-    // wait for ros time to give values != 0
-    ros::Rate loop_rate(10);
-    while(ros::Time::now().toSec() == 0.0)
-    {
-        loop_rate.sleep();
-    }
-
-    // initial delay for receiving joystick events, effectivly ignoring these
-    ignore_time_ = ros::Time::now() + ros::Duration(0.5);
+    delay_timer_ = nh_.createTimer(
+                ros::Duration(0.5), &TeleopHanse::delayCallback, this, true, false);
 
     // initialize dynamic reconfigure
     dyn_reconfigure_cb_ = boost::bind(
@@ -45,6 +39,7 @@ TeleopHanse::TeleopHanse() :
     srv_vel_mux_select_ = nh_.serviceClient<topic_tools::MuxSelect>(
                 "/hanse/commands/cmd_vel_mux/select");
 
+    delay_timer_.start();
     ROS_INFO("teleop_joy started");
     ROS_INFO("Gamepad disabled");
 }
@@ -53,7 +48,6 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
                                          uint32_t level)
 {
     ROS_INFO("got new parameters, level=%d", level);
-
     config_ = config;
 
     // refresh publish timer frequency
@@ -63,7 +57,7 @@ void TeleopHanse::dynReconfigureCallback(hanse_gamepad::GamepadNodeConfig &confi
 void TeleopHanse::timerCallback(const ros::TimerEvent &e)
 {
     // only send messages if gamepad is enabled and delay is over
-    if (gamepad_enabled_ && (ros::Time::now() > ignore_time_))
+    if (gamepad_enabled_ && gamepad_delay_ended_)
     {
         // publish data on topic.
         geometry_msgs::Twist velocity_msg;
@@ -74,10 +68,16 @@ void TeleopHanse::timerCallback(const ros::TimerEvent &e)
     }
 }
 
+void TeleopHanse::delayCallback(const ros::TimerEvent &e)
+{
+    gamepad_delay_ended_ = true;
+    ROS_INFO("Initial delay ended.");
+}
+
 void TeleopHanse::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
     // ignore initial events
-    if (ros::Time::now() < ignore_time_)
+    if (!gamepad_delay_ended_)
     {
         return;
     }

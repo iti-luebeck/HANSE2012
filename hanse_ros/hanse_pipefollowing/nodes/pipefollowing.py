@@ -121,7 +121,7 @@ class IsSeen(AbortableState):
 		while not rospy.is_shutdown() and not self.preempt_requested():
 
 			# if size between min und max..
-			if Global.is_seen:
+			if Config.minSize < Global.size < Config.maxSize:
 				# end of pipe reached?
 				#Coordiantes for end of pipe
 				if Global.currentPosition.y > Global.pipe_passed:
@@ -186,7 +186,7 @@ class Lost(AbortableState):
 			speedDict = {
 				LostTypes.LostLeft:  (Config.fwSpeed, -0.2),
 				LostTypes.LostRight: (Config.fwSpeed, 0.2),
-				LostTypes.LostBottom:(0.0, 0.2),
+				LostTypes.LostBottom:(Config.fwSpeed, 0.0),
 				LostTypes.LostTop:   (Config.fwSpeed, 0.0),
 			}
 

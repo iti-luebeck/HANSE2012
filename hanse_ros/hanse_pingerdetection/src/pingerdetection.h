@@ -8,6 +8,7 @@
 #include "minfilter.h"
 #include "audioplot.h"
 #include <ros/ros.h>
+#include "averageWindow.h"
 
 #include "hanse_pingerdetection/PingerDetectionConfig.h"
 #include <dynamic_reconfigure/server.h>
@@ -46,14 +47,20 @@ private:
     pa_simple *audioInput;
     float *inputBuffer;
     Goertzel leftGoertzel, rightGoertzel;
-    AudioPlot rawPlot, goertzelPlot, minPlot;
-    MinFilter leftMin, rightMin;
+    AudioPlot rawPlot, goertzelPlot, minPlot, goertzelAveragePlot;
+    MinFilter leftMinFilter, rightMinFilter;
+    AverageWindow leftAverageGoertzel;
+    AverageWindow rightAverageGoertzel;
+    AverageWindow leftAverageMagnitude;
+    AverageWindow rightAverageMagnitude;
+
     hanse_pingerdetection::PingerDetectionConfig config;
     dynamic_reconfigure::Server<hanse_pingerdetection::PingerDetectionConfig> reconfigureServer;
     ros::Publisher pingerPub;
+     ros::Publisher pingerPubDebug;
     int sampleCounter;
     int leftArrival, rightArrival;
-    float leftSum, leftWeighted, rightSum, rightWeighted;
+    float leftPeakSum, leftWeighted, rightPeakSum, rightWeighted;
     float leftMax, rightMax;
     int timeout;
 };

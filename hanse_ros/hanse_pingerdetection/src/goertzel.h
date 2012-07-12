@@ -11,7 +11,7 @@ public:
 
     void setParameters(int window, float frequency);
 
-    float filter(float sample);
+    float goertzelFilter(float sample);
 
 private:
     int window;
@@ -20,6 +20,8 @@ private:
     float integralSin, integralCos;
     int listCounter;
     int sampleCounter;
+
+
 };
 
 #endif
