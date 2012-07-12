@@ -11,7 +11,7 @@ public:
 
     void setParameters(int window, float frequency);
 
-    float filter(float sample);
+    float goertzelFilter(float sample);
 
 private:
     int window;

@@ -25,7 +25,7 @@ void Goertzel::setParameters(int window, float frequency)
     sampleCounter = 0;
 }
 
-float Goertzel::filter(float sample)
+float Goertzel::goertzelFilter(float sample)
 {
     integralSin -= windowSin[listCounter];
     integralCos -= windowCos[listCounter];

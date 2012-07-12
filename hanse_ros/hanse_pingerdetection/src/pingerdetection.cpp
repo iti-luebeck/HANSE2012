@@ -2,7 +2,7 @@
 #include <pulse/simple.h>
 #include "pingerdetection.h"
 #include <hanse_msgs/PingerDetection.h>
-
+#include <hanse_msgs/PingerDetectionDebug.h>
 
 PingerDetection::PingerDetection() :
     currentState(WAIT_FOR_PING),
@@ -18,12 +18,15 @@ PingerDetection::PingerDetection() :
     rightMinFilter(240),
     leftAverageGoertzel(500),
     rightAverageGoertzel(500),
+    leftAverageMagnitude(10),
+    rightAverageMagnitude(10),
     sampleCounter(0)
 {
 
     reconfigureServer.setCallback(boost::bind(&PingerDetection::reconfigure, this, _1, _2));
 
     pingerPub = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
+    pingerPubDebug = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pingerDebug", 10);
 
     pa_sample_spec ss;
 
@@ -71,17 +74,17 @@ void PingerDetection::processSample(float left, float right)
         rawPlot.addSample(left / 2 + 0.5f, right / 2 + 0.5f);
     }
 
-    // Goertzel
-    float leftGoertzelSample = leftGoertzel.filter(left);
-    float rightGoertzelSample = rightGoertzel.filter(right);
+    // Goertzel berechnen
+    float leftGoertzelSample = leftGoertzel.goertzelFilter(left);
+    float rightGoertzelSample = rightGoertzel.goertzelFilter(right);
 
     if (config.plotGoertzel){
         goertzelPlot.addSample(leftGoertzelSample / config.plotScaleGoertzel, rightGoertzelSample / config.plotScaleGoertzel);
     }
 
-    // Average Goertzel
-    float leftAverageGoertzelSample = leftAverageGoertzel.filter(leftGoertzelSample);
-    float rightAverageGoertzelSample = rightAverageGoertzel.filter(rightGoertzelSample);
+    // Durchschnitt über mehrere Goertzel-Werte berechnen
+    float leftAverageGoertzelSample = leftAverageGoertzel.averageCalulation(leftGoertzelSample);
+    float rightAverageGoertzelSample = rightAverageGoertzel.averageCalulation(rightGoertzelSample);
 
     if(config.plotGoertzelAverage){
         goertzelAveragePlot.addSample(leftAverageGoertzelSample / config.plotScaleAverageGoertzel, rightAverageGoertzelSample / config.plotScaleAverageGoertzel);
@@ -104,17 +107,15 @@ void PingerDetection::processSample(float left, float right)
         }
     }
 
-    // Now we calculate the TOA
-
     float leftSample = 0.0f;
     float rightSample = 0.0f;
 
-    // Calulation source
-    if(config.analyseEnum == 3){
+    // Je nach Enumeintrag wird eine andere Quelle für die Berechnung eines Peaks verwendet
+    if(config.analyseSource == 3){
         // AverageGoertzel
         leftSample = leftAverageGoertzelSample;
         rightSample = rightAverageGoertzelSample;
-    } else if(config.analyseEnum == 2){
+    } else if(config.analyseSource == 2){
         // Min
         leftSample = leftMinFilterSample;
         rightSample = rightMinFilterSample;
@@ -124,18 +125,26 @@ void PingerDetection::processSample(float left, float right)
         rightSample = rightGoertzelSample;
     }
 
+    hanse_msgs::PingerDetectionDebug msg;
+    msg.header.stamp = ros::Time::now();
+    msg.leftSample = leftSample;
+    msg.leftSample = rightSample;
+    pingerPubDebug.publish(msg);
+
     switch (currentState) {
     case WAIT_FOR_PING: {
 
         timeout = (int)(config.timeout * sampleRate);
         leftMax = 0.0f;
         rightMax = 0.0f;
-        leftSum = 0.0f;
+        leftPeakSum = 0.0f;
         leftWeighted = 0.0f;
-        rightSum = 0.0f;
+        rightPeakSum = 0.0f;
         rightWeighted = 0.0f;
+
         bool leftDetected = leftSample > config.thresholdHigh;
         bool rightDetected = rightSample > config.thresholdHigh;
+
         if (leftDetected) {
             leftArrival = sampleCounter;
             currentState = WAIT_FOR_SECOND_PING_RIGHT;
@@ -179,12 +188,19 @@ void PingerDetection::processSample(float left, float right)
         if (leftSilent && rightSilent) {
             //int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
             int sampleDifference = rightArrival - leftArrival;
+
+            float leftAverageMagnitudeResult = leftAverageMagnitude.averageCalulation(leftPeakSum);
+            float rightAverageMagnitudeResult = rightAverageMagnitude.averageCalulation(rightPeakSum);
+
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
-            msg.leftAmplitude = leftSum;
-            msg.rightAmplitude = rightSum;
+            msg.leftAmplitude = leftPeakSum;
+            msg.rightAmplitude = rightPeakSum;
             msg.timeDifference = sampleDifference / (float)sampleRate;
             msg.angle = calculateAngle(sampleDifference);
+            msg.leftAverageMagnitude = leftAverageMagnitudeResult;
+            msg.rightAverageMagnitude = rightAverageMagnitudeResult;
+
             currentState = WAIT_FOR_PING;
             pingerPub.publish(msg);
         }
@@ -197,14 +213,14 @@ void PingerDetection::processSample(float left, float right)
 void PingerDetection::addRight(float sample)
 {
     rightMax = std::max(rightMax, sample);
-    rightSum += sample;
+    rightPeakSum += sample;
     rightWeighted += (sampleCounter - rightArrival) * sample;
 }
 
 void PingerDetection::addLeft(float sample)
 {
     leftMax = std::max(leftMax, sample);
-    leftSum += sample;
+    leftPeakSum += sample;
     leftWeighted += (sampleCounter - leftArrival) * sample;
 }
 
@@ -228,8 +244,8 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 
     leftGoertzel.setParameters(config.window, config.frequency) ;
     rightGoertzel.setParameters(config.window, config.frequency);
-    leftAverageGoertzel.setWindow(config.averageWindow);
-    rightAverageGoertzel.setWindow(config.averageWindow);
+    leftAverageGoertzel.setWindow(config.averageWindowGoertzelSamples);
+    rightAverageGoertzel.setWindow(config.averageWindowGoertzelSamples);
     leftMinFilter.setWindow(config.minWindow);
     rightMinFilter.setWindow(config.minWindow);
     rawPlot.setSamplesPerPixel(config.samplesPerPixel);
@@ -241,6 +257,8 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
     minPlot.setCounter(config.counter);
     goertzelAveragePlot.setCounter(config.counter);
 
+    leftAverageMagnitude.setWindow(config.averageMagnitudeWindow);
+    rightAverageMagnitude.setWindow(config.averageMagnitudeWindow);
 
 }
 
