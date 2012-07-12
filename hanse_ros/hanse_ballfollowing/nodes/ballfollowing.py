@@ -129,7 +129,7 @@ class Seen(AbortableState):
 
 class Lost(AbortableState):
 	def __init__(self):
-		smach.State.__init__(self, outcomes=[Transitions.Seen, Transitions.Aborted])
+		smach.State.__init__(self, outcomes=[Transitions.Seen, Transitions.Done, Transitions.Aborted])
 
 	def execute(self, userdata):
 		rospy.loginfo('Executing state '+States.Lost)
@@ -138,6 +138,10 @@ class Lost(AbortableState):
 		while not rospy.is_shutdown() and not self.preempt_requested():
 			if Config.minSize < Global.size < Config.maxSize:
 				return Transitions.Seen
+
+			if diffHeading > 10 and diffHeading < 30:
+				setMotorSpeed(0,0)
+				return Transitions.Done
 
 			rospy.sleep(0.2)
 
@@ -222,7 +226,7 @@ if __name__ == '__main__':
                                transitions={Transitions.Lost : States.Lost,
                                				Transitions.Done : States.Done})
 		smach.StateMachine.add(States.Lost, Lost(), 
-                               transitions={Transitions.Seen : States.Seen})
+                               transitions={Transitions.Seen : States.Seen,Transitions.Done : States.Done})
 
 	# Create and start the introspection server
 	sis = smach_ros.IntrospectionServer('ballfollowing_introspection_server', sm, '/SM_ROOT')
