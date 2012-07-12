@@ -9,6 +9,7 @@ from geometry_msgs.msg import PoseStamped, Vector3
 from geometry_msgs.msg import Twist
 from hanse_msgs.msg import PingerDetection
 from std_msgs.msg import Header
+from std_msgs.msg import String
 from hanse_pingerfollowing.cfg import PingerFollowingConfig
 
 class Node:
@@ -20,6 +21,9 @@ class Node:
 
 class Config:
     pass
+
+class Global:
+    status = 'stop'
 
 def configCallback(config, level):
     Config.initStep = config['init_step']
@@ -34,7 +38,14 @@ def configCallback(config, level):
     Config.minOneStep = config['min_one_step']
     return config
 
+def statusCallback(msg):
+    # rospy.loginfo(msg.data)
+    Global.status = msg.data
+
 def pingerCallback(msg):
+    if status == stop:
+        return
+
     avg = msg.leftAmplitude * (1-Config.hydrophoneDirection) + msg.rightAmplitude * Config.hydrophoneDirection
     distance = 1 / math.sqrt(avg)
     if Node.target == None:
@@ -85,5 +96,6 @@ if __name__ == '__main__':
     rospy.init_node('pingerfollowing')
     dynamic_reconfigure.server.Server(PingerFollowingConfig, configCallback)
     rospy.Subscriber('/hanse/pinger', PingerDetection, pingerCallback)
+    rospy.Subscriber('/hanse/pinger/status', String, statusCallback)
     Node.cmd_vel = pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
     rospy.spin()
