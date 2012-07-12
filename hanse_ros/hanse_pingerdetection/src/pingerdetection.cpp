@@ -125,11 +125,8 @@ void PingerDetection::processSample(float left, float right)
         rightSample = rightGoertzelSample;
     }
 
-    hanse_msgs::PingerDetectionDebug msg;
-    msg.header.stamp = ros::Time::now();
-    msg.leftSample = leftSample;
-    msg.leftSample = rightSample;
-    pingerPubDebug.publish(msg);
+
+   // ROS_INFO("leftSample %f  rightSample %f", leftSample, rightSample);
 
     switch (currentState) {
     case WAIT_FOR_PING: {
@@ -189,15 +186,18 @@ void PingerDetection::processSample(float left, float right)
             //int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
             int sampleDifference = rightArrival - leftArrival;
 
-            float leftAverageMagnitudeResult = leftAverageMagnitude.averageCalulation(leftPeakSum);
-            float rightAverageMagnitudeResult = rightAverageMagnitude.averageCalulation(rightPeakSum);
+            float leftAverageMagnitudeResult = leftAverageMagnitude.averageCalulation(leftMax);
+            float rightAverageMagnitudeResult = rightAverageMagnitude.averageCalulation(rightMax);
 
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
             msg.leftAmplitude = leftPeakSum;
             msg.rightAmplitude = rightPeakSum;
             msg.timeDifference = sampleDifference / (float)sampleRate;
-            msg.angle = calculateAngle(sampleDifference);
+            msg.leftPeakSum = leftPeakSum;
+            msg.rightPeakSum = rightPeakSum;
+            msg.leftWeighted = leftWeighted;
+            msg.rightWeighted = rightWeighted;
             msg.leftAverageMagnitude = leftAverageMagnitudeResult;
             msg.rightAverageMagnitude = rightAverageMagnitudeResult;
 
