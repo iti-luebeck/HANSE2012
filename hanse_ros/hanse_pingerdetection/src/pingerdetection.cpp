@@ -197,7 +197,7 @@ void PingerDetection::processSample(float left, float right)
 
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
-            msg.leftAmplitude = leftPeakSum;
+            /*msg.leftAmplitude = leftPeakSum;
             msg.rightAmplitude = rightPeakSum;
             msg.timeDifference = sampleDifference / (float)sampleRate;
             msg.leftPeakSum = leftPeakSum;
@@ -205,8 +205,15 @@ void PingerDetection::processSample(float left, float right)
             msg.leftWeighted = leftWeighted;
             msg.rightWeighted = rightWeighted;
             msg.leftAverageMagnitude = leftAverageMagnitudeResult;
-            msg.rightAverageMagnitude = rightAverageMagnitudeResult;
+            msg.rightAverageMagnitude = rightAverageMagnitudeResult;*/
 
+            msg.leftAmplitude = leftAverageMagnitudeResult;
+            msg.rightAmplitude = rightAverageMagnitudeResult;
+            msg.timeDifference = sampleDifference / (float)sampleRate;
+            msg.leftPeakSum = leftPeakSum;
+            msg.rightPeakSum = rightPeakSum;
+            msg.leftWeighted = leftWeighted;
+            msg.rightWeighted = rightWeighted;
             currentState = WAIT_FOR_PING;
             pingerPub.publish(msg);
         }
