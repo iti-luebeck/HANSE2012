@@ -21,7 +21,7 @@ from hanse_srvs.srv import *
 
 
 class Global:
-	SIMULATOR = True
+	SIMULATOR = False
 	time_initial = 0.0
 	duration = rospy.Duration(0,0)
 	logfile = " "
@@ -55,21 +55,21 @@ class Global:
 
 
 	#waypoint middle line
-	waypt_middle = Point(70,-74,0)
+	waypt_middle = Point(70,74,0)
 	#waypoint past validation gate
-	waypt_past_valgate = Point(79.0,-74.25,1)
+	waypt_past_valgate = Point(79.0,74.25,1)
 	#waypoint 180 degree turn
-	waypt_180_valgate = Point(73,-74.25,1)
+	waypt_180_valgate = Point(73,74.25,1)
 	#waypoint end of pipe
-	waypt_eop = Point(60,-74,1)
+	waypt_eop = Point(60,74,1)
 	#waypoint midwater
-	waypt_midwater = Point(57.5,-68,1)
+	waypt_midwater = Point(57.5,68,1)
 	#waypoint wallstart
-	waypt_wallstart = Point(52.5,-65,1)
+	waypt_wallstart = Point(54.5,65,1)
 	#waypoint end of wall
-	waypt_endwall = Point(65,-60,1)
+	waypt_endwall = Point(65,60,1)
 	#waypoint start
-	waypt_start = Point(70,-55,1)
+	waypt_start = Point(70,55,1)
 
 
 class States:
