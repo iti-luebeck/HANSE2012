@@ -47,11 +47,11 @@ class Global:
 	# variable settings
 	###############
 	#timer,
-	timer = 900
+	timer = 1200
 	#target depth in cm
 
 
-	depth = 100 # TODO change to 180
+	depth = 180 # TODO change to 180
 
 
 	#waypoint middle line
@@ -67,7 +67,7 @@ class Global:
 	#waypoint wallstart
 	waypt_wallstart = Point(54.5,65,1)
 	#waypoint end of wall
-	waypt_endwall = Point(65,60,1)
+	waypt_endwall = Point(65,62,1)
 	#waypoint start
 	waypt_start = Point(70,55,1)
 
@@ -180,12 +180,12 @@ class validationGate(smach.State):
 		Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt_past_valgate.x-50)+","+str(Global.waypt_past_valgate.y-50)+")"
 		rospy.loginfo('navigation succeeded')
 		goal = create_nav_goal(Global.waypt_past_valgate.x, Global.waypt_past_valgate.y, 0.0)
-		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+		state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 		if state == GoalStatus.SUCCEEDED:
 			Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt_180_valgate.x-50)+","+str(Global.waypt_180_valgate.y-50)+")"
 			rospy.loginfo('navigation succeeded')
 			goal = create_nav_goal(Global.waypt_180_valgate.x, Global.waypt_180_valgate.y, 0.0)
-			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+			state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
 			return Transitions.Goal_passed
 		else:
 			rospy.loginfo('navigation failed: ' + GoalStatus.to_string(state))
@@ -247,7 +247,7 @@ class navigateToWall(smach.State):
 	# enter nav goal for wall
 	############
 	goal = create_nav_goal(Global.waypt_wallstart.x, Global.waypt_wallstart.y, 0.0)
-	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(360))
+	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
         if state == GoalStatus.SUCCEEDED:
 		return Transitions.navigatewall_passed
 	else:
