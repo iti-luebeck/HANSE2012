@@ -168,6 +168,7 @@ def configCallback(config, level):
 	Config.fwSpeed = config['fwSpeed']
 	Config.kpAngle = config['kpAngle']
 	Config.lostFactor = config['lostFactor']
+	Config.offset = config['offset']
 	return config
 
 def positionCallback(msg):	
