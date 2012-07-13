@@ -35,6 +35,7 @@ class Global:
 	nav_client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
 	pipe_client = actionlib.SimpleActionClient('/pipefollowing', PipeFollowingAction)
 	pub_start_pingerfollow = rospy.Publisher('/hanse/pinger/status',String)
+	pub_cmd_vel = rospy.Publisher('/hanse/commands/cmd_vel_behaviour', Twist)
 	action = " "
 	wf_action = " "
 	pf_action = " "
@@ -51,7 +52,7 @@ class Global:
 	#target depth in cm
 
 
-	depth = 180 # TODO change to 180
+	depth = 60 # TODO change to 180
 
 
 	#waypoint middle line
@@ -71,6 +72,27 @@ class Global:
 	#waypoint start
 	waypt_start = Point(70,55,1)
 
+	#waypt1
+	waypt1 = Point(58,-58,1)
+	#waypt2
+	waypt2 = Point(66,-58,1)
+	#waypt3
+	waypt3 = Point(72,-62,1)
+	#waypt4
+	waypt4 = Point(66,-66,1)
+	#waypt5
+	waypt5 = Point(58,-66,1)
+	#waypt6
+	waypt6 = Point(58,-58,1)
+	#waypt7
+	waypt7 = Point(66,-66,1)
+	#waypt8
+	waypt8 = Point(66,-58,1)
+	#waypt9
+	waypt9 = Point(58,-66,1)
+	#waypt10
+	waypt10 = Point(62,-62,1)
+
 
 class States:
 	Init = 'Init'
@@ -81,6 +103,7 @@ class States:
 	navigateToWall = 'navigateToWall'
 	wallFollow = 'wallFollow'
 	pingerFollow = 'pingerFollow'
+	nicolaus = 'nicolaus'
 	Surface = 'Surface'
 	
 
@@ -101,6 +124,8 @@ class Transitions:
 	Wall_failed = 'Wall_failed'
 	ball_passed = 'ball_passed'
 	pinger_passed = 'pinger_passed'
+	nicolaus_passed = 'nicolaus_passed'
+	nicolaus_failed = 'nicolaus_failed'
 	Surfaced = 'Surfaced'
 	
 
@@ -124,18 +149,6 @@ class Init(smach.State):
 	rospy.loginfo("nav_client started and waiting")
         Global.nav_client.wait_for_server()
 	rospy.loginfo("nav_server listening for goals")
-
-	rospy.loginfo("pipe_client started and waiting")
-        Global.pipe_client.wait_for_server()
-	rospy.loginfo("pipe_server listening for goals")
-
-	rospy.loginfo("wf_client started and waiting")
-        Global.wf_client.wait_for_server()
-	rospy.loginfo("wf_server listening for goals")
-
-	rospy.loginfo("bf_client started and waiting")
-	Global.bf_client.wait_for_server()
-	rospy.loginfo("bf_server listening for goals")
 
         return Transitions.Init_Finished
 
@@ -318,6 +331,68 @@ class pingerFollowing(smach.State):
 	
 	return Transitions.ball_passed	
 
+
+#################################
+# define state nicolaus
+#################################
+class nicolaus(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=[Transitions.nicolaus_passed])
+        
+
+    def execute(self, userdata):
+
+	goal = create_nav_goal(Global.waypt1.x, Global.waypt1.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp1 passed")
+
+	goal = create_nav_goal(Global.waypt2.x, Global.waypt2.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp2 passed")
+
+	goal = create_nav_goal(Global.waypt3.x, Global.waypt3.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp3 passed")
+
+	goal = create_nav_goal(Global.waypt4.x, Global.waypt4.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp4 passed")
+	
+	goal = create_nav_goal(Global.waypt5.x, Global.waypt5.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp5 passed")
+
+	goal = create_nav_goal(Global.waypt6.x, Global.waypt6.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp6 passed")
+
+	goal = create_nav_goal(Global.waypt7.x, Global.waypt7.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp7 passed")
+
+	goal = create_nav_goal(Global.waypt8.x, Global.waypt8.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp8 passed")
+
+	goal = create_nav_goal(Global.waypt9.x, Global.waypt9.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+
+	rospy.loginfo("wp9 passed")
+
+	goal = create_nav_goal(Global.waypt10.x, Global.waypt10.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, rospy.Duration(120))
+       
+	return Transitions.nicolaus_passed
+
+
 #################################
 # define state Surface
 #################################
@@ -330,11 +405,20 @@ class surface(smach.State):
 	Global.actionstate = (False,False,False,False)
 
 	Global.call_depth(0.0)
-	#rosply.sleep(10)
+	rospy.sleep(5)
+	
+	twist = Twist(linear=Vector3(x=lin,z=0), angular=Vector3(z=1))
+	Global.pub_cmd_vel.publish(twist)
+	Global.pub_cmd_vel.publish(twist)
+	Global.pub_cmd_vel.publish(twist)
+	rosply.sleep(15)
 	#goal = create_nav_goal(Global.waypt_start.x, Global.waypt_start.y, 0.0)
 	#state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(120))
-	rospy.sleep(10)
-	
+	#rospy.sleep(10)
+	twist = Twist(linear=Vector3(x=0,y=0,z=0), angular=Vector3(z=0))
+	Global.pub_cmd_vel.publish(twist)
+	Global.pub_cmd_vel.publish(twist)
+	Global.pub_cmd_vel.publish(twist)
 	return Transitions.Surfaced
 
 #timerCallback calls the routine for creating the logfile
@@ -433,7 +517,7 @@ def main():
 
 
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.valGate,
+                               transitions={Transitions.Submerged:States.nicolaus,
 						 Transitions.Submerge_failed:States.Surface})
 
 
@@ -463,6 +547,8 @@ def main():
 	smach.StateMachine.add(States.pingerFollow, pingerFollowing(), 
                               transitions={Transitions.pinger_passed:States.Surface})
 
+	smach.StateMachine.add(States.nicolaus, nicolaus(), 
+                               transitions={Transitions.nicolaus_passed:States.Surface})
 
 	smach.StateMachine.add(States.Surface, surface(), 
                                transitions={Transitions.Surfaced:'outcome'})
