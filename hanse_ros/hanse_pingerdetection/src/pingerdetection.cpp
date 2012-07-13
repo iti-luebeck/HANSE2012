@@ -26,7 +26,7 @@ PingerDetection::PingerDetection() :
     enabled = false;
 
     reconfigureServer.setCallback(boost::bind(&PingerDetection::reconfigure, this, _1, _2));
-    pingerInput = nh.subscribe("/hanse/pingerdetection",1, &PingerDetection::pingerDetectionCallback, this);
+    pingerInput = nh.subscribe("/hanse/pinger/status",1, &PingerDetection::pingerDetectionCallback, this);
 
 
     pingerPub = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
