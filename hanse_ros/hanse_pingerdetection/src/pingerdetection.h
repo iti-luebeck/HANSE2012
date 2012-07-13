@@ -10,6 +10,10 @@
 #include <ros/ros.h>
 #include "averageWindow.h"
 
+#include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/Int32.h>
+
 #include "hanse_pingerdetection/PingerDetectionConfig.h"
 #include <dynamic_reconfigure/server.h>
 
@@ -23,6 +27,7 @@ public:
 
     void tick();
 
+    void pingerDetectionCallback(const std_msgs::StringConstPtr &msg);
 
 
 private:
@@ -57,12 +62,14 @@ private:
     hanse_pingerdetection::PingerDetectionConfig config;
     dynamic_reconfigure::Server<hanse_pingerdetection::PingerDetectionConfig> reconfigureServer;
     ros::Publisher pingerPub;
-     ros::Publisher pingerPubDebug;
+    ros::Publisher pingerPubDebug;
+    ros::Subscriber pingerInput;
     int sampleCounter;
     int leftArrival, rightArrival;
     float leftPeakSum, leftWeighted, rightPeakSum, rightWeighted;
     float leftMax, rightMax;
     int timeout;
+    bool enabled;
 };
 
 #endif
