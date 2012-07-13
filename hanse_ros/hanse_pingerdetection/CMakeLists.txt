@@ -11,6 +11,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
+
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
@@ -34,6 +35,6 @@ rosbuild_add_executable(pingerdetection
   src/goertzel.cpp
   src/audioplot.cpp
   src/minfilter.cpp
-  src/average.cpp
+  src/averageWindow.cpp
 )
 target_link_libraries(pingerdetection pulse pulse-simple)

@@ -1,0 +1,3 @@
+<launch>
+  <node name="pingerfollowing" pkg="hanse_pingerfollowing" type="pingerfollowing.py" />
+</launch>

@@ -23,7 +23,11 @@ PingerDetection::PingerDetection() :
     sampleCounter(0)
 {
 
+    enabled = false;
+
     reconfigureServer.setCallback(boost::bind(&PingerDetection::reconfigure, this, _1, _2));
+    pingerInput = nh.subscribe("/hanse/pinger/status",1, &PingerDetection::pingerDetectionCallback, this);
+
 
     pingerPub = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
     pingerPubDebug = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pingerDebug", 10);
@@ -60,8 +64,10 @@ void PingerDetection::tick()
 {
     int error;
     pa_simple_read(audioInput, (void *)inputBuffer, sizeof(float) * bufferFrames * 2, &error);
-    for (int i = 0; i < bufferFrames; i++) {
-        processSample(inputBuffer[2 * i + 0], inputBuffer[2 * i + 1]);
+    if(enabled){
+        for (int i = 0; i < bufferFrames; i++) {
+            processSample(inputBuffer[2 * i + 0], inputBuffer[2 * i + 1]);
+        }
     }
 }
 
@@ -125,11 +131,8 @@ void PingerDetection::processSample(float left, float right)
         rightSample = rightGoertzelSample;
     }
 
-    hanse_msgs::PingerDetectionDebug msg;
-    msg.header.stamp = ros::Time::now();
-    msg.leftSample = leftSample;
-    msg.leftSample = rightSample;
-    pingerPubDebug.publish(msg);
+
+    // ROS_INFO("leftSample %f  rightSample %f", leftSample, rightSample);
 
     switch (currentState) {
     case WAIT_FOR_PING: {
@@ -189,15 +192,18 @@ void PingerDetection::processSample(float left, float right)
             //int sampleDifference = (rightArrival + rightWeighted / rightSum) - (leftArrival + leftWeighted / leftSum);
             int sampleDifference = rightArrival - leftArrival;
 
-            float leftAverageMagnitudeResult = leftAverageMagnitude.averageCalulation(leftPeakSum);
-            float rightAverageMagnitudeResult = rightAverageMagnitude.averageCalulation(rightPeakSum);
+            float leftAverageMagnitudeResult = leftAverageMagnitude.averageCalulation(leftMax);
+            float rightAverageMagnitudeResult = rightAverageMagnitude.averageCalulation(rightMax);
 
             hanse_msgs::PingerDetection msg;
             msg.header.stamp = ros::Time::now();
             msg.leftAmplitude = leftPeakSum;
             msg.rightAmplitude = rightPeakSum;
             msg.timeDifference = sampleDifference / (float)sampleRate;
-            msg.angle = calculateAngle(sampleDifference);
+            msg.leftPeakSum = leftPeakSum;
+            msg.rightPeakSum = rightPeakSum;
+            msg.leftWeighted = leftWeighted;
+            msg.rightWeighted = rightWeighted;
             msg.leftAverageMagnitude = leftAverageMagnitudeResult;
             msg.rightAverageMagnitude = rightAverageMagnitudeResult;
 
@@ -259,6 +265,21 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 
     leftAverageMagnitude.setWindow(config.averageMagnitudeWindow);
     rightAverageMagnitude.setWindow(config.averageMagnitudeWindow);
+
+}
+
+
+void PingerDetection::pingerDetectionCallback(const std_msgs::StringConstPtr& msg){
+
+    if(msg->data == std::string("start")){
+        ROS_INFO("Pingerdetection callback enable");
+        this->enabled = true;
+    } else if(msg->data == std::string("stop")){
+        ROS_INFO("Pingerdetection callback disable");
+        this->enabled = false;
+    } else {
+        ROS_INFO("Pingerdetection callback parameter %s is not valid", msg->data.c_str());
+    }
 
 }
 
