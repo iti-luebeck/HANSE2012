@@ -1,7 +1,7 @@
 <launch>
   <!-- ENGINE -->
   <group ns="hanse">
-    <node name="depthEngine" pkg="hanse_depthengine" type="hanse_depthengine" output="screen">
+    <node name="depthEngine" pkg="hanse_depthengine" type="hanse_depthengine" output="screen" respawn="true">
       <rosparam file="$(find hanse_depthengine)/config_depthengine.yaml"/>
     </node>
   </group>

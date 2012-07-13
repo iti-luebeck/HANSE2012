@@ -5,5 +5,5 @@
     <include ns="hanse" file="$(find hanse_object_detection)/launch/ball.launch" />
     <include file="$(find hanse_ballfollowing)/launch/ballfollowing.launch" />
   </group>
-  <node name="republish_ball_detection_hanse" pkg="image_transport" type="republish" args="raw in:=/image_ball compressed out:=/image_ball/transport" />
+  <!--node name="republish_ball_detection_hanse" pkg="image_transport" type="republish" args="raw in:=/image_ball compressed out:=/image_ball/transport" /-->
 </launch>

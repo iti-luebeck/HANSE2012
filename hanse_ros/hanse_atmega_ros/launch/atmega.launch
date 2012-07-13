@@ -1,6 +1,6 @@
 <launch>
   <group ns="hanse">
-    <node name="atmega" pkg="hanse_atmega_ros" type="hanse_atmega_ros.py" output="screen">
+    <node name="atmega" pkg="hanse_atmega_ros" type="hanse_atmega_ros.py" output="screen" respawn="true">
       <param name="serial_port" value="/dev/ttyUSB_atmega" />
     </node>
   </group>

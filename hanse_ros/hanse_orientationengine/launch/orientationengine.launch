@@ -1,7 +1,7 @@
 <launch>
   <!-- ENGINE -->
   <group ns="hanse">
-    <node name="orientationEngine" pkg="hanse_orientationengine" type="hanse_orientationengine" output="screen">
+    <node name="orientationEngine" pkg="hanse_orientationengine" type="hanse_orientationengine" output="screen" respawn="true">
       <rosparam file="$(find hanse_orientationengine)/config_orientationengine.yaml"/>
     </node>
   </group>
