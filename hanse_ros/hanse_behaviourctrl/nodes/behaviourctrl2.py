@@ -458,7 +458,10 @@ def main():
 
 
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 
-                              transitions={Transitions.ball_passed:States.Surface})
+                              transitions={Transitions.ball_passed:States.pingerFollow})
+
+	smach.StateMachine.add(States.pingerFollow, pingerFollowing(), 
+                              transitions={Transitions.pinger_passed:States.Surface})
 
 
 	smach.StateMachine.add(States.Surface, surface(), 
