@@ -23,7 +23,11 @@ PingerDetection::PingerDetection() :
     sampleCounter(0)
 {
 
+    enabled = false;
+
     reconfigureServer.setCallback(boost::bind(&PingerDetection::reconfigure, this, _1, _2));
+    pingerInput = nh.subscribe("/hanse/pinger/status",1, &PingerDetection::pingerDetectionCallback, this);
+
 
     pingerPub = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pinger", 10);
     pingerPubDebug = nh.advertise<hanse_msgs::PingerDetection>("/hanse/pingerDebug", 10);
@@ -60,8 +64,10 @@ void PingerDetection::tick()
 {
     int error;
     pa_simple_read(audioInput, (void *)inputBuffer, sizeof(float) * bufferFrames * 2, &error);
-    for (int i = 0; i < bufferFrames; i++) {
-        processSample(inputBuffer[2 * i + 0], inputBuffer[2 * i + 1]);
+    if(enabled){
+        for (int i = 0; i < bufferFrames; i++) {
+            processSample(inputBuffer[2 * i + 0], inputBuffer[2 * i + 1]);
+        }
     }
 }
 
@@ -126,7 +132,7 @@ void PingerDetection::processSample(float left, float right)
     }
 
 
-   // ROS_INFO("leftSample %f  rightSample %f", leftSample, rightSample);
+    // ROS_INFO("leftSample %f  rightSample %f", leftSample, rightSample);
 
     switch (currentState) {
     case WAIT_FOR_PING: {
@@ -259,6 +265,21 @@ void PingerDetection::reconfigure(hanse_pingerdetection::PingerDetectionConfig &
 
     leftAverageMagnitude.setWindow(config.averageMagnitudeWindow);
     rightAverageMagnitude.setWindow(config.averageMagnitudeWindow);
+
+}
+
+
+void PingerDetection::pingerDetectionCallback(const std_msgs::StringConstPtr& msg){
+
+    if(msg->data == std::string("start")){
+        ROS_INFO("Pingerdetection callback enable");
+        this->enabled = true;
+    } else if(msg->data == std::string("stop")){
+        ROS_INFO("Pingerdetection callback disable");
+        this->enabled = false;
+    } else {
+        ROS_INFO("Pingerdetection callback parameter %s is not valid", msg->data.c_str());
+    }
 
 }
 

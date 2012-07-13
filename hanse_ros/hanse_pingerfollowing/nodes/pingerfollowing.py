@@ -43,7 +43,8 @@ def statusCallback(msg):
     Global.status = msg.data
 
 def pingerCallback(msg):
-    if status == stop:
+    if status == 'stop':
+        setMotorSpeed(0, 0)
         return
 
     avg = msg.leftAmplitude * (1-Config.hydrophoneDirection) + msg.rightAmplitude * Config.hydrophoneDirection

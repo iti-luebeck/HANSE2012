@@ -35,6 +35,7 @@ class Config:
 	fwSpeed = 0.8
 	kpAngle = 1.0
 	lostFactor = 3
+        offset = 0
 
 class Global:
 	x = 0.0
@@ -114,7 +115,7 @@ class Seen(AbortableState):
 				################
 				# gegebenenfalls an die kamera anpassen (division factor)
 				################
-				angularSpeed = Config.kpAngle * (IMAGE_COLS / 4 - Global.x) / (IMAGE_COLS / 2)
+				angularSpeed = Config.kpAngle * ((IMAGE_COLS / 4 - Global.x) / (IMAGE_COLS / 2) - Config.offset)
 				rospy.loginfo('angular speed: '+str(angularSpeed))
 				setMotorSpeed(Config.fwSpeed, angularSpeed)
 				rospy.sleep(0.1)
