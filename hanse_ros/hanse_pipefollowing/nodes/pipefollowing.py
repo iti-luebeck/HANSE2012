@@ -56,7 +56,8 @@ class Global:
 	is_seen = True
 	state = " "
 	distance = 0
-	pipe_passed = 63.6
+        pipe_passed = 63.6
+
 
 
 #==============================================================================
@@ -276,7 +277,7 @@ def setMotorSpeed(lin, ang):
 	#pub_motor_right.publish(sollSpeed(data = right))
 
 def timerCallback(event):
-    pub_behaviour_info.publish(String(data = 'Orientation:  '+str(Global.orientation)+ ' x-Distance to pipe:  '+str(Global.distance)))
+    pub_behaviour_info.publish(String(data = 'Orientation:  '+str(Global.orientation)))
 
 
 

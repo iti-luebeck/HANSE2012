@@ -11,6 +11,7 @@ from std_msgs.msg import Float64, Float32, String
 from geometry_msgs.msg import PoseStamped, Point, Twist, Vector3
 from sensor_msgs.msg import Imu
 from datetime import datetime
+from tf.transformations import euler_from_quaternion
 from actionlib_msgs.msg import GoalStatus
 from hanse_navigation.msg import NavigateGoal, NavigateAction
 from hanse_pipefollowing.msg import PipeFollowingGoal, PipeFollowingAction
@@ -25,6 +26,7 @@ class Global:
 	duration = rospy.Duration(0,0)
 	logfile = " "
 	currentPosition = Point()
+	currentHeading = 0
 	pressure_initial = 0
 	pressure = 0
 	call_depth = rospy.ServiceProxy('/hanse/engine/depth/setDepth', SetTarget)
@@ -32,12 +34,13 @@ class Global:
 	bf_client = actionlib.SimpleActionClient('/ballfollowing', BallFollowingAction)
 	nav_client = actionlib.SimpleActionClient('/hanse/navigation', NavigateAction)
 	pipe_client = actionlib.SimpleActionClient('/pipefollowing', PipeFollowingAction)
+	pub_start_pingerfollow = rospy.Publisher('/hanse/pinger/status',String)
 	action = " "
 	wf_action = " "
 	pf_action = " "
 	action_state = " "
 	#pipe, wall,...
-	actionstate = (False,False,False)
+	actionstate = (False,False,False,False)
 
 
 	###############
@@ -46,7 +49,11 @@ class Global:
 	#timer,
 	timer = 900
 	#target depth in cm
+
+
 	depth = 100 # TODO change to 180
+
+
 	#waypoint middle line
 	waypt_middle = Point(70,-74,0)
 	#waypoint past validation gate
@@ -56,9 +63,9 @@ class Global:
 	#waypoint end of pipe
 	waypt_eop = Point(60,-74,1)
 	#waypoint midwater
-	waypy_midwater = Point(57.5,-68,1)
+	waypt_midwater = Point(57.5,-68,1)
 	#waypoint wallstart
-	waypt_wallstart = Point(54,-65,1)
+	waypt_wallstart = Point(52.5,-65,1)
 	#waypoint end of wall
 	waypt_endwall = Point(65,-60,1)
 	#waypoint start
@@ -142,7 +149,7 @@ class submerge(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv submerging "
-	Global.actionstate = (False,False,False)
+	Global.actionstate = (False,False,False,False)
 
 	Global.call_depth(Global.depth)
 	while Global.duration.secs < 30:
@@ -164,7 +171,7 @@ class validationGate(smach.State):
 
     def execute(self, userdata):
 	Global.action = "navigate to validation gate : waypoint ("+str(Global.waypt_middle.x-50)+","+str(Global.waypt_middle.y-50)+")"
-	Global.actionstate = (False,False,False)
+	Global.actionstate = (False,False,False,False)
 
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	goal = create_nav_goal(Global.waypt_middle.x, Global.waypt_middle.y, 0.0)
@@ -196,7 +203,7 @@ class PipeFollowing(smach.State):
 
     def execute(self, userdata):
 	start_time = Global.duration.secs
-	Global.actionstate = (False,True,False)
+	Global.actionstate = (True,False,False,False)
 
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
         state = Global.pipe_client.send_goal_and_wait(PipeFollowingGoal(), execute_timeout = rospy.Duration(180))
@@ -225,21 +232,22 @@ class PipeFollowing(smach.State):
 
 #################################
 # define state navigateToWall
+#ZEIT AENDERN
 #################################
 class navigateToWall(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=[Transitions.navigatewall_passed,Transitions.navigatewall_failed])
 
     def execute(self, userdata):
-	Global.action = "navigate to wall following : waypoint ("+str(Global.waypt_wallstart)+","+str(Global.waypt_wallstart)+")"
-	Global.actionstate = (False,False,False)
+	Global.action = "navigate to wall following : waypoint ("+str(Global.waypt_wallstart.x-50)+","+str(Global.waypt_wallstart.y-50)+")"
+	Global.actionstate = (False,False,False,False)
 
 	signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	############
 	# enter nav goal for wall
 	############
 	goal = create_nav_goal(Global.waypt_wallstart.x, Global.waypt_wallstart.y, 0.0)
-	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(60))
+	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(360))
         if state == GoalStatus.SUCCEEDED:
 		return Transitions.navigatewall_passed
 	else:
@@ -254,7 +262,7 @@ class WallFollowing(smach.State):
 
     def execute(self, userdata):
 	start_time = Global.duration.secs
-	Global.actionstate = (True,False,False)
+	Global.actionstate = (False,True,False,False)
 
         signal.signal(signal.SIGINT, lambda signum, frame: client.cancel_goal())
 	#Setting the time limit for wallfollowing
@@ -274,17 +282,19 @@ class ballFollowing(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.ball_passed])
         
     def execute(self, userdata):
-	Global.action = "following mid water target "
-	Global.actionstate = (False,False,False)
+	Global.action = "navigate to midwater following : waypoint ("+str(Global.waypt_midwater.x-50)+","+str(Global.waypt_midwater.y-50)+")"
+	Global.actionstate = (False,False,True,False)
 
 	goal = create_nav_goal(Global.waypt_midwater.x, Global.waypt_midwater.y, 0.0)
 	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
         if state == GoalStatus.SUCCEEDED:
+		Global.action = "following mid water target "
+		state = Global.bf_client.send_goal_and_wait(BallFollowingGoal(),rospy.Duration(120))
 		return Transitions.ball_passed
 	else:
 		return Transitions.ball_passed
 
-	state = Global.bf_client.send_goal_and_wait(BallFollowingGoal(),rospy.Duration(120))
+	
 	
 	return Transitions.ball_passed	
 
@@ -297,6 +307,13 @@ class pingerFollowing(smach.State):
         smach.State.__init__(self, outcomes=[Transitions.pinger_passed])
         
     def execute(self, userdata):
+	Global.actionstate = (False,False,False,True)
+	goal = create_nav_goal(Global.waypt_180_valgate.x, Global.waypt_180_valgate.y, 0.0)
+	state = Global.nav_client.send_goal_and_wait(goal, execute_timeout=rospy.Duration(180))
+	start_time = Global.duration.secs
+	Global.pub_start_pingerfollow.pub('start')
+	rospy.sleep(Global.duration.secs-start_time-30)
+	Globa.pub_start_pingerfollow.pub('stop')
 	
 	
 	return Transitions.ball_passed	
@@ -310,7 +327,7 @@ class surface(smach.State):
         
     def execute(self, userdata):
 	Global.action = "auv surfacing"
-	Global.actionstate = (False,False,False)
+	Global.actionstate = (False,False,False,False)
 
 	Global.call_depth(0.0)
 	#rosply.sleep(10)
@@ -322,12 +339,18 @@ class surface(smach.State):
 
 #timerCallback calls the routine for creating the logfile
 def timerCallback(event): 
+    if (Global.actionstate[2]):
+		Global.action = "follow midwater : heading: " + str(Global.currentHeading)
+    if (Global.actionstate[3]):
+		Global.action = "follow pinger : heading: " + str(Global.currentHeading)
     Global.duration = rospy.Time.now() - Global.time_initial
     if Global.duration.secs > Global.timer:
 	Global.call_depth(0.0)
     f = open(Global.logfile,"a")
-    f.write(str(Global.duration.secs)+','+str(round(Global.currentPosition.x-50,2))+','
-	+str(round(Global.currentPosition.y-50,2))+','+str((Global.pressure-Global.pressure_initial)/100.0)+','+Global.action+'\r\n')
+    x = Global.currentPosition.x-50
+    y = Global.currentPosition.y-50
+    f.write(str(Global.duration.secs)+','+str(round(((x-1)/48)*50,2))+','
+	+str(round(((y-1)/49)*50,2))+','+str((Global.pressure-Global.pressure_initial)/100.0)+','+Global.action+'\r\n')
     f.close()
 
 
@@ -340,14 +363,17 @@ def pressureCallback(msg):
 #getting the position from the localisation
 def positionCallback(msg):	
 	Global.currentPosition = msg.pose.position
+	q = msg.pose.orientation	
+	(roll,pitch,yaw) = euler_from_quaternion([q.x, q.y, q.z, q.w])
+	Global.currentHeading = yaw
 
 def wallfollow_infoCallback(msg):
-	if (Global.actionstate[2]):
+	if (Global.actionstate[1]):
 		Global.action = "follow wall " + msg.data
 
 def pipefollow_infoCallback(msg):
-	if (Global.actionstate[1]):
-		Global.action = "follow pipe " + msg.data
+	if (Global.actionstate[0]):
+		Global.action = "follow pipe " + msg.data + 'heading: ' + str(Global.currentHeading)
 
 #creating a goal that can be used as a target for the navigation with absolute coordinates x,y and z
 #(z may be set by directly using depth_control	
@@ -390,6 +416,7 @@ def main():
     rospy.Subscriber('/hanse/behaviour/wallfollow_info', String, wallfollow_infoCallback)
     rospy.Subscriber('/hanse/behaviour/pipefollow_info', String, pipefollow_infoCallback)
     
+    
 	
 
 
@@ -406,7 +433,7 @@ def main():
 
 
 	smach.StateMachine.add(States.Submerge, submerge(), 
-                               transitions={Transitions.Submerged:States.pipeFollow,
+                               transitions={Transitions.Submerged:States.valGate,
 						 Transitions.Submerge_failed:States.Surface})
 
 
@@ -417,7 +444,7 @@ def main():
 
         smach.StateMachine.add(States.pipeFollow, PipeFollowing(), 
                               transitions={Transitions.Pipe_passed:States.navigateToWall,
-						 Transitions.Pipe_failed : States.Surface})
+						 Transitions.Pipe_failed : States.navigateToWall})
 
 
 	smach.StateMachine.add(States.navigateToWall, navigateToWall(), 
@@ -426,8 +453,8 @@ def main():
 
 
 	smach.StateMachine.add(States.wallFollow, WallFollowing(), 
-                               transitions={Transitions.Wall_passed:States.Surface,
-						 Transitions.Wall_failed : States.Surface})
+                               transitions={Transitions.Wall_passed:States.ballFollow,
+						 Transitions.Wall_failed : States.ballFollow})
 
 
 	smach.StateMachine.add(States.ballFollow, ballFollowing(), 
