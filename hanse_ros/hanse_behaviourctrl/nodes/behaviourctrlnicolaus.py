@@ -52,7 +52,7 @@ class Global:
 	#target depth in cm
 
 
-	depth = 60 # TODO change to 180
+	depth = 70 # TODO change to 180
 
 
 	#waypoint middle line
@@ -73,25 +73,25 @@ class Global:
 	waypt_start = Point(70,55,1)
 
 	#waypt1
-	waypt1 = Point(58,-58,1)
+	waypt1 = Point(58,58,1)
 	#waypt2
-	waypt2 = Point(66,-58,1)
+	waypt2 = Point(66,58,1)
 	#waypt3
-	waypt3 = Point(72,-62,1)
+	waypt3 = Point(72,62,1)
 	#waypt4
-	waypt4 = Point(66,-66,1)
+	waypt4 = Point(66,66,1)
 	#waypt5
-	waypt5 = Point(58,-66,1)
+	waypt5 = Point(58,66,1)
 	#waypt6
-	waypt6 = Point(58,-58,1)
+	waypt6 = Point(58,58,1)
 	#waypt7
-	waypt7 = Point(66,-66,1)
+	waypt7 = Point(66,66,1)
 	#waypt8
-	waypt8 = Point(66,-58,1)
+	waypt8 = Point(66,58,1)
 	#waypt9
-	waypt9 = Point(58,-66,1)
+	waypt9 = Point(58,66,1)
 	#waypt10
-	waypt10 = Point(62,-62,1)
+	waypt10 = Point(62,62,1)
 
 
 class States:

@@ -1,4 +1,4 @@
 #!/bin/sh
 cd $(dirname $0)
 cd hanse_launch
-./safe.sh roslaunch hanse_launch behaviourctrl2.launch
+./safe.sh roslaunch hanse_launch behaviourctrl.launch
