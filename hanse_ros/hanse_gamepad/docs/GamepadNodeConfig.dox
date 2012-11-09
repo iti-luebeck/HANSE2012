@@ -4,14 +4,14 @@ Reads and maintains the following parameters on the ROS server
 
 - \b "~publish_frequency" : \b [int] how often to send data to server min: -2147483648, default: 1, max: 2147483647
 - \b "~gamepad_switch_button" : \b [int] button to enable hand control min: -2147483648, default: 1, max: 2147483647
-- \b "~joy_deadzone" : \b [double] min raw joystick value to be considered != 0 min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~joy_deadzone" : \b [double] min raw joystick value to be considered != 0 min: -inf, default: 1.0, max: inf
 - \b "~linear_axis" : \b [int] axis for linear speed min: -2147483648, default: 1, max: 2147483647
-- \b "~linear_scale" : \b [double] scale factor for linear speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~linear_scale" : \b [double] scale factor for linear speed min: -inf, default: 1.0, max: inf
 - \b "~angular_axis" : \b [int] axis for angular speed min: -2147483648, default: 1, max: 2147483647
-- \b "~angular_scale" : \b [double] scale factor for angular speed min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~angular_scale" : \b [double] scale factor for angular speed min: -inf, default: 1.0, max: inf
 - \b "~depth_up_button" : \b [int] button to go up min: -2147483648, default: 1, max: 2147483647
 - \b "~depth_down_button" : \b [int] button to go down min: -2147483648, default: 1, max: 2147483647
-- \b "~depth_delta" : \b [double] increment to go up/down in each step min: -std::numeric_limits<double>::infinity(), default: 1.0, max: std::numeric_limits<double>::infinity()
+- \b "~depth_delta" : \b [double] increment to go up/down in each step min: -inf, default: 1.0, max: inf
 - \b "~zero_depth_reset_button" : \b [int] resets the pressure for water surface min: -2147483648, default: 1, max: 2147483647
 - \b "~motor_switch_button" : \b [int] switch motors between ready and off min: -2147483648, default: 1, max: 2147483647
 - \b "~pid_switch_button" : \b [int] switch pid's between all off and last on min: -2147483648, default: 1, max: 2147483647

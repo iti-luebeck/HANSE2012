@@ -1,0 +1,12 @@
+\subsubsection usage Usage
+\verbatim
+<node name="ballfollowing" pkg="hanse_ballfollowing" type="ballfollowing">
+  <param name="minSize" type="double" value="0.05" />
+  <param name="maxSize" type="double" value="0.4" />
+  <param name="fwSpeed" type="double" value="0.5" />
+  <param name="kpAngle" type="double" value="0.2" />
+  <param name="lostFactor" type="double" value="3.0" />
+  <param name="offset" type="double" value="0.1" />
+</node>
+\endverbatim
+

@@ -1,0 +1,18 @@
+\subsubsection usage Usage
+\verbatim
+<node name="sonarlocalization" pkg="hanse_sonarlocalization" type="sonarlocalization">
+  <param name="particle_count" type="int" value="7000" />
+  <param name="perturb_position" type="double" value="0.05" />
+  <param name="perturb_velocity" type="double" value="0.05" />
+  <param name="perturb_rotation" type="double" value="0.02" />
+  <param name="weight_sigma" type="double" value="1.4" />
+  <param name="weight_scaling" type="double" value="0.1" />
+  <param name="bend_distance" type="double" value="0.0" />
+  <param name="bend_factor" type="double" value="1.0" />
+  <param name="imu_motion" type="bool" value="False" />
+  <param name="thruster_motion" type="bool" value="True" />
+  <param name="thruster_speed" type="double" value="0.4" />
+  <param name="thruster_rate" type="double" value="2.3" />
+</node>
+\endverbatim
+

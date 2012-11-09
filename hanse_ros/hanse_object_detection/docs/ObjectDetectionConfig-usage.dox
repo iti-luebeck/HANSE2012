@@ -1,0 +1,14 @@
+\subsubsection usage Usage
+\verbatim
+<node name="object_detection" pkg="hanse_object_detection" type="object_detection">
+  <param name="channel" type="int" value="2" />
+  <param name="inverted" type="bool" value="False" />
+  <param name="use_blobs" type="bool" value="False" />
+  <param name="morph_iterations" type="int" value="5" />
+  <param name="threshold" type="int" value="127" />
+  <param name="automatic" type="bool" value="True" />
+  <param name="subtract_background" type="bool" value="False" />
+  <param name="subtract_mean" type="bool" value="True" />
+</node>
+\endverbatim
+

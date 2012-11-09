@@ -1,0 +1,7 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~step_size" : \b [int] stepSize min: 1, default: 2, max: 10
+- \b "~publish_angle" : \b [int] publishAngle min: 0, default: 90, max: 360
+

@@ -1,0 +1,17 @@
+\subsubsection usage Usage
+\verbatim
+<node name="pipefollowing" pkg="hanse_pipefollowing" type="pipefollowing">
+  <param name="minSize" type="double" value="0.05" />
+  <param name="maxSize" type="double" value="0.5" />
+  <param name="fwSpeed" type="double" value="0.5" />
+  <param name="deltaAngle" type="double" value="0.192" />
+  <param name="deltaDist" type="double" value="100.0" />
+  <param name="kpAngle" type="double" value="0.2" />
+  <param name="kpDist" type="double" value="0.1" />
+  <param name="robCenterX" type="double" value="320.0" />
+  <param name="robCenterY" type="double" value="240.0" />
+  <param name="maxDistance" type="double" value="320.0" />
+  <param name="mirror" type="bool" value="True" />
+</node>
+\endverbatim
+

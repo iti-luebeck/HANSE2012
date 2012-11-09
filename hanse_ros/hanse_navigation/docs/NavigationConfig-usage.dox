@@ -1,0 +1,14 @@
+\subsubsection usage Usage
+\verbatim
+<node name="navigation" pkg="hanse_navigation" type="navigation">
+  <param name="hysteresis_heading" type="double" value="0.17" />
+  <param name="hysteresis_goal" type="double" value="0.3" />
+  <param name="forward_max_speed" type="double" value="0.8" />
+  <param name="forward_max_dist" type="double" value="4.0" />
+  <param name="angular_min_speed" type="double" value="0.3" />
+  <param name="angular_max_speed" type="double" value="0.6" />
+  <param name="p_heading" type="double" value="0.5" />
+  <param name="simulator" type="bool" value="False" />
+</node>
+\endverbatim
+

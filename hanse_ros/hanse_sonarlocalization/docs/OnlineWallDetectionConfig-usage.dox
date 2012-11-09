@@ -1,0 +1,16 @@
+\subsubsection usage Usage
+\verbatim
+<node name="sonarlocalization" pkg="hanse_sonarlocalization" type="sonarlocalization">
+  <param name="distance_damping" type="double" value="0.33" />
+  <param name="median_filter_width" type="int" value="4" />
+  <param name="median_filter_mu" type="double" value="0.5" />
+  <param name="nms_filter_width" type="int" value="4" />
+  <param name="length_cutoff" type="int" value="246" />
+  <param name="pre_gain" type="double" value="2.0" />
+  <param name="outside_slope" type="double" value="20.0" />
+  <param name="between_slope" type="double" value="50.0" />
+  <param name="final_gain" type="double" value="2.0" />
+  <param name="threshold" type="double" value="0.5" />
+</node>
+\endverbatim
+

@@ -1,0 +1,8 @@
+\subsubsection usage Usage
+\verbatim
+<node name="sonarlocalization" pkg="hanse_sonarlocalization" type="sonarlocalization">
+  <param name="step_size" type="int" value="2" />
+  <param name="publish_angle" type="int" value="90" />
+</node>
+\endverbatim
+

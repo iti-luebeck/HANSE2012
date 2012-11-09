@@ -1,0 +1,17 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~particle_count" : \b [int] particleCount min: 10, default: 7000, max: 30000
+- \b "~perturb_position" : \b [double] perturbPosition min: 0.0, default: 0.05, max: 1.0
+- \b "~perturb_velocity" : \b [double] perturbVelocity min: 0.0, default: 0.05, max: 0.1
+- \b "~perturb_rotation" : \b [double] perturbRotation min: 0.0, default: 0.02, max: 0.785398163397
+- \b "~weight_sigma" : \b [double] weightSigma min: 0.001, default: 1.4, max: 5.0
+- \b "~weight_scaling" : \b [double] weightScaling min: 0.0, default: 0.1, max: 1.0
+- \b "~bend_distance" : \b [double] bendDistance min: 0.0, default: 0.0, max: 1.0
+- \b "~bend_factor" : \b [double] bendFactor min: 0.1, default: 1.0, max: 10.0
+- \b "~imu_motion" : \b [bool] imuMotion min: False, default: False, max: True
+- \b "~thruster_motion" : \b [bool] thrusterMotion min: False, default: True, max: True
+- \b "~thruster_speed" : \b [double] thrusterSpeed min: 0.0, default: 0.4, max: 2.0
+- \b "~thruster_rate" : \b [double] thrusterRate min: 0.1, default: 2.3, max: 10.0
+

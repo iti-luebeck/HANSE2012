@@ -1,0 +1,13 @@
+\subsubsection usage Usage
+\verbatim
+<node name="sonardriver" pkg="hanse_sonardriver" type="sonardriver">
+  <param name="range" type="int" value="10" />
+  <param name="start_gain" type="int" value="7" />
+  <param name="pulse_length" type="int" value="127" />
+  <param name="profile_minimum_range" type="int" value="127" />
+  <param name="data_points" type="int" value="25" />
+  <param name="profile" type="bool" value="False" />
+  <param name="switch_delay" type="int" value="0" />
+</node>
+\endverbatim
+

@@ -1,0 +1,10 @@
+\subsubsection usage Usage
+\verbatim
+<node name="hanse_pingerfollowing" pkg="hanse_pingerfollowing" type="hanse_pingerfollowing">
+  <param name="max_amplitude" type="double" value="4.0" />
+  <param name="base_amplitude" type="double" value="1.0" />
+  <param name="damping_factor" type="double" value="1.0" />
+  <param name="damping_exponent" type="double" value="3.0" />
+</node>
+\endverbatim
+

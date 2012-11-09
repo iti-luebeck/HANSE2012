@@ -1,0 +1,15 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~distance_damping" : \b [double] distance_damping min: 0.0, default: 0.33, max: 1.0
+- \b "~median_filter_width" : \b [int] medianFilterWidth min: 0, default: 4, max: 30
+- \b "~median_filter_mu" : \b [double] medianFilterMu min: 0.0, default: 0.5, max: 1.0
+- \b "~nms_filter_width" : \b [int] nmsFilterWidth min: 0, default: 4, max: 30
+- \b "~length_cutoff" : \b [int] lengthCutoff min: 1, default: 246, max: 256
+- \b "~pre_gain" : \b [double] preGain min: 0.0, default: 2.0, max: 5.0
+- \b "~outside_slope" : \b [double] outsideSlope min: 0.0, default: 20.0, max: 50.0
+- \b "~between_slope" : \b [double] betweenSlope min: 0.0, default: 50.0, max: 200.0
+- \b "~final_gain" : \b [double] finalGain min: 0.0, default: 2.0, max: 5.0
+- \b "~threshold" : \b [double] threshold min: 0.0, default: 0.5, max: 1.0
+

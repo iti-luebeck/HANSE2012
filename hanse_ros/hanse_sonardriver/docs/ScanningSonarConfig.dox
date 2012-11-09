@@ -1,0 +1,14 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~range" : \b [int] range min: 5, default: 50, max: 50
+- \b "~start_gain" : \b [int] startGain min: 0, default: 15, max: 40
+- \b "~train_angle" : \b [int] trainAngle min: 0, default: 70, max: 140
+- \b "~sector_width" : \b [int] sectorWidth min: 0, default: 120, max: 120
+- \b "~step_size" : \b [int] stepSize min: 0, default: 2, max: 2
+- \b "~pulse_length" : \b [int] pulseLength min: 1, default: 127, max: 252
+- \b "~data_points" : \b [int] dataPoints min: 25, default: 25, max: 50
+- \b "~switch_delay" : \b [int] switchDelay min: 0, default: 0, max: 252
+- \b "~frequency" : \b [int] frequency min: 0, default: 135, max: 135
+

@@ -1,0 +1,13 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~channel" : \b [int] color channel min: -2147483648, default: 2, max: 2147483647
+- \b "~inverted" : \b [bool] inverted min: False, default: False, max: True
+- \b "~use_blobs" : \b [bool] use blobs min: False, default: False, max: True
+- \b "~morph_iterations" : \b [int] nr. of morphological operations min: 1, default: 5, max: 50
+- \b "~threshold" : \b [int] threshold to use min: 0, default: 127, max: 255
+- \b "~automatic" : \b [bool] use otsu thresholding min: False, default: True, max: True
+- \b "~subtract_background" : \b [bool] bla min: False, default: False, max: True
+- \b "~subtract_mean" : \b [bool] bla min: False, default: True, max: True
+

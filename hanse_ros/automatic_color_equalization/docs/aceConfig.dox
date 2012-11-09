@@ -1,0 +1,8 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~step" : \b [int] Test min: 1, default: 32, max: 64
+- \b "~samples" : \b [int] Test min: 1, default: 200, max: 1000
+- \b "~sigma" : \b [double] Test min: 0.01, default: 0.4, max: 1.0
+

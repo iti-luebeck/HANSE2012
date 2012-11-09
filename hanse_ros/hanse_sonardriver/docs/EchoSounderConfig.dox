@@ -1,0 +1,12 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~range" : \b [int] range min: 5, default: 10, max: 50
+- \b "~start_gain" : \b [int] startGain min: 0, default: 7, max: 40
+- \b "~pulse_length" : \b [int] pulseLength min: 1, default: 127, max: 252
+- \b "~profile_minimum_range" : \b [int] profileMinimumRange min: 0, default: 127, max: 250
+- \b "~data_points" : \b [int] dataPoints min: 25, default: 25, max: 50
+- \b "~profile" : \b [bool] profile min: False, default: False, max: True
+- \b "~switch_delay" : \b [int] switchDelay min: 0, default: 0, max: 252
+

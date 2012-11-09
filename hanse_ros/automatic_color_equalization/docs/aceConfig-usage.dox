@@ -1,0 +1,9 @@
+\subsubsection usage Usage
+\verbatim
+<node name="dynamic_reconfigure_node" pkg="automatic_color_equalization" type="dynamic_reconfigure_node">
+  <param name="step" type="int" value="32" />
+  <param name="samples" type="int" value="200" />
+  <param name="sigma" type="double" value="0.4" />
+</node>
+\endverbatim
+

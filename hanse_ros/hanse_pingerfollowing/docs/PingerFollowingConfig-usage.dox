@@ -1,0 +1,16 @@
+\subsubsection usage Usage
+\verbatim
+<node name="hanse_pingerfollowing" pkg="hanse_pingerfollowing" type="hanse_pingerfollowing">
+  <param name="init_step" type="double" value="2.0" />
+  <param name="step" type="double" value="0.1" />
+  <param name="bias_step" type="double" value="1.0" />
+  <param name="mu" type="double" value="0.5" />
+  <param name="hydrophone_direction" type="double" value="0.5" />
+  <param name="bias" type="double" value="0.5" />
+  <param name="angular_speed" type="double" value="0.75" />
+  <param name="turn_time" type="double" value="0.75" />
+  <param name="linear_speed" type="double" value="0.75" />
+  <param name="min_one_step" type="bool" value="True" />
+</node>
+\endverbatim
+

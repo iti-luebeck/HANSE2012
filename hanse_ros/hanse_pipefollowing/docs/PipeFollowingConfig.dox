@@ -1,0 +1,16 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~minSize" : \b [double]  min: 0.0, default: 0.05, max: 1.0
+- \b "~maxSize" : \b [double]  min: 0.0, default: 0.5, max: 1.0
+- \b "~fwSpeed" : \b [double]  min: 0.1, default: 0.5, max: 1.0
+- \b "~deltaAngle" : \b [double] in radians min: 0.01, default: 0.192, max: 0.785398163397
+- \b "~deltaDist" : \b [double]  min: 0.0, default: 100.0, max: 600.0
+- \b "~kpAngle" : \b [double]  min: -5.0, default: 0.2, max: 5.0
+- \b "~kpDist" : \b [double]  min: -5.0, default: 0.1, max: 5.0
+- \b "~robCenterX" : \b [double]  min: 0.0, default: 320.0, max: 640.0
+- \b "~robCenterY" : \b [double]  min: 0.0, default: 240.0, max: 480.0
+- \b "~maxDistance" : \b [double]  min: 0.0, default: 320.0, max: 600.0
+- \b "~mirror" : \b [bool]  min: False, default: True, max: True
+

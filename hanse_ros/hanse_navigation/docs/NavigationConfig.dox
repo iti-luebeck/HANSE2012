@@ -1,0 +1,13 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~hysteresis_heading" : \b [double] in radians min: 0.1, default: 0.17, max: 1.0
+- \b "~hysteresis_goal" : \b [double]  min: 0.1, default: 0.3, max: 4.0
+- \b "~forward_max_speed" : \b [double]  min: 0.1, default: 0.8, max: 1.0
+- \b "~forward_max_dist" : \b [double]  min: 0.8, default: 4.0, max: 4.0
+- \b "~angular_min_speed" : \b [double]  min: 0.1, default: 0.3, max: 1.0
+- \b "~angular_max_speed" : \b [double]  min: 0.1, default: 0.6, max: 1.0
+- \b "~p_heading" : \b [double]  min: -10.0, default: 0.5, max: 10.0
+- \b "~simulator" : \b [bool]  min: False, default: False, max: True
+
