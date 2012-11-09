@@ -1,0 +1,7 @@
+<launch>
+  <include file="$(find hanse_launch)/launch/engine.launch" />
+
+  <group ns="hanse">
+      <node name="wall_detection" pkg="hanse_sonarlocalization" type="sonar_wall_detection" />
+  </group>
+</launch>

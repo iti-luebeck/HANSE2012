@@ -1,0 +1,18 @@
+<package>
+  <description brief="hanse_wall_sonar">
+
+     hanse_wall_sonar
+
+  </description>
+  <author>Hanse</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_wall_sonar</url>
+  <depend package="hanse_sonarlocalization"/>
+  <depend package="hanse_orientationengine"/>
+  <depend package="std_msgs"/>
+  <depend package="roscpp"/>
+
+</package>
+
+

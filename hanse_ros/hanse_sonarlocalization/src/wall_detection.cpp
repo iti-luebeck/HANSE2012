@@ -6,7 +6,7 @@
 WallDetection::WallDetection(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<sensor_msgs::LaserScan>("sonar/laser_scan", 1)),
-    subscriber(handle.subscribe("hanse/sonar/scan", 1, &WallDetection::callback, this)),
+    subscriber(handle.subscribe("sonar/scan", 1, &WallDetection::callback, this)),
     lastHeadPosition(0),
     movedSincePublish(0),
     isInitialized(false)
