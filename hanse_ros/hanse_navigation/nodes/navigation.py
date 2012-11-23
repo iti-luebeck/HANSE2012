@@ -121,7 +121,7 @@ class AdjustHeading(smach.State):
 			if val > 0: val = numpy.clip(val, minAngSpeed, maxAngSpeed)
 			if val < 0: val = numpy.clip(val, -maxAngSpeed, -minAngSpeed)
 			
-			setMotorSpeed(0, val)
+			setMotorSpeed(0, -val)
 			rospy.sleep(0.1)
 
 		return Transitions.Exit
