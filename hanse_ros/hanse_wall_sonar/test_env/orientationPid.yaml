@@ -1,0 +1,13 @@
+# PID setting optimized for MARS
+{
+publish_frequency: 10.0,
+k_p: 10.0,
+k_i: 0.0,
+k_d: 10.0,
+bias: 0.0,
+i_max: 20,
+output_min: -127,
+output_max: 127,
+angular: false
+}
+

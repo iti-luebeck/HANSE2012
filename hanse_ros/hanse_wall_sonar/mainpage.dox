@@ -4,11 +4,8 @@
 
 \b hanse_wall_sonar 
 
-<!-- 
-Provide an overview of your package.
--->
+<!-- overview -->
 
--->
-
+The \c hanse_wall_sonar  package allows to use the sonar to follow a wall.
 
 */

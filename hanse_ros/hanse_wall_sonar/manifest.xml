@@ -9,10 +9,9 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hanse_wall_sonar</url>
   <depend package="hanse_sonarlocalization"/>
-  <depend package="hanse_orientationengine"/>
   <depend package="std_msgs"/>
   <depend package="roscpp"/>
-  <depend package="hanse_depthengine"/>
+  <depend package="hanse_navigation"/>
 </package>
 
 

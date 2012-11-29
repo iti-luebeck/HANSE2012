@@ -1,7 +1,20 @@
+<!--
+This launchfile is used for programming & testing the hanse_wall_sonar package.
+It is optimized for usage with MARS simulator
+-->
 <launch>
-  <include file="$(find hanse_launch)/launch/engine.launch" />
+	<!-- engine -->
+	<include file="$(find hanse_launch)/launch/engine.launch" />
 
-  <group ns="hanse">
-      <node name="wall_detection" pkg="hanse_sonarlocalization" type="sonar_wall_detection" />
-  </group>
+	<!-- orientation engine:-->
+	<!-- remapping for orientation engine to work with mars -->
+	<remap from="/hanse/position/estimate" to="/hanse/posemeter" />
+	<include file="$(find hanse_launch)/launch/navigation.launch" />
+	<!-- load mars optimized PID values-->
+	<node name="dynamic_reconfigure" pkg="dynamic_reconfigure" type="dynparam" args="load /hanse/pid/orientation/orientationPid $(find hanse_wall_sonar)/test_env/orientationPid.yaml" />
+
+	<group ns="hanse">
+		<!--wall dedection node-->
+		<node name="wall_detection" pkg="hanse_sonarlocalization" type="sonar_wall_detection" />
+	</group>
 </launch>
