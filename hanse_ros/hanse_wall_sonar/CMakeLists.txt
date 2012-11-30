@@ -30,3 +30,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #target_link_libraries(example ${PROJECT_NAME})
 
 rosbuild_add_executable(wall_follow src/wall_follow.cpp)
+rosbuild_add_executable(wall_follow src/iwall_follow_algo.cpp)
+rosbuild_add_executable(wall_follow src/wall_follow_shift_algo.cpp)
