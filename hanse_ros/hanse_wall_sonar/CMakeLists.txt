@@ -29,6 +29,11 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
-rosbuild_add_executable(wall_follow src/wall_follow.cpp)
-rosbuild_add_executable(wall_follow src/iwall_follow_algo.cpp)
-rosbuild_add_executable(wall_follow src/wall_follow_shift_algo.cpp)
+find_package(Eigen REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
+
+#include own source path. This may sound stupid, but is needed for the eigen plugin.
+include_directories(src)
+
+rosbuild_add_executable(wall_follow src/wall_follow.cpp src/iwall_follow_algo.h src/wall_follow_shift_algo.cpp src/eigen_plugin.h)
+

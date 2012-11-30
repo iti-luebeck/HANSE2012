@@ -2,3 +2,6 @@
 /bin
 /build
 *~
+*.cbp
+/CMakeCache.txt
+/CMakeFiles
