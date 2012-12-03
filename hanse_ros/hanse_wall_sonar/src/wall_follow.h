@@ -1,4 +1,11 @@
 #include "ros/ros.h"
+#include <ros/console.h>
+#define EIGEN_MATRIXBASE_PLUGIN "eigen_plugin/matrixbase_plugin.h"
+#define EIGEN_QUATERNIONBASE_PLUGIN "eigen_plugin/quaternionbase_plugin.h"
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <iostream>
+#include <exception>
 #include "std_msgs/String.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -40,6 +47,8 @@ private:
     ros::Publisher pub;
     ros::Publisher debug_pub;
     Iwall_follow_algo *algo;
+
+   geometry_msgs::Pose last_pose;
 };
 
 /*!

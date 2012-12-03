@@ -17,7 +17,7 @@ public:
 };
 
 void wall_follow_shift_algo::sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg,
-        Eigen::Vector2d &goal)
+        Eigen::Vector2d &goal) throw (std::runtime_error)
 {
     set<Vector2d, CompPointsX> shifted_sonar_points;
     Vector2d shift_distance(0,0);
@@ -41,6 +41,9 @@ void wall_follow_shift_algo::sonar_laser_update(const sensor_msgs::LaserScan::Co
 
     Vector2d sum(0,0);
     set<Vector2d>::iterator iterator = shifted_sonar_points.begin();
+    if(shifted_sonar_points.size() < 5){
+        throw std::runtime_error("We don't have enough sonar points!");
+    }
     double last_r;
     for(unsigned int i = 0; i < 5; i++){
         sum += *iterator;
@@ -51,10 +54,9 @@ void wall_follow_shift_algo::sonar_laser_update(const sensor_msgs::LaserScan::Co
 
     sum.setR(last_r);
 
-    std::cout << "debug result:\n";
-    std::cout << sum;
-    std::cout << "\n\n";
+//    std::cout << "debug result:\n";
+//    std::cout << sum;
+//    std::cout << "\n\n";
 
-    goal = sum;
-
+    goal = *(shifted_sonar_points.begin());
 }

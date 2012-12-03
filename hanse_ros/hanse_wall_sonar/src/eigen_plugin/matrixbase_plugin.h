@@ -1,6 +1,6 @@
 #include "math.h"
-#ifndef EIGEN_PLUGIN_H
-#define EIGEN_PLUGIN_H
+#ifndef MATRIXBASE_PLUGIN_H
+#define MATRIXBASE_PLUGIN_H
 
 inline Scalar getR() const{
     EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived, 2);
@@ -24,4 +24,4 @@ inline void setTheta(Scalar theta){
     setPolar(getR(), theta);
 }
 
-#endif // EIGEN_PLUGIN_H
+#endif // MATRIXBASE_PLUGIN_H
