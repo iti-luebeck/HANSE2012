@@ -11,6 +11,8 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "iwall_follow_algo.h"
 #include "wall_follow_shift_algo.h"
+#include "geometry_msgs/PolygonStamped.h"
+#include <list>
 
 #ifndef WALL_FOLLOW_H
 #define WALL_FOLLOW_H
@@ -46,9 +48,20 @@ private:
     ros::NodeHandle _n;
     ros::Publisher pub;
     ros::Publisher debug_pub;
+    ros::Publisher debug_laser_pub;
     Iwall_follow_algo *algo;
 
    geometry_msgs::Pose last_pose;
+
+   //! visualizing sonar in rviz
+   /*!
+     Rotate and relocate the laserscan to global coordinates,
+     publishing a new polygon with the publisher debug_laser_pub
+     \param msg the laserscan
+     \param a transformation from robot to global coordinates
+    */
+   void transform_sonar_for_rviz(const sensor_msgs::LaserScan::ConstPtr& msg, Affine3d a);
+
 };
 
 /*!

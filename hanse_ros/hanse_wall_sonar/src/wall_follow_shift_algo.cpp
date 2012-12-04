@@ -7,7 +7,7 @@ using std::set;
 class CompPointsX
 {
 public:
-    bool operator()(Vector2d v1, Vector2d v2)
+    bool operator()(Vector3d v1, Vector3d v2)
     {
         if(v1(0) < v2(0))
             return true;
@@ -16,47 +16,47 @@ public:
     }
 };
 
-void wall_follow_shift_algo::sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg,
-        Eigen::Vector2d &goal) throw (std::runtime_error)
+void wall_follow_shift_algo::sonar_laser_update(
+        const sensor_msgs::LaserScan::ConstPtr& msg,
+        Vector3d &goal,
+        Quaterniond &orientation) throw (std::runtime_error)
 {
-    set<Vector2d, CompPointsX> shifted_sonar_points;
-    Vector2d shift_distance(0,0);
 
-    for (unsigned int i = 0; i < msg->ranges.size(); i++){
-        double angle = msg->angle_min + msg->angle_increment * i;
-        if(msg->ranges.at(i) > 0){
-            //calculating x, y coordinates of laser scan
-            Vector2d p(0, 0);
-            p.setPolar(msg->ranges.at(i), angle);
+    Vector3d shift_distance(0, -3, 0);
 
-            //shifting scan
-            p -= shift_distance;
-            //only add vectors with positive x coordinate
-            //follow right wall
-            if(p(0) > 0 && p(1) < 0){
-                shifted_sonar_points.insert(p);
-            }
+    //searching for nearest scan
+    double min_dist = DBL_MAX;
+    unsigned int start_index = -1;
+    for(unsigned int i = 0; i<msg->ranges.size(); i++){
+        if (msg->ranges[i] <= min_dist && msg->ranges[i] > 0){
+            min_dist = msg->ranges[i];
+            start_index = i;
         }
     }
 
-    Vector2d sum(0,0);
-    set<Vector2d>::iterator iterator = shifted_sonar_points.begin();
-    if(shifted_sonar_points.size() < 5){
-        throw std::runtime_error("We don't have enough sonar points!");
-    }
-    double last_r;
-    for(unsigned int i = 0; i < 5; i++){
-        sum += *iterator;
-        last_r = (*iterator).getR();
-        iterator++;
-    }
+    Vector3d v_sum(0, 0, 0);
+    double d_sum = 0;
 
+    unsigned int k = 0;
+    //while (k <= 10){
+        unsigned int index = (start_index - k + msg->ranges.size()-5) % msg->ranges.size();
+        if(msg->ranges.at(index) > 0){
+            double angle = msg->angle_min + msg->angle_increment * index;
+            //calculating x, y coordinates of laser scan
+            Vector3d p(msg->ranges.at( index ), 0, 0);
+            AngleAxis<double> rotation(angle, Vector3d(0, 0, -1));
+            p = rotation * p;
 
-    sum.setR(last_r);
+            //shifting scan
+            p -= shift_distance;
 
-//    std::cout << "debug result:\n";
-//    std::cout << sum;
-//    std::cout << "\n\n";
+            v_sum += p;
 
-    goal = *(shifted_sonar_points.begin());
+            d_sum = p.norm();
+
+        }
+       // k++;
+    //}
+
+    goal = v_sum ;
 }

@@ -20,7 +20,8 @@ public:
      */
     virtual void sonar_laser_update(
             const sensor_msgs::LaserScan::ConstPtr& msg,
-            Eigen::Vector2d &goal) throw (std::runtime_error) = 0;
+            Vector3d &goal,
+            Quaterniond &orientation) throw (std::runtime_error) = 0;
 };
 
 #endif // IWALL_FOLLOW_ALGO_H
