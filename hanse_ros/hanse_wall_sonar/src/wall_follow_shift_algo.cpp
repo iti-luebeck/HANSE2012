@@ -50,7 +50,7 @@ void wall_follow_shift_algo::sonar_laser_update(
             //shifting scan
             p -= shift_distance;
 
-            v_sum += p;
+            v_sum = p;
 
             d_sum = p.norm();
 
