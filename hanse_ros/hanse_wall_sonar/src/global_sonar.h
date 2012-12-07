@@ -7,28 +7,26 @@
 #include "visualization_msgs/Marker.h"
 #include <vector>
 
-#ifndef WALL_FOLLOW_H
-#define WALL_FOLLOW_H
+#ifndef GLOBAL_SONAR_H
+#define GLOBAL_SONAR_H
 
 using namespace Eigen;
 
-//! WallFollowNode
+//!
 /*!
-  Class that handles the logic for the debug_sonar node.
+
   */
-class DebugSonarNode {
+class GlobalSonarNode {
 public:
-    //! WallFollowNode Constructor
+    //!
     /*!
-      Constructor for WallFollowNode class
       \param node handle of the node
      */
-    DebugSonarNode(ros::NodeHandle node);
+    GlobalSonarNode(ros::NodeHandle node);
 
     //! laser scan callback
     /*!
-      Callback method receiving laser scan updates, publishes
-      rotated and relocated laserscan in global coordinates, as Marker.
+
       \param msg received message.
      */
     void sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg);
@@ -43,11 +41,12 @@ public:
 private:
     ros::Publisher pub;
     geometry_msgs::Pose last_pose;
+    sensor_msgs::LaserScan last_laser_scan;
     ros::NodeHandle node;
 };
 
 /*!
-  Start the debug_sonar node. Isn't using any input arguments.
+  Start the global_sonar node. Isn't using any input arguments.
   \param argc unused
   \param argv unused
 */

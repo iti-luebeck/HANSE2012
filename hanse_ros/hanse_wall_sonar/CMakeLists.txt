@@ -37,3 +37,4 @@ include_directories(src)
 
 rosbuild_add_executable(wall_follow src/wall_follow.cpp src/iwall_follow_algo.h src/wall_follow_shift_algo.cpp src/eigen_plugin/matrixbase_plugin.h src/eigen_plugin/quaternionbase_plugin.h)
 rosbuild_add_executable(debug_sonar src/debug_sonar.cpp)
+rosbuild_add_executable(global_sonar src/global_sonar.cpp)

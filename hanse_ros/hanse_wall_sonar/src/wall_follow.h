@@ -26,7 +26,7 @@ public:
     //! WallFollowNode Constructor
     /*!
       Constructor for WallFollowNode class
-      \param n node handle of the node
+      \param node handle of the node
      */
     WallFollowNode(ros::NodeHandle n);
 
@@ -37,7 +37,7 @@ public:
      */
     void sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg);
 
-    //! laser position callback
+    //! position callback
     /*!
       Callback method receiving position updates
       \param msg received message.

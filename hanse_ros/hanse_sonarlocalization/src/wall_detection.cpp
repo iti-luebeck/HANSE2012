@@ -6,6 +6,8 @@
 WallDetection::WallDetection(ros::NodeHandle handle) :
     nh(handle),
     publisher(handle.advertise<sensor_msgs::LaserScan>("sonar/laser_scan", 1)),
+    //publisher for enhanced laser scan (add updated indexes)
+    ePublisher(handle.advertise<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1)),
     subscriber(handle.subscribe("sonar/scan", 1, &WallDetection::callback, this)),
     lastHeadPosition(0),
     movedSincePublish(0),
@@ -104,6 +106,24 @@ void WallDetection::publishLaserScan(ros::Time stamp)
 
     ROS_INFO("tick");
     publisher.publish(laserScan);
+    
+    //publish enhance 
+    hanse_msgs::ELaserScan escan;
+    //fill header
+    escan.header.stamp = stamp;
+    laserScan.header.frame_id = "/map";
+    //add lasser scan
+    escan.laser_scan = laserScan;
+    //add informations about updated indexes
+    double normalized_head_pos = fmod(lastHeadPosition + 2 * M_PI, 2 * M_PI);
+    uint16_t u_start = (int) ceil(normalized_head_pos / stepSize);
+    uint16_t u_end = u_start + (int) ceil(publishAngle / stepSize - 0.0001);
+    u_end = u_end % (laserScan.ranges.size());
+    
+    escan.u_start = u_start;
+    escan.u_end = u_end;
+    
+    ePublisher.publish(escan);
 }
 
 void WallDetection::init()

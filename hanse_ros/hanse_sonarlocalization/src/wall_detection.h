@@ -5,6 +5,7 @@
 #include <map>
 #include "ros/ros.h"
 #include "hanse_msgs/ScanningSonar.h"
+#include "hanse_msgs/ELaserScan.h"
 #include "hanse_sonarlocalization/WallDetectionConfig.h"
 #include "dynamic_reconfigure/server.h"
 
@@ -24,6 +25,7 @@ private:
 
     ros::NodeHandle nh;
     ros::Publisher publisher;
+    ros::Publisher ePublisher;
     ros::Subscriber subscriber;
     std::map<double, WallDistance> sonarDataMap;
     double lastHeadPosition;
