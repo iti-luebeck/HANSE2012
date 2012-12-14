@@ -5,10 +5,12 @@
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Point32.h"
+#include "geometry_msgs/Polygon.h"
+#include "geometry_msgs/PolygonStamped.h"
 #include "visualization_msgs/Marker.h"
 #include <vector>
 #include "hanse_msgs/ELaserScan.h"
-#include "pcl_ros/point_cloud.h"
+#include <math.h>
 
 #ifndef GLOBAL_SONAR_H
 #define GLOBAL_SONAR_H
@@ -47,6 +49,9 @@ private:
     sensor_msgs::LaserScan last_laser_scan;
     ros::NodeHandle node;
     std::vector<geometry_msgs::Point32> last_points;
+    std::vector<char> last_valid_points;
+
+    Affine3d get_robot_transform();
 };
 
 /*!

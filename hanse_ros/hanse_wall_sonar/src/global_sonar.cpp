@@ -3,32 +3,25 @@
 
 GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node(n){
     //advertize node for sonar with global points
-    this->pub = this->node.advertise<visualization_msgs::Marker>("/debug/sonar_global", 1000);
+    this->pub = this->node.advertise<geometry_msgs::PolygonStamped>("/globalsonar", 1000);
+
     ROS_INFO("Sonar node initialized");
 }
 
 
 
 void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr& msg){
-
+    //check if sonar scanning size has changed
     if(msg->laser_scan.ranges.size() != last_points.size()){
+        //throw all points away
         last_points.clear();
         last_points.resize(msg->laser_scan.ranges.size());
+        last_valid_points.clear();
+        last_valid_points.resize(msg->laser_scan.ranges.size());
     }
-    //orientation of HANSE
-    Quaterniond orientation(last_pose.orientation.w,
-                            last_pose.orientation.x,
-                            last_pose.orientation.y,
-                            last_pose.orientation.z);
 
-    //position of HANSE in global coordinates
-    Translation3d position(last_pose.position.x,
-                           last_pose.position.y,
-                           last_pose.position.z);
-
-    //Transformation from robot to global coordinates
-    Affine3d a;
-    a = position * orientation;
+    //
+    Affine3d a = get_robot_transform();
 
 
     if(msg->laser_scan.ranges.at(msg->changed) >= 0){
@@ -48,23 +41,47 @@ void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr&
         point.y = p(1);
 
         last_points[msg->changed] = point;
+        last_valid_points[msg->changed] = true;
     } else {
-        last_points[msg->changed] = null;
+        last_valid_points[msg->changed] = false;
     }
 
+    std::vector<geometry_msgs::Point32> polygonPoints;
+    for(unsigned int i = 0; i < last_points.size(); i++){
+        if(last_valid_points[i]){
+            polygonPoints.push_back(last_points[i]);
+        }
+    }
 
+    //we could solve the TSP here, to have a nice sorting ;)
 
     //Publish StampedPolygon
     geometry_msgs::PolygonStamped spolygon;
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
-    spolygon.polygon.points = last_points;
-    debug_laser_pub.publish(spolygon);
-
-
+    spolygon.polygon.points = polygonPoints;
+    pub.publish(spolygon);
 }
 
 
+Affine3d GlobalSonarNode::get_robot_transform(){
+    //orientation of HANSE
+    Quaterniond orientation(last_pose.orientation.w,
+                            last_pose.orientation.x,
+                            last_pose.orientation.y,
+                            last_pose.orientation.z);
+
+    //position of HANSE in global coordinates
+    Translation3d position(last_pose.position.x,
+                           last_pose.position.y,
+                           last_pose.position.z);
+
+    //Transformation from robot to global coordinates
+    Affine3d a;
+    a = position * orientation;
+
+    return a;
+}
 
 
 void GlobalSonarNode::pos_update(const geometry_msgs::PoseStamped::ConstPtr &msg){
@@ -75,7 +92,7 @@ void GlobalSonarNode::pos_update(const geometry_msgs::PoseStamped::ConstPtr &msg
 int main(int argc, char **argv)
 {
     // init wall follow node
-    ros::init(argc, argv, "debug_sonar");
+    ros::init(argc, argv, "global_sonar");
 
     //create NodeHandle
     ros::NodeHandle n;
