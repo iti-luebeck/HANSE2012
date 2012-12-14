@@ -11,25 +11,28 @@ WallDetection::WallDetection(ros::NodeHandle handle) :
     subscriber(handle.subscribe("sonar/scan", 1, &WallDetection::callback, this)),
     lastHeadPosition(0),
     movedSincePublish(0),
-    isInitialized(false)
+    isInitialized(false),
+    movedSincePublishELaserscan(0)
 {
     publishAngle = M_PI / 5;
     stepSize = (2 * M_PI) / 60;
 
     for (int i = -180; i < 180; i++) {
-	float f = angles::from_degrees(i);
-	WallDistance distance;
-	distance.headPosition = f;
-	distance.distance = -1;
-	sonarDataMap.insert(std::make_pair(f, distance));
+        float f = angles::from_degrees(i);
+        WallDistance distance;
+        distance.headPosition = f;
+        distance.distance = -1;
+        sonarDataMap.insert(std::make_pair(f, distance));
     }
 
 }
 
 void WallDetection::callback(const hanse_msgs::ScanningSonar &msg)
 {
-    if (!isInitialized)
-	init();
+    // do initialization on first run
+    if (!isInitialized){
+        init();
+    }
     double headPosition = angles::normalize_angle(msg.headPosition);
     double posDiff = angles::normalize_angle(lastHeadPosition - headPosition);
     double posLow, posHigh;
@@ -55,8 +58,14 @@ void WallDetection::callback(const hanse_msgs::ScanningSonar &msg)
     lastHeadPosition = headPosition;
 
     if (movedSincePublish > publishAngle) {
-	movedSincePublish -= publishAngle;
-	publishLaserScan(msg.header.stamp);
+        movedSincePublish -= publishAngle;
+        publishLaserScan(msg.header.stamp);
+    }
+
+    movedSincePublishELaserscan += fabs(posDiff);
+    if (movedSincePublishELaserscan > stepSize) {
+        movedSincePublishELaserscan -= stepSize;
+        publishELaserScan(msg.header.stamp);
     }
 }
 
@@ -67,19 +76,32 @@ WallDetection::WallDistance WallDetection::computeWallDistance(const hanse_msgs:
     int dataPoints = msg.echoData.size();
     distance.distance = -1;
     for (int i = 0; i < dataPoints; i++) {
-	if (msg.echoData[i] > 32) {
-	    distance.distance = ((double)i / (dataPoints-1)) * (msg.range - 0.15) + 0.15;
-	    break;
-	}
+        if (msg.echoData[i] > 32) {
+            distance.distance = ((double)i / (dataPoints-1)) * (msg.range - 0.15) + 0.15;
+            break;
+        }
     }
     return distance;
 }
 
 void WallDetection::publishLaserScan(ros::Time stamp)
 {
+    //create LaserScan message
+    sensor_msgs::LaserScan laserScan = createLaserScan(stamp);
+
+    ROS_INFO("tick");
+    publisher.publish(laserScan);
+}
+
+sensor_msgs::LaserScan WallDetection::createLaserScan(ros::Time stamp){
+    //create message
     sensor_msgs::LaserScan laserScan;
+    
+    //create header
     laserScan.header.stamp = stamp;
     laserScan.header.frame_id = "/map";
+    
+    //create laser scan message
     laserScan.angle_min = -M_PI;
     laserScan.angle_max = M_PI;
     laserScan.angle_increment = stepSize;
@@ -89,45 +111,58 @@ void WallDetection::publishLaserScan(ros::Time stamp)
     laserScan.range_max = 50;
 
     for (double a = -M_PI; a < M_PI; a += stepSize) {
-	auto iPos = sonarDataMap.lower_bound(a);
-	if (iPos == sonarDataMap.end())
-	    iPos = sonarDataMap.begin();
-	double dPos = angles::normalize_angle_positive(iPos->first - a);
-	auto iNeg = iPos;
-	if (iNeg == sonarDataMap.begin())
-	    iNeg = sonarDataMap.end();
-	iNeg--;
-	double dNeg = angles::normalize_angle_positive(a - iNeg->first);
+        auto iPos = sonarDataMap.lower_bound(a);
+        if (iPos == sonarDataMap.end())
+            iPos = sonarDataMap.begin();
+        double dPos = angles::normalize_angle_positive(iPos->first - a);
+        auto iNeg = iPos;
+        if (iNeg == sonarDataMap.begin())
+            iNeg = sonarDataMap.end();
+        iNeg--;
+        double dNeg = angles::normalize_angle_positive(a - iNeg->first);
 
-	auto i = dPos > dNeg ? iNeg : iPos;
+        auto i = dPos > dNeg ? iNeg : iPos;
 
-	laserScan.ranges.push_back(i->second.distance);
+        laserScan.ranges.push_back(i->second.distance);
     }
-
-    ROS_INFO("tick");
-    publisher.publish(laserScan);
     
-    //publish enhance 
+    return laserScan;
+}
+
+void WallDetection::publishELaserScan(ros::Time stamp)
+{
+    //create LaserScan message
+    sensor_msgs::LaserScan laserScan = createLaserScan(stamp);
+    
+    //create enhance laser scan message
     hanse_msgs::ELaserScan escan;
     //fill header
     escan.header.stamp = stamp;
     laserScan.header.frame_id = "/map";
     //add lasser scan
     escan.laser_scan = laserScan;
-    //add informations about updated indexes
-    double normalized_head_pos = fmod(lastHeadPosition + 2 * M_PI, 2 * M_PI);
-    uint16_t u_start = (int) ceil(normalized_head_pos / stepSize);
-    uint16_t u_end = u_start + (int) ceil(publishAngle / stepSize - 0.0001);
-    u_end = u_end % (laserScan.ranges.size());
+    //add informations about updated index
+    double normalized_head_pos = lastHeadPosition + M_PI;
+    //double perc_head_pos = 1 / (2 * M_PI) * normalized_head_pos;
+    //uint16_t changed = (int) floor(perc_head_pos * (360 / angles::to_degrees(stepSize)));
+    uint16_t changed = (int) floor(normalized_head_pos / stepSize);
+    escan.changed = changed;
     
-    escan.u_start = u_start;
-    escan.u_end = u_end;
-    
+    //publish created message
     ePublisher.publish(escan);
+    
+
+    //debug output
+    ROS_DEBUG("head %lf", angles::to_degrees(lastHeadPosition));
+    ROS_DEBUG("mormalized head %lf", angles::to_degrees(normalized_head_pos));
+    ROS_DEBUG("step size %lf", angles::to_degrees(stepSize));
+    ROS_DEBUG(" changed %d", changed);
+    ROS_DEBUG("--");
 }
 
 void WallDetection::init()
 {
+    
     isInitialized = true;
     reconfigServer.setCallback(boost::bind(&WallDetection::reconfigure, this, _1, _2));
 }
