@@ -1,68 +1,67 @@
 #include "global_sonar.h"
-//! \todo{TODO dynamic reconfigure}
 
 
 GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node(n){
     //advertize node for sonar with global points
     this->pub = this->node.advertise<visualization_msgs::Marker>("/debug/sonar_global", 1000);
-    ROS_INFO("Debug node initialized");
+    ROS_INFO("Sonar node initialized");
 }
 
 
 
-void GlobalSonarNode::sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg){
-    //create point and color vectors for visualization
-    std::vector<geometry_msgs::Point> points;
-    std::vector<std_msgs::ColorRGBA> colors;
-    //calculating vectors
-    for (unsigned int i = 0; i < msg->ranges.size(); i++){
-        if(msg->ranges.at(i) > 0){
-            double angle = msg->angle_min + msg->angle_increment * i;
+void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr& msg){
 
-            //calculating x, y coordinates of laser scan
-            Vector3d p(msg->ranges.at(i), 0, 0);
-            AngleAxis<double> rotation(angle, Vector3d(0, 0, -1));
-            p = rotation * p;
-
-            //add point to point array
-            geometry_msgs::Point point;
-            point.x = p(0);
-            point.y = p(1);
-            points.push_back(point);
-
-            //calc color
-            std_msgs::ColorRGBA color;
-            color.r = 0;
-            color.g = 1;
-            color.b = i * 1.0/msg->ranges.size();
-            color.a = 1;
-
-            colors.push_back(color);
-        }
+    if(msg->laser_scan.ranges.size() != last_points.size()){
+        last_points.clear();
+        last_points.resize(msg->laser_scan.ranges.size());
     }
-    //Create marker
-    visualization_msgs::Marker marker;
+    //orientation of HANSE
+    Quaterniond orientation(last_pose.orientation.w,
+                            last_pose.orientation.x,
+                            last_pose.orientation.y,
+                            last_pose.orientation.z);
 
-    marker.header.frame_id = "/map";
-    marker.header.stamp = ros::Time::now();
-    marker.points = points;
-    marker.pose = last_pose;
-    marker.colors = colors;
-    marker.color.a = 1;
-    marker.lifetime = ros::Duration();
-    marker.action = visualization_msgs::Marker::ADD;
+    //position of HANSE in global coordinates
+    Translation3d position(last_pose.position.x,
+                           last_pose.position.y,
+                           last_pose.position.z);
 
-    //choose typ
-    //marker.type = visualization_msgs::Marker::LINE_STRIP;
-    marker.type = visualization_msgs::Marker::POINTS;
+    //Transformation from robot to global coordinates
+    Affine3d a;
+    a = position * orientation;
 
-    //choose scale
-    marker.scale.x = .1;
-    marker.scale.y = .1;
-    marker.scale.z = .1;
 
-    //publish marker
-    this->pub.publish(marker);
+    if(msg->laser_scan.ranges.at(msg->changed) >= 0){
+        double angle = msg->laser_scan.angle_min + msg->laser_scan.angle_increment * msg->changed;
+
+        //calculating x, y coordinates of laser scan
+        Vector3d p(msg->laser_scan.ranges.at(msg->changed), 0, 0);
+        AngleAxis<double> rotation(angle, Vector3d(0, 0, -1));
+        p = rotation * p;
+
+        //Converting to global coordinates
+        p = a * p;
+
+        //add point to polygon
+        geometry_msgs::Point32 point;
+        point.x = p(0);
+        point.y = p(1);
+
+        last_points[msg->changed] = point;
+    } else {
+        last_points[msg->changed] = null;
+    }
+
+
+
+    //Publish StampedPolygon
+    geometry_msgs::PolygonStamped spolygon;
+    spolygon.header.frame_id = "/map";
+    spolygon.header.stamp = ros::Time::now();
+    spolygon.polygon.points = last_points;
+    debug_laser_pub.publish(spolygon);
+
+
 }
 
 
@@ -84,7 +83,7 @@ int main(int argc, char **argv)
     GlobalSonarNode follow(n);
 
     //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber sub_laser = n.subscribe<sensor_msgs::LaserScan>("/hanse/sonar/laser_scan", 1000, boost::bind(&GlobalSonarNode::sonar_laser_update, &follow, _1));
+    ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, boost::bind(&GlobalSonarNode::sonar_laser_update, &follow, _1));
 
     //Subscribe to the current position
     ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, boost::bind(&GlobalSonarNode::pos_update, &follow, _1));

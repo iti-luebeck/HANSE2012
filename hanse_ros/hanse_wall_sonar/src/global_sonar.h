@@ -4,8 +4,11 @@
 #include <iostream>
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/Point32.h"
 #include "visualization_msgs/Marker.h"
 #include <vector>
+#include "hanse_msgs/ELaserScan.h"
+#include "pcl_ros/point_cloud.h"
 
 #ifndef GLOBAL_SONAR_H
 #define GLOBAL_SONAR_H
@@ -29,7 +32,7 @@ public:
 
       \param msg received message.
      */
-    void sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr& msg);
 
     //! position callback
     /*!
@@ -43,6 +46,7 @@ private:
     geometry_msgs::Pose last_pose;
     sensor_msgs::LaserScan last_laser_scan;
     ros::NodeHandle node;
+    std::vector<geometry_msgs::Point32> last_points;
 };
 
 /*!
