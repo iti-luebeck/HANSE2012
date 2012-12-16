@@ -143,8 +143,6 @@ void WallDetection::publishELaserScan(ros::Time stamp)
     escan.laser_scan = laserScan;
     //add informations about updated index
     double normalized_head_pos = lastHeadPosition + M_PI;
-    //double perc_head_pos = 1 / (2 * M_PI) * normalized_head_pos;
-    //uint16_t changed = (int) floor(perc_head_pos * (360 / angles::to_degrees(stepSize)));
     uint16_t changed = (int) floor(normalized_head_pos / stepSize);
     escan.changed = changed;
     
