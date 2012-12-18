@@ -1,6 +1,5 @@
 #include "wall_follow_shift_algo.h"
 
-
 using namespace Eigen;
 using std::set;
 
@@ -16,47 +15,79 @@ public:
     }
 };
 
+
+wall_follow_shift_algo::wall_follow_shift_algo(){
+#ifdef DEBUG
+    // init wall follow node
+    char *argv[] = {}; int argc = 0;
+    ros::init(argc, argv, "debug_shift");
+
+    //create NodeHandle
+    ros::NodeHandle n;
+    pub = n.advertise<geometry_msgs::PolygonStamped>("/debug_shift_poly", 1000);
+#endif //DEBUG
+}
+
 void wall_follow_shift_algo::sonar_laser_update(
-        const sensor_msgs::LaserScan::ConstPtr& msg,
+        const geometry_msgs::PolygonStamped::ConstPtr& msg,
+        const geometry_msgs::Pose& pose,
         Vector3d &goal,
         Quaterniond &orientation) throw (std::runtime_error)
 {
 
     Vector3d shift_distance(0, -3, 0);
+    Quaterniond robot_orientation(pose.orientation.w,
+                            pose.orientation.x,
+                            pose.orientation.y,
+                            pose.orientation.z);
+    Vector3d global_shift;
+    global_shift = robot_orientation * shift_distance;
 
-    //searching for nearest scan
+    //create vector containing all shifted points
+    std::vector<Vector3d> shifted_points;
+    for(unsigned int i = 0; i < msg->polygon.points.size(); i++){
+        Vector3d p(msg->polygon.points[i].x,
+                   msg->polygon.points[i].y,
+                   msg->polygon.points[i].z);
+        shifted_points.push_back(p + global_shift);
+    }
+#ifdef DEBUG
+    publish_debug_info(shifted_points);
+#endif //DEBUG
+
+    //searching for nearest point
     double min_dist = DBL_MAX;
-    unsigned int start_index = -1;
-    for(unsigned int i = 0; i<msg->ranges.size(); i++){
-        if (msg->ranges[i] <= min_dist && msg->ranges[i] > 0){
-            min_dist = msg->ranges[i];
-            start_index = i;
+    unsigned int nearest_point_index = -1;
+    for(unsigned int i = 0; i < shifted_points.size(); i++){
+        double square_distance = pow(pose.position.x - shifted_points[i](0), 2) + pow(pose.position.y - shifted_points[i](1), 2);
+        if (square_distance <= min_dist){
+            min_dist = square_distance;
+            nearest_point_index = i;
         }
     }
 
-    Vector3d v_sum(0, 0, 0);
-    double d_sum = 0;
+    goal = shifted_points[nearest_point_index + 20];
 
-    unsigned int k = 0;
-    //while (k <= 10){
-        unsigned int index = (start_index - k + msg->ranges.size()-5) % msg->ranges.size();
-        if(msg->ranges.at(index) > 0){
-            double angle = msg->angle_min + msg->angle_increment * index;
-            //calculating x, y coordinates of laser scan
-            Vector3d p(msg->ranges.at( index ), 0, 0);
-            AngleAxis<double> rotation(angle, Vector3d(0, 0, -1));
-            p = rotation * p;
-
-            //shifting scan
-            p -= shift_distance;
-
-            v_sum = p;
-
-            d_sum = p.norm();
-
-        }
-       // k++;
-    //}
-
-    goal = v_sum ;
+    orientation = Quaterniond(1, 0, 0, 0);
 }
+
+#ifdef DEBUG
+void wall_follow_shift_algo::publish_debug_info(const std::vector<Vector3d> &shifted_points){
+    //create polygon from valid points
+    std::vector<geometry_msgs::Point32> debug_points;
+    for(unsigned int i = 0; i < shifted_points.size(); i++){
+        geometry_msgs::Point32 p;
+        p.x = shifted_points[i](0);
+        p.y = shifted_points[i](1);
+        p.z = shifted_points[i](2);
+
+        debug_points.push_back(p);
+    }
+
+    geometry_msgs::PolygonStamped spolygon;
+    spolygon.header.frame_id = "/map";
+    spolygon.header.stamp = ros::Time::now();
+    spolygon.polygon.points = debug_points;
+    pub.publish(spolygon);
+}
+#endif //DEBUG

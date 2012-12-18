@@ -17,6 +17,8 @@
 #ifndef WALL_FOLLOW_H
 #define WALL_FOLLOW_H
 
+#define DEBUG
+
 //! WallFollowNode
 /*!
   Class that handles the logic for the WallFollow node.
@@ -35,7 +37,7 @@ public:
       Callback method receiving laser scan updates
       \param msg received message.
      */
-    void sonar_laser_update(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void g_sonar_update(const geometry_msgs::PolygonStamped::ConstPtr& msg);
 
     //! position callback
     /*!
@@ -51,16 +53,18 @@ private:
     ros::Publisher debug_laser_pub;
     Iwall_follow_algo *algo;
 
-   geometry_msgs::Pose last_pose;
+    geometry_msgs::Pose last_pose;
 
-   //! visualizing sonar in rviz
-   /*!
-     Rotate and relocate the laserscan to global coordinates,
-     publishing a new polygon with the publisher debug_laser_pub
-     \param msg the laserscan
-     \param a transformation from robot to global coordinates
+    int32_t last_goal_update;
+
+    //! visualizing sonar in rviz
+    /*!
+     * Rotate and relocate the laserscan to global coordinates,
+     * publishing a new polygon with the publisher debug_laser_pub
+     * \param msg the laserscan
+     * \param a transformation from robot to global coordinates
     */
-   void transform_sonar_for_rviz(const sensor_msgs::LaserScan::ConstPtr& msg, Affine3d a);
+    void transform_sonar_for_rviz(const sensor_msgs::LaserScan::ConstPtr& msg, Affine3d a);
 
 };
 

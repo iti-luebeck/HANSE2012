@@ -1,8 +1,9 @@
 #include "geometry_msgs/PoseStamped.h"
-#include "sensor_msgs/LaserScan.h"
+#include "ros/ros.h"
 #define EIGEN_MATRIXBASE_PLUGIN "eigen_plugin/matrixbase_plugin.h"
 #define EIGEN_QUATERNIONBASE_PLUGIN "eigen_plugin/quaternionbase_plugin.h"
 #include <Eigen/Dense>
+#include "geometry_msgs/PolygonStamped.h"
 
 using namespace Eigen;
 
@@ -19,7 +20,8 @@ public:
       \return coordinates of the goal relatively to HANSE
      */
     virtual void sonar_laser_update(
-            const sensor_msgs::LaserScan::ConstPtr& msg,
+            const geometry_msgs::PolygonStamped::ConstPtr& msg,
+            const geometry_msgs::Pose& pose,
             Vector3d &goal,
             Quaterniond &orientation) throw (std::runtime_error) = 0;
 };
