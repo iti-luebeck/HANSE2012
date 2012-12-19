@@ -12,7 +12,8 @@ WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n){
     debug_laser_pub = _n.advertise<geometry_msgs::PolygonStamped>("/debug/sonarPolygon", 1000);
 
     //TODO: think about memory ;)
-    algo = new wall_follow_shift_algo();
+    //algo = new wall_follow_shift_algo();
+    algo = new wall_follow_fancy_algo();
 
     ROS_INFO("Wall follow node initialized");
 

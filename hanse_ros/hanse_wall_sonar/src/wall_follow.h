@@ -11,6 +11,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "iwall_follow_algo.h"
 #include "wall_follow_shift_algo.h"
+#include "wall_follow_fancy_algo.h"
 #include "geometry_msgs/PolygonStamped.h"
 #include <list>
 
