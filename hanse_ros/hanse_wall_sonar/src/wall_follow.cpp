@@ -30,7 +30,7 @@ void WallFollowNode::g_sonar_update(const geometry_msgs::PolygonStamped::ConstPt
         return;
     }
 
-    //FIXME use current pose
+
     geometry_msgs::PoseStamped spose;
     spose.header.frame_id = "/map";
     spose.header.stamp = ros::Time::now();

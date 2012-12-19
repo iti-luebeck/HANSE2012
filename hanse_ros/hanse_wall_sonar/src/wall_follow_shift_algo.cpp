@@ -66,9 +66,36 @@ void wall_follow_shift_algo::sonar_laser_update(
         }
     }
 
-    goal = shifted_points[nearest_point_index + 20];
+    //find last point to look at
+    //limited by a lookahead distance and lookahead distance
+    double limit_lookahead_distance = 10;
+    unsigned int limit_lookahead_index_delta = 20;
 
-    orientation = Quaterniond(1, 0, 0, 0);
+    unsigned int last_point_index = nearest_point_index;
+    for(unsigned int q = 0; q <= limit_lookahead_index_delta; q++){
+        double distance = (shifted_points[nearest_point_index] - shifted_points[last_point_index + 1]).norm();
+        if(distance < limit_lookahead_distance){
+            last_point_index = (last_point_index + 1) % shifted_points.size();
+        } else {
+            break;
+        }
+    }
+
+
+    //sum points up
+    for(unsigned int q = nearest_point_index; q <= last_point_index; q++){
+       goal = shifted_points[q];
+    }
+    goal /= goal.norm();
+    goal *= shifted_points[nearest_point_index + 20].norm();
+
+
+    //calculate orientation
+    Vector3d path;
+    path = shifted_points[last_point_index] - shifted_points[nearest_point_index];
+    //TODO change this quaternion
+
+    orientation = AngleAxisd(atan2(path(1), path(0)), Vector3d::UnitZ());
 }
 
 #ifdef DEBUG
