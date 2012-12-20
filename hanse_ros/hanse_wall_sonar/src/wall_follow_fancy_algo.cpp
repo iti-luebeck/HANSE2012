@@ -1,19 +1,6 @@
 #include "wall_follow_fancy_algo.h"
 
 using namespace Eigen;
-using std::set;
-
-class CompPointsX
-{
-public:
-    bool operator()(Vector3d v1, Vector3d v2)
-    {
-        if(v1(0) < v2(0))
-            return true;
-        else
-            return false;
-    }
-};
 
 
 wall_follow_fancy_algo::wall_follow_fancy_algo(){
@@ -24,7 +11,9 @@ wall_follow_fancy_algo::wall_follow_fancy_algo(){
 
     //create NodeHandle
     ros::NodeHandle n;
-    pub = n.advertise<geometry_msgs::PolygonStamped>("/debug_shift_poly", 1000);
+    pub_all = n.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_poly", 1000);
+    pub_path = n.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_path", 1000);
+
 #endif //DEBUG
 }
 
@@ -36,6 +25,14 @@ void wall_follow_fancy_algo::sonar_laser_update(
 {
 
     Vector3d robot_position(pose.position.x, pose.position.y, pose.position.z);
+    Quaterniond robot_oriantation(pose.orientation.w,
+                                  pose.orientation.x,
+                                  pose.orientation.y,
+                                  pose.orientation.z);
+    Vector3d robot_rot;
+    robot_rot = robot_oriantation * Vector3d::UnitX();
+    double robot_yaw_angle = atan2(robot_rot(1), robot_rot(0));
+
 
     //create
     std::vector<Vector3d> points;
@@ -67,46 +64,45 @@ void wall_follow_fancy_algo::sonar_laser_update(
         }
 
 
-        // remove all points that lie inside other circles
+
         for (std::list<Vector3d>::iterator it = pCirc.begin(); it != pCirc.end(); ) {
+            // remove all points that lie inside other circles
             Vector3d p = *it;
             for (Vector3d q : points) {
                 if ((q - p).norm() < distance - tolerance) {
                     it = pCirc.erase(it);
-                    goto next_point1;
+                    goto next_point;
                 }
             }
+
+            //remove all points that are behind the robot
+            {
+                //calculate position relative to robot
+                p -= robot_position;
+                double p_angle = atan2(p(1), p(0));
+                double diff = robot_yaw_angle - p_angle;
+                //throw point away if it is behind
+                if(fabs(diff) > M_PI/2 ){
+                    it = result.erase(it);
+                    goto next_point;
+                }
+            }
+
+            //go to next element
             it++;
-            next_point1:;
+            next_point:;
         }
         result.insert(result.end(), pCirc.begin(), pCirc.end());
 
     }
 
-
-    std::list<Vector3d> all_points;
-    all_points.insert(all_points.end(), result.begin(), result.end());
-    all_points.insert(all_points.end(), points.begin(), points.end());
-
-    double output_stepsize = angles::from_degrees(3);
-    for (std::list<Vector3d>::iterator it = result.begin(); it != result.end(); ) {
-        Vector3d p = *it;
-        p -= robot_position;
-        int p_angle = (int) round(atan2(p(1), p(0)) / output_stepsize);
-
-
-        for (Vector3d q : all_points) {
-            q -= robot_position;
-            int q_angle = (int) round(atan2(q(1), q(0)) / output_stepsize);
-            if(q_angle == p_angle){
-                if((p - robot_position).norm() > (q - robot_position).norm()){
-                    it = result.erase(it);
-                    goto next_point2;
-                }
-            }
-        }
-        it++;
-        next_point2:;
+    //searching for nearest point
+    std::vector<Vector3d> nearest_points;
+    Vector3d nearest_point_to_robot = get_nearest(result, robot_position, nearest_points);
+    nearest_points.push_back(nearest_point_to_robot);
+    for(unsigned int i = 0; i < 150; i++){
+        nearest_points.push_back(
+            get_nearest(result, *(--nearest_points.end()), nearest_points));
     }
 
 
@@ -114,16 +110,31 @@ void wall_follow_fancy_algo::sonar_laser_update(
     goal = Vector3d();
 
 #ifdef DEBUG
-    publish_debug_info(result);
+    publish_debug_info(result, nearest_points);
 #endif //DEBUG
 
 }
 
+
+Vector3d wall_follow_fancy_algo::get_nearest(const std::list<Vector3d> &list, const Vector3d &ref_point, std::vector<Vector3d> &nearest_points){
+    Vector3d nearestPoint(DBL_MAX, DBL_MAX, DBL_MAX);
+    for(Vector3d p: list){
+        if((nearestPoint - ref_point).squaredNorm() > (p - ref_point).squaredNorm()
+                && ref_point != p
+                && std::find(nearest_points.begin(),nearest_points.end(),p)==nearest_points.end()){
+            nearestPoint = p;
+        }
+    }
+    return nearestPoint;
+}
+
+
 #ifdef DEBUG
-void wall_follow_fancy_algo::publish_debug_info(const std::list<Vector3d> &point_list){
+void wall_follow_fancy_algo::publish_debug_info(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
+{
     //create polygon from valid points
     std::vector<geometry_msgs::Point32> debug_points;
-    for(Vector3d point: point_list){
+    for(Vector3d point: all){
         geometry_msgs::Point32 p;
         p.x = point(0);
         p.y = point(1);
@@ -136,6 +147,34 @@ void wall_follow_fancy_algo::publish_debug_info(const std::list<Vector3d> &point
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
     spolygon.polygon.points = debug_points;
-    pub.publish(spolygon);
+    pub_all.publish(spolygon);
 }
+
+    //create polygon from valid points
+    std::vector<geometry_msgs::Point32> debug_points;
+    for(Vector3d point: path){
+        geometry_msgs::Point32 p;
+        p.x = point(0);
+        p.y = point(1);
+        p.z = point(2);
+
+        debug_points.push_back(p);
+    }
+
+    geometry_msgs::PolygonStamped spolygon;
+    spolygon.header.frame_id = "/map";
+    spolygon.header.stamp = ros::Time::now();
+    spolygon.polygon.points = debug_points;
+    pub_path.publish(spolygon);
+}
+
+//std::vector<geometry_msgs::Point32> wall_follow_fancy_algo::to_point32_vector
+//                                                (const std::iterator &begin, const std::iterator &end){
+//    std::vector<geometry_msgs::Point32> points;
+//    for(std::iterator it = begin; it!=end; it++){
+//        points.push_back(*it);
+//    }
+//    return points;
+//}
+
 #endif //DEBUG

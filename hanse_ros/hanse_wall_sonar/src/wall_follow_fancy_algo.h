@@ -9,9 +9,10 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Polygon.h"
 #include "geometry_msgs/PolygonStamped.h"
-#include <set>
 #include <float.h>
 #include <list>
+#include <set>
+#include <vector>
 #include "angles/angles.h"
 
 #ifndef WALL_FOLLOW_FANCY_ALGO_H
@@ -30,9 +31,13 @@ public:
             Quaterniond &orientation) throw (std::runtime_error);
 private:
     ros::NodeHandle n;
-    ros::Publisher pub;
+    ros::Publisher pub_all;
+    ros::Publisher pub_path;
+    Vector3d get_nearest(const std::list<Vector3d> &list, const Vector3d &ref_point, std::vector<Vector3d> &nearest_points);
+
 #ifdef DEBUG
-    void publish_debug_info(const std::list<Vector3d> &point_list);
+    void publish_debug_info(const std::list<Vector3d> &all,const std::vector<Vector3d> &path);
+    //std::vector<geometry_msgs::Point32> to_point32_vector(const std::iterator &begin, const std::iterator &end);
 #endif //DEBUG
 
 
