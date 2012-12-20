@@ -11,6 +11,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
+
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
@@ -29,13 +30,27 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+   execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+   if (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7)
+        message(STATUS "C++11 activated.")
+        add_definitions("-std=gnu++11")
+   elseif(GCC_VERSION VERSION_GREATER 4.3 OR GCC_VERSION VERSION_EQUAL 4.3)
+        message(WARNING "C++0x activated. Please upgrade to gcc 4.8 for C++11 support.")
+        add_definitions("-std=gnu++0x")
+   else ()
+        message(FATAL_ERROR "No C++11 compatible compiler found!")
+   endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
+
 find_package(Eigen REQUIRED)
 include_directories(${Eigen_INCLUDE_DIRS})
 
 #include eigen plugin path
 include_directories(src)
 
-rosbuild_add_executable(wall_follow src/wall_follow.cpp src/iwall_follow_algo.h src/wall_follow_shift_algo.cpp src/eigen_plugin/matrixbase_plugin.h src/eigen_plugin/quaternionbase_plugin.h)
+rosbuild_add_executable(wall_follow src/wall_follow.cpp src/iwall_follow_algo.h src/wall_follow_shift_algo.cpp src/wall_follow_fancy_algo.cpp src/eigen_plugin/matrixbase_plugin.h src/eigen_plugin/quaternionbase_plugin.h)
 rosbuild_add_executable(debug_sonar src/debug_sonar.cpp)
 rosbuild_add_executable(global_sonar src/global_sonar.cpp)
 rosbuild_add_executable(orientation_aware_global_sonar src/orientation_aware_global_sonar.cpp)

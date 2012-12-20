@@ -11,6 +11,8 @@
 #include "geometry_msgs/PolygonStamped.h"
 #include <set>
 #include <float.h>
+#include <list>
+#include "angles/angles.h"
 
 #ifndef WALL_FOLLOW_FANCY_ALGO_H
 #define WALL_FOLLOW_FANCY_ALGO_H
@@ -30,7 +32,7 @@ private:
     ros::NodeHandle n;
     ros::Publisher pub;
 #ifdef DEBUG
-    void publish_debug_info(const std::vector<Vector3d> &shifted_points);
+    void publish_debug_info(const std::list<Vector3d> &point_list);
 #endif //DEBUG
 
 
