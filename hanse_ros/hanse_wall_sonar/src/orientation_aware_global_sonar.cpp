@@ -50,7 +50,7 @@ void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr&
         }
     }
 
-    // loop until we reached the new data
+    // loop until we reached the last new data
     while(i != (msg->changed + 1) % msg->laser_scan.ranges.size()){
         //check point is valid
         if(msg->laser_scan.ranges[i] >= 0){
@@ -157,13 +157,13 @@ int main(int argc, char **argv)
     //create NodeHandle
     ros::NodeHandle n;
     
-    GlobalSonarNode follow(n);
+    GlobalSonarNode g_sonar(n);
 
     //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, boost::bind(&GlobalSonarNode::sonar_laser_update, &follow, _1));
+    ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, &GlobalSonarNode::sonar_laser_update, &g_sonar);
 
     //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, boost::bind(&GlobalSonarNode::pos_update, &follow, _1));
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &GlobalSonarNode::pos_update, &g_sonar);
     
     ros::Rate loop_rate(10);
 

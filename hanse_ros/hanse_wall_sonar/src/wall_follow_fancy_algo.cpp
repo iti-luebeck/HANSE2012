@@ -24,27 +24,30 @@ void wall_follow_fancy_algo::sonar_laser_update(
         Quaterniond &orientation) throw (std::runtime_error)
 {
 
-    Vector3d robot_position(pose.position.x, pose.position.y, pose.position.z);
-    Quaterniond robot_oriantation(pose.orientation.w,
+    const Vector3d robot_position(pose.position.x, pose.position.y, pose.position.z);
+    const Quaterniond robot_oriantation(pose.orientation.w,
                                   pose.orientation.x,
                                   pose.orientation.y,
                                   pose.orientation.z);
     Vector3d robot_rot;
     robot_rot = robot_oriantation * Vector3d::UnitX();
-    double robot_yaw_angle = atan2(robot_rot(1), robot_rot(0));
+    const double robot_yaw_angle = atan2(robot_rot(1), robot_rot(0));
 
 
-    //create
-    std::vector<Vector3d> points;
-    for(geometry_msgs::Point32 p : msg->polygon.points){
+    //create vector of Vector3d for global sonar points that are in front of the robot
+    std::vector<Vector3d> global_front_sonar_points;
+    for(const geometry_msgs::Point32 &p : msg->polygon.points){
         Vector3d vp(p.x, p.y, p.z);
-        points.push_back(vp);
+        if(!is_behind_robot(vp, robot_yaw_angle, robot_position)){
+            //add point if it isn't behind the robot
+            global_front_sonar_points.push_back(vp);
+        }
     }
 
 
-    // create point array for circle
+    // create std::vector<Vector3d> of points in a circle
     unsigned int step = 10;
-    double distance = 3;
+    double distance = 1;
     std::vector<Vector3d> circ;
     for (unsigned int i = 0; i < 360 / step; i++) {
         const Vector3d dVector = distance * Vector3d::UnitX();
@@ -52,129 +55,135 @@ void wall_follow_fancy_algo::sonar_laser_update(
         circ.push_back(rotate * dVector);
     }
 
-    double tolerance = 0.5;
+    double tolerance = 0.2;
     std::list<Vector3d> result;
-    for (unsigned int i = 0; i < points.size(); i++) {
+    for (const auto &p: global_front_sonar_points) {
+        //create point circle for current point
         std::list<Vector3d> pCirc;
-        for (unsigned int j = 0; j < circ.size(); j++) {
-            Vector3d circ_point = circ[j] + points[i];
-            //too greedy filter
-            //if((robot_position - points[i]).norm() > (robot_position - circ_point).norm())
-                pCirc.push_back(circ_point);
+        for (const auto &c:circ) {
+            Vector3d circ_point = c + p;
+            pCirc.push_back(circ_point);
         }
 
-
-
+        //filter unwanted points
         for (std::list<Vector3d>::iterator it = pCirc.begin(); it != pCirc.end(); ) {
             // remove all points that lie inside other circles
-            Vector3d p = *it;
-            for (Vector3d q : points) {
-                if ((q - p).norm() < distance - tolerance) {
-                    it = pCirc.erase(it);
-                    goto next_point;
-                }
+            const Vector3d &pc(*it);
+            if(is_inside_other_circle(distance, global_front_sonar_points, pc, tolerance)){
+                //remove point if it lies inside another circle
+                it = pCirc.erase(it);
+            } else if(is_behind_robot(pc, robot_yaw_angle, robot_position)){
+                //remove point if it is behind a robot
+                it = result.erase(it);
+            } else {
+                //keep point and continue with next point
+                it++;
             }
-
-            //remove all points that are behind the robot
-            {
-                //calculate position relative to robot
-                p -= robot_position;
-                double p_angle = atan2(p(1), p(0));
-                double diff = robot_yaw_angle - p_angle;
-                //throw point away if it is behind
-                if(fabs(diff) > M_PI/2 ){
-                    it = result.erase(it);
-                    goto next_point;
-                }
-            }
-
-            //go to next element
-            it++;
-            next_point:;
         }
         result.insert(result.end(), pCirc.begin(), pCirc.end());
-
     }
 
-    //searching for nearest point
-    std::vector<Vector3d> nearest_points;
-    Vector3d nearest_point_to_robot = get_nearest(result, robot_position, nearest_points);
-    nearest_points.push_back(nearest_point_to_robot);
-    for(unsigned int i = 0; i < 150; i++){
-        nearest_points.push_back(
-            get_nearest(result, *(--nearest_points.end()), nearest_points));
+    //getting a list of points by looking at the next points that are close to each other
+    //limit by a limit_lookahead_distancee and limit_lookahead_index_delta
+    //TODO ensure that this algorithm won't go backward!
+    double limit_lookahead_distance = 8;
+    unsigned int limit_lookahead_index_delta = 80;
+
+    std::vector<Vector3d> nearest_point_list = {robot_position};
+    for(unsigned int i = 0; i < limit_lookahead_index_delta; i++){
+        //use last point in nearest_point_list as reference point
+        const Vector3d &ref_point(*(--nearest_point_list.end()));
+        //initialize
+        Vector3d *nearestPoint = NULL;
+        double nearest_sdistance = DBL_MAX;
+        //search nearest point
+        for(Vector3d &p: result){
+            const double p_sdistance = (p - ref_point).squaredNorm();
+            if(p_sdistance < nearest_sdistance //is nearer
+                    && (p-robot_position).squaredNorm() < limit_lookahead_distance //check limit
+                    && std::find(nearest_point_list.begin(),nearest_point_list.end(),p)==nearest_point_list.end() //wasn't already the nearest point
+                    ){
+                nearestPoint = &p;
+                nearest_sdistance = (*nearestPoint - ref_point).squaredNorm();
+            }
+        }
+        //check if we found a new Point
+        if(nearest_sdistance != DBL_MAX){
+            nearest_point_list.push_back(*nearestPoint);
+        } else {
+            //give up because there aren't any closer points
+            break;
+        }
+    }
+    //remove robot position
+    nearest_point_list.erase(nearest_point_list.begin());
+    Vector3d sum(0, 0, 0);
+    for(const auto &p:nearest_point_list){
+        sum += p - robot_position;
     }
 
 
-    orientation = Quaterniond(1,0,0,0);
-    goal = Vector3d();
+    goal = sum / sum.norm() * 2 + robot_position;
+
+
+    orientation = AngleAxisd(atan2(sum(1), sum(0)), Vector3d::UnitZ());
+
 
 #ifdef DEBUG
-    publish_debug_info(result, nearest_points);
+    publish_debug_info(result, nearest_point_list);
 #endif //DEBUG
 
 }
 
+bool wall_follow_fancy_algo::is_behind_robot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position)
+{
+    //calculate position relative to robot
+    Vector3d p_reltative = p - robot_position;
+    double p_angle = atan2(p_reltative(1), p_reltative(0));
+    double diff = robot_yaw_angle - p_angle;
+    //return true if the point p is behind
+    return (fabs(diff) > M_PI/2 );
+}
 
-Vector3d wall_follow_fancy_algo::get_nearest(const std::list<Vector3d> &list, const Vector3d &ref_point, std::vector<Vector3d> &nearest_points){
-    Vector3d nearestPoint(DBL_MAX, DBL_MAX, DBL_MAX);
-    for(Vector3d p: list){
-        if((nearestPoint - ref_point).squaredNorm() > (p - ref_point).squaredNorm()
-                && ref_point != p
-                && std::find(nearest_points.begin(),nearest_points.end(),p)==nearest_points.end()){
-            nearestPoint = p;
+bool wall_follow_fancy_algo::is_inside_other_circle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance)
+{
+    for (const Vector3d &q : global_sonar_points) {
+        if ((q - pc).norm() < distance - tolerance) {
+            return true;
         }
     }
-    return nearestPoint;
+    return false;
 }
 
 
 #ifdef DEBUG
 void wall_follow_fancy_algo::publish_debug_info(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
-{
+    geometry_msgs::PolygonStamped spolygon;
+    spolygon.header.frame_id = "/map";
+    spolygon.header.stamp = ros::Time::now();
+
     //create polygon from valid points
-    std::vector<geometry_msgs::Point32> debug_points;
-    for(Vector3d point: all){
+    for(const Vector3d &point: all){
         geometry_msgs::Point32 p;
         p.x = point(0);
         p.y = point(1);
         p.z = point(2);
-
-        debug_points.push_back(p);
+        spolygon.polygon.points.push_back(p);
     }
-
-    geometry_msgs::PolygonStamped spolygon;
-    spolygon.header.frame_id = "/map";
-    spolygon.header.stamp = ros::Time::now();
-    spolygon.polygon.points = debug_points;
     pub_all.publish(spolygon);
-}
+
 
     //create polygon from valid points
-    std::vector<geometry_msgs::Point32> debug_points;
-    for(Vector3d point: path){
+    spolygon.polygon.points.clear();
+    for(const Vector3d &point: path){
         geometry_msgs::Point32 p;
         p.x = point(0);
         p.y = point(1);
         p.z = point(2);
 
-        debug_points.push_back(p);
+        spolygon.polygon.points.push_back(p);
     }
-
-    geometry_msgs::PolygonStamped spolygon;
-    spolygon.header.frame_id = "/map";
-    spolygon.header.stamp = ros::Time::now();
-    spolygon.polygon.points = debug_points;
     pub_path.publish(spolygon);
 }
-
-//std::vector<geometry_msgs::Point32> wall_follow_fancy_algo::to_point32_vector
-//                                                (const std::iterator &begin, const std::iterator &end){
-//    std::vector<geometry_msgs::Point32> points;
-//    for(std::iterator it = begin; it!=end; it++){
-//        points.push_back(*it);
-//    }
-//    return points;
-//}
 
 #endif //DEBUG

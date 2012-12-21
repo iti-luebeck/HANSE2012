@@ -3,7 +3,7 @@
 //! \todo{TODO subscriber in klasse auslagern?}
 //! \todo{TODO Memory management?}
 
-WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n){
+WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n) {
    //advertise to navigation goal
     pub = _n.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
 
@@ -14,6 +14,8 @@ WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n){
     //TODO: think about memory ;)
     //algo = new wall_follow_shift_algo();
     algo = new wall_follow_fancy_algo();
+
+
 
     ROS_INFO("Wall follow node initialized");
 
@@ -69,10 +71,10 @@ int main(int argc, char **argv)
     WallFollowNode follow(n);
 
     //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber sub_laser = n.subscribe<geometry_msgs::PolygonStamped>("/oa_globalsonar", 1000, boost::bind(&WallFollowNode::g_sonar_update, &follow, _1));
+    ros::Subscriber sub_laser = n.subscribe<geometry_msgs::PolygonStamped>("/oa_globalsonar", 1000, &WallFollowNode::g_sonar_update, &follow);
 
     //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, boost::bind(&WallFollowNode::pos_update, &follow, _1));
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &WallFollowNode::pos_update, &follow);
     
     ros::Rate loop_rate(10);
 

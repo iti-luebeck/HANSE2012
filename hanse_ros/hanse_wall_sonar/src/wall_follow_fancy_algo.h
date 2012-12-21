@@ -29,15 +29,17 @@ public:
             const geometry_msgs::Pose& pose,
             Vector3d &goal,
             Quaterniond &orientation) throw (std::runtime_error);
+    Vector3d test(std::vector<Vector3d> global_sonar_points, double distance, double tolerance, std::list<Vector3d>::iterator it, std::list<Vector3d> pCirc);
+
 private:
     ros::NodeHandle n;
     ros::Publisher pub_all;
     ros::Publisher pub_path;
-    Vector3d get_nearest(const std::list<Vector3d> &list, const Vector3d &ref_point, std::vector<Vector3d> &nearest_points);
 
+    bool is_behind_robot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position);
+    bool is_inside_other_circle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance);
 #ifdef DEBUG
     void publish_debug_info(const std::list<Vector3d> &all,const std::vector<Vector3d> &path);
-    //std::vector<geometry_msgs::Point32> to_point32_vector(const std::iterator &begin, const std::iterator &end);
 #endif //DEBUG
 
 

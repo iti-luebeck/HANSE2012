@@ -87,7 +87,7 @@ void wall_follow_shift_algo::sonar_laser_update(
        goal = shifted_points[q];
     }
     goal /= goal.norm();
-    goal *= shifted_points[nearest_point_index + 20].norm();
+    goal *= shifted_points[last_point_index].norm();
 
 
     //calculate orientation
