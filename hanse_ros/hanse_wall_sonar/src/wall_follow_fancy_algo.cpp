@@ -46,8 +46,8 @@ void wall_follow_fancy_algo::sonar_laser_update(
 
 
     // create std::vector<Vector3d> of points in a circle
-    unsigned int step = 10;
-    double distance = 1;
+    const unsigned int step = 2; //steps of point in circe (degree)
+    const double distance = 1; //radius of the circle
     std::vector<Vector3d> circ;
     for (unsigned int i = 0; i < 360 / step; i++) {
         const Vector3d dVector = distance * Vector3d::UnitX();
@@ -55,7 +55,7 @@ void wall_follow_fancy_algo::sonar_laser_update(
         circ.push_back(rotate * dVector);
     }
 
-    double tolerance = 0.2;
+    double tolerance = 0;
     std::list<Vector3d> result;
     for (const auto &p: global_front_sonar_points) {
         //create point circle for current point
@@ -86,8 +86,9 @@ void wall_follow_fancy_algo::sonar_laser_update(
     //getting a list of points by looking at the next points that are close to each other
     //limit by a limit_lookahead_distancee and limit_lookahead_index_delta
     //TODO ensure that this algorithm won't go backward!
-    double limit_lookahead_distance = 8;
-    unsigned int limit_lookahead_index_delta = 80;
+    const double limit_lookahead_distance = DBL_MAX;
+    const unsigned int limit_lookahead_index_delta = 40;
+    const double limit_point_sdistance = pow(1.5, 2);
 
     std::vector<Vector3d> nearest_point_list = {robot_position};
     for(unsigned int i = 0; i < limit_lookahead_index_delta; i++){
@@ -102,6 +103,7 @@ void wall_follow_fancy_algo::sonar_laser_update(
             if(p_sdistance < nearest_sdistance //is nearer
                     && (p-robot_position).squaredNorm() < limit_lookahead_distance //check limit
                     && std::find(nearest_point_list.begin(),nearest_point_list.end(),p)==nearest_point_list.end() //wasn't already the nearest point
+                    && p_sdistance < limit_point_sdistance
                     ){
                 nearestPoint = &p;
                 nearest_sdistance = (*nearestPoint - ref_point).squaredNorm();
@@ -123,7 +125,7 @@ void wall_follow_fancy_algo::sonar_laser_update(
     }
 
 
-    goal = sum / sum.norm() * 2 + robot_position;
+    goal = sum / sum.norm() + robot_position;
 
 
     orientation = AngleAxisd(atan2(sum(1), sum(0)), Vector3d::UnitZ());
