@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, boost::bind(&GlobalSonarNode::sonar_laser_update, &follow, _1));
 
     //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, boost::bind(&GlobalSonarNode::pos_update, &follow, _1));
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/position/estimate", 1000, boost::bind(&GlobalSonarNode::pos_update, &follow, _1));
     
     ros::Rate loop_rate(10);
 

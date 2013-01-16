@@ -7,8 +7,9 @@ msg_gen/
 CMakeLists.txt.user
 CMakeLists.txt.user.*
 CMakeCache.txt
-CMakeFiles
+CMakeFiles/*
 cmake_install.cmake
+*/build.make
 *.so
 *.cfgc
 *.pyc

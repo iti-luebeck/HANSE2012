@@ -7,7 +7,7 @@ wall_follow_fancy_algo::wall_follow_fancy_algo(){
 #ifdef DEBUG
     // init wall follow node
     char *argv[] = {}; int argc = 0;
-    ros::init(argc, argv, "debug_shift");
+    ros::init(argc, argv, "debug_fancy");
 
     //create NodeHandle
     ros::NodeHandle n;
@@ -49,13 +49,13 @@ void wall_follow_fancy_algo::sonar_laser_update(
     const unsigned int step = 2; //steps of point in circe (degree)
     const double distance = 1; //radius of the circle
     std::vector<Vector3d> circ;
-    for (unsigned int i = 0; i < 360 / step; i++) {
+    for (unsigned int i = 0; i < 360; i+=step) {
         const Vector3d dVector = distance * Vector3d::UnitX();
-        AngleAxisd rotate(2 * M_PI * ((double) i*10)/360, Vector3d::UnitZ());
+        AngleAxisd rotate(angles::from_degrees((double) i), Vector3d::UnitZ());
         circ.push_back(rotate * dVector);
     }
 
-    double tolerance = 0;
+    double tolerance = 0; //to check if points lie within other circles
     std::list<Vector3d> result;
     for (const auto &p: global_front_sonar_points) {
         //create point circle for current point
@@ -74,7 +74,7 @@ void wall_follow_fancy_algo::sonar_laser_update(
                 it = pCirc.erase(it);
             } else if(is_behind_robot(pc, robot_yaw_angle, robot_position)){
                 //remove point if it is behind a robot
-                it = result.erase(it);
+                it = pCirc.erase(it);
             } else {
                 //keep point and continue with next point
                 it++;
@@ -83,10 +83,13 @@ void wall_follow_fancy_algo::sonar_laser_update(
         result.insert(result.end(), pCirc.begin(), pCirc.end());
     }
 
+
+    //Greedy Algorithm to calculate goal point and orientation
+
     //getting a list of points by looking at the next points that are close to each other
-    //limit by a limit_lookahead_distancee and limit_lookahead_index_delta
+    //limit by a limit_lookahead_distancee, limit_lookahead_index_delta and limit_point_sdistance
     //TODO ensure that this algorithm won't go backward!
-    const double limit_lookahead_distance = DBL_MAX;
+    const double limit_lookahead_sdistance = DBL_MAX;
     const unsigned int limit_lookahead_index_delta = 40;
     const double limit_point_sdistance = pow(1.5, 2);
 
@@ -95,15 +98,15 @@ void wall_follow_fancy_algo::sonar_laser_update(
         //use last point in nearest_point_list as reference point
         const Vector3d &ref_point(*(--nearest_point_list.end()));
         //initialize
-        Vector3d *nearestPoint = NULL;
+        Vector3d const *nearestPoint = NULL;
         double nearest_sdistance = DBL_MAX;
         //search nearest point
-        for(Vector3d &p: result){
+        for(const Vector3d &p: result){
             const double p_sdistance = (p - ref_point).squaredNorm();
             if(p_sdistance < nearest_sdistance //is nearer
-                    && (p-robot_position).squaredNorm() < limit_lookahead_distance //check limit
-                    && std::find(nearest_point_list.begin(),nearest_point_list.end(),p)==nearest_point_list.end() //wasn't already the nearest point
-                    && p_sdistance < limit_point_sdistance
+                    && (p-robot_position).squaredNorm() < limit_lookahead_sdistance //check lookahead distance limit
+                    && std::find(nearest_point_list.begin(),nearest_point_list.end(),p)==nearest_point_list.end() //isn't already the nearest point list
+                    && p_sdistance < limit_point_sdistance //check if distance between the two points is small enough
                     ){
                 nearestPoint = &p;
                 nearest_sdistance = (*nearestPoint - ref_point).squaredNorm();
@@ -119,6 +122,8 @@ void wall_follow_fancy_algo::sonar_laser_update(
     }
     //remove robot position
     nearest_point_list.erase(nearest_point_list.begin());
+
+    //
     Vector3d sum(0, 0, 0);
     for(const auto &p:nearest_point_list){
         sum += p - robot_position;

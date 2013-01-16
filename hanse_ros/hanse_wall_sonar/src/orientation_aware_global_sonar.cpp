@@ -36,7 +36,7 @@ void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr&
     unsigned int j = (last_newchange + 1 + delta_j) % msg->laser_scan.ranges.size();
 
     //spike removal
-    //removes points if a low number of a low number of points (< 3)
+    //removes points if a low number of points (< 3)
     //will be left out between two updates
     if(abs(last_j - j) < 3){
         if (last_j < j){
@@ -58,7 +58,7 @@ void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr&
 
             //calculating x, y coordinates of laser scan
             Vector3d p(msg->laser_scan.ranges[i], 0, 0);
-            AngleAxis<double> rotation(-angle, Vector3d::UnitZ());
+            AngleAxis<double> rotation(-angle, Vector3d::UnitZ()); // <<--- change -angle to angle for reality
             p = rotation * p;
 
             //Converting to global coordinates
@@ -159,11 +159,18 @@ int main(int argc, char **argv)
     
     GlobalSonarNode g_sonar(n);
 
+#ifdef SIMULATION_MODE
     //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, &GlobalSonarNode::sonar_laser_update, &g_sonar);
+    ros::Subscriber sub_elaser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, &GlobalSonarNode::sonar_laser_update, &g_sonar);
 
     //Subscribe to the current position
     ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &GlobalSonarNode::pos_update, &g_sonar);
+#else
+    ros::Subscriber sub_walls = n.subscribe<hanse_msgs::WallDetection>("/hanse/sonar/scan/walls", 1000, &GlobalSonarNode::walls_update, &g_sonar);
+
+    //Subscribe to the current position
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/position/estimate", 1000, &GlobalSonarNode::pos_update, &g_sonar);
+#endif
     
     ros::Rate loop_rate(10);
 

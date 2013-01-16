@@ -82,9 +82,9 @@ void wall_follow_shift_algo::sonar_laser_update(
     }
 
 
-    //sum points up
+    //sum up points
     for(unsigned int q = nearest_point_index; q <= last_point_index; q++){
-       goal = shifted_points[q];
+       goal += shifted_points[q];
     }
     goal /= goal.norm();
     goal *= shifted_points[last_point_index].norm();
@@ -93,8 +93,6 @@ void wall_follow_shift_algo::sonar_laser_update(
     //calculate orientation
     Vector3d path;
     path = shifted_points[last_point_index] - shifted_points[nearest_point_index];
-    //TODO change this quaternion
-
     orientation = AngleAxisd(atan2(path(1), path(0)), Vector3d::UnitZ());
 }
 

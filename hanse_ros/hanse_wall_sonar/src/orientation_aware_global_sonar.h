@@ -9,11 +9,17 @@
 #include "geometry_msgs/PolygonStamped.h"
 #include "visualization_msgs/Marker.h"
 #include <vector>
-#include "hanse_msgs/ELaserScan.h"
 #include <math.h>
 
 #ifndef ORIENTATION_AWARE_GLOBAL_SONAR_H
 #define ORIENTATION_AWARE_GLOBAL_SONAR_H
+
+#define SIMULATION_MODE
+#ifdef SIMULATION_MODE
+    #include "hanse_msgs/ELaserScan.h"
+#else
+    #include "hanse_msgs/WallDetection.h"
+#endif
 
 using namespace Eigen;
 
