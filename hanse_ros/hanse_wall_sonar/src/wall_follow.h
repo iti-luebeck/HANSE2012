@@ -1,7 +1,5 @@
 #include "ros/ros.h"
 #include <ros/console.h>
-#define EIGEN_MATRIXBASE_PLUGIN "eigen_plugin/matrixbase_plugin.h"
-#define EIGEN_QUATERNIONBASE_PLUGIN "eigen_plugin/quaternionbase_plugin.h"
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <iostream>
@@ -19,6 +17,7 @@
 #define WALL_FOLLOW_H
 
 #define DEBUG
+#define SIMULATION_MODE
 
 //! WallFollowNode
 /*!
@@ -38,34 +37,25 @@ public:
       Callback method receiving laser scan updates
       \param msg received message.
      */
-    void g_sonar_update(const geometry_msgs::PolygonStamped::ConstPtr& msg);
+    void gSonarUpdate(const geometry_msgs::PolygonStamped::ConstPtr& msg);
 
     //! position callback
     /*!
       Callback method receiving position updates
       \param msg received message.
      */
-    void pos_update(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void posUpdate(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 private:
-    ros::NodeHandle _n;
-    ros::Publisher pub;
-    ros::Publisher debug_pub;
-    ros::Publisher debug_laser_pub;
-    Iwall_follow_algo *algo;
+    ros::NodeHandle node_;
+    ros::Publisher pub_;
+    ros::Publisher debug_pub_;
+    ros::Publisher debug_laser_pub_;
+    Iwall_follow_algo *algo_;
 
-    geometry_msgs::Pose last_pose;
+    geometry_msgs::Pose last_pose_;
 
-    int32_t last_goal_update;
-
-    //! visualizing sonar in rviz
-    /*!
-     * Rotate and relocate the laserscan to global coordinates,
-     * publishing a new polygon with the publisher debug_laser_pub
-     * \param msg the laserscan
-     * \param a transformation from robot to global coordinates
-    */
-    void transform_sonar_for_rviz(const sensor_msgs::LaserScan::ConstPtr& msg, Affine3d a);
+    int32_t last_goal_update_;
 
 };
 

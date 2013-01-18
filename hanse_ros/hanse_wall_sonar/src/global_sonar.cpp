@@ -1,94 +1,180 @@
 #include "global_sonar.h"
 
 
-GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node(n), last_newchange(0){
+GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node_(n){
     //advertize node for sonar with global points
-    this->pub = this->node.advertise<geometry_msgs::PolygonStamped>("/globalsonar", 1000);
+    this->pub_ = this->node_.advertise<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000);
+
+
+#ifndef SIMULATION_MODE
+    store_time_sec_ = 7;
+#endif
 
     ROS_INFO("Global sonar node initialized");
 }
 
 
-
-void GlobalSonarNode::sonar_laser_update(const hanse_msgs::ELaserScan::ConstPtr& msg){
+#ifdef SIMULATION_MODE
+void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& msg){
     //check if sonar scanning size has changed
-    if(msg->laser_scan.ranges.size() != last_points.size()){
+    if(msg->laser_scan.ranges.size() != last_points_.size()){
         //throw all points away
-        last_points.clear();
-        last_points.resize(msg->laser_scan.ranges.size());
-        last_valid_points.clear();
-        last_valid_points.resize(msg->laser_scan.ranges.size());
+        last_points_.clear();
+        last_points_.resize(msg->laser_scan.ranges.size());
+        last_valid_points_.clear();
+        last_valid_points_.resize(msg->laser_scan.ranges.size());
+        //reset indexes
+        last_newchange_ = 0;
+        last_j_ = 0;
+        //wait for next update
+        return;
     }
 
-    //
-    Affine3d a = get_robot_transform();
+     //let i the first index to read from incomming laser scan
+    unsigned int i = (last_newchange_ + 1) % msg->laser_scan.ranges.size();
+    //let j the first index to write to the saved laser scan
+    //(j is orientation aware)
+    int delta_j = (int) round(getRobotZRot() / (2*M_PI) * msg->laser_scan.ranges.size());
+    unsigned int j = (last_newchange_ + 1 + delta_j) % msg->laser_scan.ranges.size();
 
-    // loop from (last change + 1) to the new change
-    unsigned int i = (last_newchange + 1) % msg->laser_scan.ranges.size();
+    //spike removal
+    //removes points if a low number of points (< 3)
+    //will be left out between two updates
+    if(abs(last_j_ - j) < 3){
+        if (last_j_ < j){
+            for(unsigned int q = last_j_; q < j; q++){
+                last_valid_points_[q] = false;
+            }
+        } else {
+            for(unsigned int q = j; q < last_j_; q++){
+                last_valid_points_[q] = false;
+            }
+        }
+    }
+
+    // loop until we reached the last new data
     while(i != (msg->changed + 1) % msg->laser_scan.ranges.size()){
         //check point is valid
         if(msg->laser_scan.ranges[i] >= 0){
             double angle = msg->laser_scan.angle_min + msg->laser_scan.angle_increment * i;
 
-            //calculating x, y coordinates of laser scan
-            Vector3d p(msg->laser_scan.ranges[i], 0, 0);
-            AngleAxis<double> rotation(-angle, Vector3d::UnitZ());
-            p = rotation * p;
-
-            //Converting to global coordinates
-            p = a * p;
-
-            //add point to polygon
-            geometry_msgs::Point32 point;
-            point.x = p(0);
-            point.y = p(1);
-
             //add new point
-            last_points[i] = point;
-            last_valid_points[i] = true;
+            last_points_[j] = calculateGlobalPoint(angle, msg->laser_scan.ranges[i]);
+            last_valid_points_[j] = true;
+
         } else {
             //invalidate point
-            last_valid_points[i] = false;
+            last_valid_points_[j] = false;
         }
 
-        //circular increase i
+        //circular increase i and j
         i = (i+1) % msg->laser_scan.ranges.size();
+        j = (j+1) % msg->laser_scan.ranges.size();
     }
+
+
+
 
     //create polygon from valid points
     std::vector<geometry_msgs::Point32> polygonPoints;
-    for(unsigned int i = 0; i < last_points.size(); i++){
-        if(last_valid_points[i]){
-            polygonPoints.push_back(last_points[i]);
+    for(unsigned int i = 0; i < last_points_.size(); i++){
+        if(last_valid_points_[i]){
+            polygonPoints.push_back(last_points_[i]);
         }
     }
-
-    //we could solve the TSP here, to have a nice sorting ;)
-    //or use some kind of more greedy approach
 
     //Publish StampedPolygon
     geometry_msgs::PolygonStamped spolygon;
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
     spolygon.polygon.points = polygonPoints;
-    pub.publish(spolygon);
+    pub_.publish(spolygon);
 
     //let the last new change the actual new change
-    last_newchange = msg->changed;
+    last_newchange_ = msg->changed;
+    //save the last index that changed the internal laser scan
+    last_j_ = j;
+}
+#else //SIMULATION_MODE (not defined)
+void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg){
+
+    double angle = msg->headPosition;
+    uint32_t current_time = ros::Time::now().sec;
+
+    if(msg->wallDetected){
+        for(const double &distance : msg->distances){
+            //creating and storing stamped position struct
+            geometry_msgs::Point32 point = calculateGlobalPoint(angle, distance);
+            posStamped pos;
+            pos.pos_ = point;
+            pos.sec_ = current_time;
+            pos_list_.push_back(pos);
+        }
+    }
+
+    //handling outdated data
+    for(std::list<posStamped>::iterator it = pos_list_.begin() ; it != pos_list_.end(); ){
+        if((*it).sec_ + store_time_sec_ < current_time){
+            //remove old position from list
+            it = pos_list_.erase(it);
+        }else{
+            //end iteration cause pos_list_ is ordered by inserttime
+            it = pos_list_.end();
+        }
+    }
+
+
+
+    //create polygon from pos_list_
+    std::vector<geometry_msgs::Point32> polygonPoints;
+    for(const posStamped &pos : pos_list_){
+        polygonPoints.push_back(pos.pos_);
+    }
+
+    //Publish StampedPolygon
+    geometry_msgs::PolygonStamped spolygon;
+    spolygon.header.frame_id = "/map";
+    spolygon.header.stamp = ros::Time::now();
+    spolygon.polygon.points = polygonPoints;
+    pub_.publish(spolygon);
+}
+
+#endif //SIMULATION_MODE
+
+geometry_msgs::Point32 GlobalSonarNode::calculateGlobalPoint(double local_angle, double local_distance){
+    //calculating x, y coordinates from local angle and distance
+    Vector3d p(local_distance, 0, 0);
+//inverting angle
+#ifdef SIMULATION_MODE
+    AngleAxis<double> rotation(-local_angle, Vector3d::UnitZ());
+#else
+    AngleAxis<double> rotation(local_angle, Vector3d::UnitZ());
+#endif
+    p = rotation * p;
+
+    //Converting to global coordinates
+    p = getRobotTransform() * p;
+
+    //create and return point32
+    geometry_msgs::Point32 point;
+    point.x = p(0);
+    point.y = p(1);
+    point.z = p(2);
+    return point;
 }
 
 
-Affine3d GlobalSonarNode::get_robot_transform(){
+Affine3d GlobalSonarNode::getRobotTransform(){
     //orientation of HANSE
-    Quaterniond orientation(last_pose.orientation.w,
-                            last_pose.orientation.x,
-                            last_pose.orientation.y,
-                            last_pose.orientation.z);
+    Quaterniond orientation(last_pose_.orientation.w,
+                            last_pose_.orientation.x,
+                            last_pose_.orientation.y,
+                            last_pose_.orientation.z);
 
     //position of HANSE in global coordinates
-    Translation3d position(last_pose.position.x,
-                           last_pose.position.y,
-                           last_pose.position.z);
+    Translation3d position(last_pose_.position.x,
+                           last_pose_.position.y,
+                           last_pose_.position.z);
 
     //Transformation from robot to global coordinates
     Affine3d a;
@@ -97,10 +183,26 @@ Affine3d GlobalSonarNode::get_robot_transform(){
     return a;
 }
 
+double GlobalSonarNode::getRobotZRot(){
+    Quaterniond orientation(last_pose_.orientation.w,
+                            last_pose_.orientation.x,
+                            last_pose_.orientation.y,
+                            last_pose_.orientation.z);
+    Vector3d robot = Vector3d::UnitX();
+    //transform a vector using the current orientation
+    robot = orientation * robot;
+    //calculate the rotation
+    double robot_angle = atan2(robot[1], robot[0]);
+    //normalize for a value between 0 and 2pi
+    robot_angle = fmod(robot_angle + 2*M_PI,2*M_PI);
 
-void GlobalSonarNode::pos_update(const geometry_msgs::PoseStamped::ConstPtr &msg){
+    return robot_angle;
+}
+
+
+void GlobalSonarNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
     //update last known pose
-    last_pose = msg->pose;
+    last_pose_ = msg->pose;
 }
 
 int main(int argc, char **argv)
@@ -111,13 +213,21 @@ int main(int argc, char **argv)
     //create NodeHandle
     ros::NodeHandle n;
     
-    GlobalSonarNode follow(n);
+    GlobalSonarNode global_sonar(n);
 
-    //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber esub_laser = n.subscribe<hanse_msgs::ELaserScan>("/hanse/sonar/e_laser_scan", 1000, boost::bind(&GlobalSonarNode::sonar_laser_update, &follow, _1));
+#ifdef SIMULATION_MODE
+    //Subscribe to topic e_laser_scan (from sonar)
+    ros::Subscriber sub_elaser = n.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, &global_sonar);
 
     //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/position/estimate", 1000, boost::bind(&GlobalSonarNode::pos_update, &follow, _1));
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, &global_sonar);
+#else
+    //Subscribe to topic walls
+    ros::Subscriber sub_walls = n.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, &global_sonar);
+
+    //Subscribe to the current position
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, &global_sonar);
+#endif
     
     ros::Rate loop_rate(10);
 

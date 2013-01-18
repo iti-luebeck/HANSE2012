@@ -3,17 +3,17 @@
 //! \todo{TODO subscriber in klasse auslagern?}
 //! \todo{TODO Memory management?}
 
-WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n) {
+WallFollowNode::WallFollowNode(ros::NodeHandle n) : node_(n) {
    //advertise to navigation goal
-    pub = _n.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
+    pub_ = node_.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
 
-    debug_pub = _n.advertise<geometry_msgs::PoseStamped>("/debug/goal", 1000);
+    debug_pub_ = node_.advertise<geometry_msgs::PoseStamped>("/debug/goal", 1000);
 
-    debug_laser_pub = _n.advertise<geometry_msgs::PolygonStamped>("/debug/sonarPolygon", 1000);
+    debug_laser_pub_ = node_.advertise<geometry_msgs::PolygonStamped>("/debug/sonarPolygon", 1000);
 
     //TODO: think about memory ;)
-    algo = new wall_follow_shift_algo();
-    //algo = new wall_follow_fancy_algo();
+    //algo = new wall_follow_shift_algo();
+    algo_ = new WallFollowFancyAlgo();
 
 
 
@@ -23,11 +23,11 @@ WallFollowNode::WallFollowNode(ros::NodeHandle n) : _n(n) {
 
 
 
-void WallFollowNode::g_sonar_update(const geometry_msgs::PolygonStamped::ConstPtr& msg){
+void WallFollowNode::gSonarUpdate(const geometry_msgs::PolygonStamped::ConstPtr& msg){
     Vector3d goal;
     Quaterniond goal_orientation;
     try {
-       algo->sonar_laser_update(msg, last_pose, goal, goal_orientation);
+       algo_->sonarLaserUpdate(msg, last_pose_, goal, goal_orientation);
     } catch (std::runtime_error e) {
         ROS_ERROR_STREAM(e.what() << " Skipping...");
         return;
@@ -47,17 +47,17 @@ void WallFollowNode::g_sonar_update(const geometry_msgs::PolygonStamped::ConstPt
     spose.pose.orientation.w = goal_orientation.w();
 
     //limit publish rate
-    if(ros::Time::now().sec - last_goal_update > 5){
-        pub.publish(spose);
-        debug_pub.publish(spose);
+    if(ros::Time::now().sec - last_goal_update_ > 5){
+        pub_.publish(spose);
+        debug_pub_.publish(spose);
 
-        last_goal_update = ros::Time::now().sec;
+        last_goal_update_ = ros::Time::now().sec;
     }
 }
 
-void WallFollowNode::pos_update(const geometry_msgs::PoseStamped::ConstPtr &msg){
+void WallFollowNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
     //update last pose
-    last_pose = msg->pose;
+    last_pose_ = msg->pose;
 }
 
 int main(int argc, char **argv)
@@ -71,11 +71,16 @@ int main(int argc, char **argv)
     WallFollowNode follow(n);
 
     //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber sub_laser = n.subscribe<geometry_msgs::PolygonStamped>("/oa_globalsonar", 1000, &WallFollowNode::g_sonar_update, &follow);
+    ros::Subscriber sub_laser = n.subscribe<geometry_msgs::PolygonStamped>("/oa_globalsonar", 1000, &WallFollowNode::gSonarUpdate, &follow);
 
+#ifdef SIMULATION_MODE
     //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &WallFollowNode::pos_update, &follow);
-    
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &WallFollowNode::posUpdate, &follow);
+#else
+    //Subscribe to the current position
+    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/position/estimate", 1000, &WallFollowNode::pos_update, &follow);
+#endif
+
     ros::Rate loop_rate(10);
 
     ros::spin();

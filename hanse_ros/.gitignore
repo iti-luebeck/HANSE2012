@@ -1,3 +1,4 @@
+*.autosave
 build/
 build_qt/
 bin/

@@ -1,6 +1,4 @@
 #include "iwall_follow_algo.h"
-#define EIGEN_MATRIX_PLUGIN "eigen_plugin/matrixbase_plugin.h"
-#define EIGEN_QUATERNIONBASE_PLUGIN "eigen_plugin/quaternionbase_plugin.h"
 #include <Eigen/Dense>
 #include <exception>
 #include "ros/ros.h"
@@ -17,20 +15,20 @@
 
 //enable debug mode
 #define DEBUG
-class wall_follow_shift_algo : public Iwall_follow_algo
+class WallFollowShiftAlgo : public Iwall_follow_algo
 {
 public:
-    wall_follow_shift_algo();
-    void sonar_laser_update(
+    WallFollowShiftAlgo();
+    void sonarLaserUpdate(
             const geometry_msgs::PolygonStamped::ConstPtr& msg,
             const geometry_msgs::Pose& pose,
             Vector3d &goal,
             Quaterniond &orientation) throw (std::runtime_error);
 private:
-    ros::NodeHandle n;
-    ros::Publisher pub;
+    ros::NodeHandle node_;
+    ros::Publisher pub_;
 #ifdef DEBUG
-    void publish_debug_info(const std::vector<Vector3d> &shifted_points);
+    void publishDebugInfo(const std::vector<Vector3d> &shifted_points);
 #endif //DEBUG
 
 

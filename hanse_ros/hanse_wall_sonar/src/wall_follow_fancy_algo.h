@@ -1,6 +1,4 @@
 #include "iwall_follow_algo.h"
-#define EIGEN_MATRIX_PLUGIN "eigen_plugin/matrixbase_plugin.h"
-#define EIGEN_QUATERNIONBASE_PLUGIN "eigen_plugin/quaternionbase_plugin.h"
 #include <Eigen/Dense>
 #include <exception>
 #include "ros/ros.h"
@@ -20,11 +18,11 @@
 
 //enable debug mode
 #define DEBUG
-class wall_follow_fancy_algo : public Iwall_follow_algo
+class WallFollowFancyAlgo : public Iwall_follow_algo
 {
 public:
-    wall_follow_fancy_algo();
-    void sonar_laser_update(
+    WallFollowFancyAlgo();
+    void sonarLaserUpdate(
             const geometry_msgs::PolygonStamped::ConstPtr& msg,
             const geometry_msgs::Pose& pose,
             Vector3d &goal,
@@ -32,13 +30,13 @@ public:
 
 
 private:
-    bool is_behind_robot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position);
-    bool is_inside_other_circle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance);
+    bool isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position);
+    bool isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance);
 #ifdef DEBUG
-    ros::NodeHandle n;
-    ros::Publisher pub_all;
-    ros::Publisher pub_path;
-    void publish_debug_info(const std::list<Vector3d> &all,const std::vector<Vector3d> &path);
+    ros::NodeHandle node_;
+    ros::Publisher pub_all_;
+    ros::Publisher pub_path_;
+    void publishDebugInfo(const std::list<Vector3d> &all,const std::vector<Vector3d> &path);
 #endif //DEBUG
 
 

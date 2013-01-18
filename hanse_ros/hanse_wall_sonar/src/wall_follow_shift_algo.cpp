@@ -16,7 +16,7 @@ public:
 };
 
 
-wall_follow_shift_algo::wall_follow_shift_algo(){
+WallFollowShiftAlgo::WallFollowShiftAlgo(){
 #ifdef DEBUG
     // init wall follow node
     char *argv[] = {}; int argc = 0;
@@ -24,11 +24,11 @@ wall_follow_shift_algo::wall_follow_shift_algo(){
 
     //create NodeHandle
     ros::NodeHandle n;
-    pub = n.advertise<geometry_msgs::PolygonStamped>("/debug_shift_poly", 1000);
+    pub_ = n.advertise<geometry_msgs::PolygonStamped>("/debug_shift_poly", 1000);
 #endif //DEBUG
 }
 
-void wall_follow_shift_algo::sonar_laser_update(
+void WallFollowShiftAlgo::sonarLaserUpdate(
         const geometry_msgs::PolygonStamped::ConstPtr& msg,
         const geometry_msgs::Pose& pose,
         Vector3d &goal,
@@ -52,7 +52,7 @@ void wall_follow_shift_algo::sonar_laser_update(
         shifted_points.push_back(p + global_shift);
     }
 #ifdef DEBUG
-    publish_debug_info(shifted_points);
+    publishDebugInfo(shifted_points);
 #endif //DEBUG
 
     //searching for nearest point
@@ -97,7 +97,7 @@ void wall_follow_shift_algo::sonar_laser_update(
 }
 
 #ifdef DEBUG
-void wall_follow_shift_algo::publish_debug_info(const std::vector<Vector3d> &shifted_points){
+void WallFollowShiftAlgo::publishDebugInfo(const std::vector<Vector3d> &shifted_points){
     //create polygon from valid points
     std::vector<geometry_msgs::Point32> debug_points;
     for(unsigned int i = 0; i < shifted_points.size(); i++){
@@ -113,6 +113,6 @@ void wall_follow_shift_algo::publish_debug_info(const std::vector<Vector3d> &shi
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
     spolygon.polygon.points = debug_points;
-    pub.publish(spolygon);
+    pub_.publish(spolygon);
 }
 #endif //DEBUG
