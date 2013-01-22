@@ -1,0 +1,8 @@
+\subsubsection usage Usage
+\verbatim
+<node name="global_sonar" pkg="hanse_wall_sonar" type="global_sonar">
+  <param name="simulation_mode_" type="bool" value="False" />
+  <param name="store_time_sec_" type="int" value="7" />
+</node>
+\endverbatim
+

@@ -12,15 +12,15 @@
 #include <list>
 #include <math.h>
 
+// Dynamic reconfigure includes.
+#include <dynamic_reconfigure/server.h>
+#include <hanse_wall_sonar/global_sonar_paramsConfig.h>
+
+#include "hanse_msgs/ELaserScan.h"    // needed for Simulation_mode
+#include "hanse_msgs/WallDetection.h" // needed for Real World
+
 #ifndef ORIENTATION_AWARE_GLOBAL_SONAR_H
 #define ORIENTATION_AWARE_GLOBAL_SONAR_H
-
-//#define SIMULATION_MODE
-#ifdef SIMULATION_MODE
-    #include "hanse_msgs/ELaserScan.h"
-#else
-    #include "hanse_msgs/WallDetection.h"
-#endif
 
 using namespace Eigen;
 
@@ -39,20 +39,18 @@ public:
     GlobalSonarNode(ros::NodeHandle node_);
 
 
-#ifdef SIMULATION_MODE
-    //! laser scan callback
+    //! laser scan callback for Simulation
     /*!
       \param msg received message.
      */
     void sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& msg);
 
-#else
-    //! WallDetecion callback
+    //! WallDetecion callback for real world
     /*!
       \param msg received message.
      */
     void wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg);
-#endif
+
 
     //! position callback
     /*!
@@ -61,13 +59,21 @@ public:
      */
     void posUpdate(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
+    void configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level);
+
 private:
+    //! true: active simulation_mode
+    bool simulation_mode_;
     //! publisher for the global sonar
     ros::Publisher pub_;
     //! handle of global sonar node
     ros::NodeHandle node_;
 
-#ifdef SIMULATION_MODE
+    //! Subscriber for the current position
+    ros::Subscriber sub_pos;
+
+
+    //Members needed for Simulation
     //! last global sonar points
     std::vector<geometry_msgs::Point32> last_points_;
     //! list of which sonar points are valid (avoiding vector<bool>)
@@ -77,7 +83,11 @@ private:
     uint16_t last_newchange_;
     //! index of the last changed value of internal laser scan
     uint16_t last_j_;
-#else
+    //! Subscriber for the sonar data in simulation mode
+    ros::Subscriber sub_elaser;
+
+    //Members needed for Realworld
+    hanse_wall_sonar::global_sonar_paramsConfig config;
     //! time to store WallDetection positions.
     uint32_t store_time_sec_;
     //! datastructure to store incomming WallDetection messages.
@@ -87,11 +97,15 @@ private:
     };
     //! list of all messages that are stored.
     std::list<posStamped> pos_list_;
-#endif
+    //! Subscriber for the sonar data in real world
+    ros::Subscriber sub_walls;
+
 
     //! last known pose
     geometry_msgs::Pose last_pose_;
 
+    //! Subscribing to the topics corresponding to the current mode
+    void setupSubscribers();
 
     //! returns the Affine3d to transform from robot to global coordinates
     Affine3d getRobotTransform();

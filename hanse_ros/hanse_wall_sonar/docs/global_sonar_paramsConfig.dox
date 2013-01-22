@@ -1,0 +1,7 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~simulation_mode_" : \b [bool] en-/disables the simulation mode min: False, default: False, max: True
+- \b "~store_time_sec_" : \b [int] Time to store sonar points. min: 1, default: 7, max: 21
+

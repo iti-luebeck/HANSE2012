@@ -2,19 +2,20 @@
 
 
 GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node_(n){
+    //subscribing to the topics corresponding to the current mode
+    setupSubscribers();
+
     //advertize node for sonar with global points
     this->pub_ = this->node_.advertise<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000);
 
 
-#ifndef SIMULATION_MODE
-    store_time_sec_ = 7;
-#endif
+    config.store_time_sec_ = 7;
 
     ROS_INFO("Global sonar node initialized");
+
+
 }
 
-
-#ifdef SIMULATION_MODE
 void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& msg){
     //check if sonar scanning size has changed
     if(msg->laser_scan.ranges.size() != last_points_.size()){
@@ -95,7 +96,7 @@ void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& m
     //save the last index that changed the internal laser scan
     last_j_ = j;
 }
-#else //SIMULATION_MODE (not defined)
+
 void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg){
 
     double angle = msg->headPosition;
@@ -114,7 +115,7 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
 
     //handling outdated data
     for(std::list<posStamped>::iterator it = pos_list_.begin() ; it != pos_list_.end(); ){
-        if((*it).sec_ + store_time_sec_ < current_time){
+        if((*it).sec_ + config.store_time_sec_ < current_time){
             //remove old position from list
             it = pos_list_.erase(it);
         }else{
@@ -123,6 +124,8 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
         }
     }
 
+
+    std::cout << config.store_time_sec_ << "\n";
 
 
     //create polygon from pos_list_
@@ -139,17 +142,18 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
     pub_.publish(spolygon);
 }
 
-#endif //SIMULATION_MODE
 
 geometry_msgs::Point32 GlobalSonarNode::calculateGlobalPoint(double local_angle, double local_distance){
     //calculating x, y coordinates from local angle and distance
     Vector3d p(local_distance, 0, 0);
 //inverting angle
-#ifdef SIMULATION_MODE
-    AngleAxis<double> rotation(-local_angle, Vector3d::UnitZ());
-#else
-    AngleAxis<double> rotation(local_angle, Vector3d::UnitZ());
-#endif
+    AngleAxis<double> rotation;
+    if(simulation_mode_){
+        rotation = AngleAxis<double>(-local_angle, Vector3d::UnitZ());
+    }else{
+        rotation = AngleAxis<double>(local_angle, Vector3d::UnitZ());
+    }
+
     p = rotation * p;
 
     //Converting to global coordinates
@@ -205,6 +209,36 @@ void GlobalSonarNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg)
     last_pose_ = msg->pose;
 }
 
+
+void GlobalSonarNode::configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level){
+    bool old_sim_mode = this->config.simulation_mode_;
+    this->config = config;
+    if (config.simulation_mode_ != old_sim_mode){
+        setupSubscribers();
+    }
+}
+
+
+void GlobalSonarNode::setupSubscribers(){
+    sub_elaser.shutdown();
+    sub_pos.shutdown();
+    sub_walls.shutdown();
+    if(config.simulation_mode_){
+        //Subscribe to topic e_laser_scan (from sonar)
+        sub_elaser = node_.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, this);
+
+        //Subscribe to the current position
+        sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, this);
+    }else{
+        //Subscribe to topic walls
+        sub_walls = node_.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, this);
+
+        //Subscribe to the current position
+        sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, this);
+    }
+}
+
+
 int main(int argc, char **argv)
 {
     // init wall follow node
@@ -215,19 +249,15 @@ int main(int argc, char **argv)
     
     GlobalSonarNode global_sonar(n);
 
-#ifdef SIMULATION_MODE
-    //Subscribe to topic e_laser_scan (from sonar)
-    ros::Subscriber sub_elaser = n.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, &global_sonar);
+    // Set up a dynamic reconfigure server.
+    // This should be done before reading parameter server values.
+    dynamic_reconfigure::Server<hanse_wall_sonar::global_sonar_paramsConfig> dr_srv;
+    dynamic_reconfigure::Server<hanse_wall_sonar::global_sonar_paramsConfig>::CallbackType cb;
+    cb = boost::bind(&GlobalSonarNode::configCallback, &global_sonar, _1, _2);
+    dr_srv.setCallback(cb);
 
-    //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, &global_sonar);
-#else
-    //Subscribe to topic walls
-    ros::Subscriber sub_walls = n.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, &global_sonar);
+    //TODO load parameters for dyn reconfigure
 
-    //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, &global_sonar);
-#endif
     
     ros::Rate loop_rate(10);
 

@@ -17,6 +17,7 @@
   <depend package="pcl_ros"/>
   <depend package="hanse_msgs"/>
   <rosdep name="eigen" />
+  <depend package="dynamic_reconfigure"/>
 </package>
 
 
