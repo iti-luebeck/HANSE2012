@@ -13,11 +13,12 @@
 #include "geometry_msgs/PolygonStamped.h"
 #include <list>
 
+// Dynamic reconfigure includes.
+#include <dynamic_reconfigure/server.h>
+#include <hanse_wall_sonar/wall_follow_paramsConfig.h>
+
 #ifndef WALL_FOLLOW_H
 #define WALL_FOLLOW_H
-
-#define DEBUG
-#define SIMULATION_MODE
 
 //! WallFollowNode
 /*!
@@ -46,6 +47,9 @@ public:
      */
     void posUpdate(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
+    //!
+    void configCallback(hanse_wall_sonar::wall_follow_paramsConfig &config_, uint32_t level);
+
 private:
     ros::NodeHandle node_;
     ros::Publisher pub_;
@@ -53,10 +57,16 @@ private:
     ros::Publisher debug_laser_pub_;
     Iwall_follow_algo *algo_;
 
+    ros::Subscriber sub_laser_;
+    ros::Subscriber sub_pos_;
+
     geometry_msgs::Pose last_pose_;
 
-    int32_t last_goal_update_;
+    uint32_t last_goal_update_;
 
+    hanse_wall_sonar::wall_follow_paramsConfig config_;
+
+    void setupSubscribers();
 };
 
 /*!

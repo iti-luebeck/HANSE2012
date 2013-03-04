@@ -222,7 +222,7 @@ void GlobalSonarNode::configCallback(hanse_wall_sonar::global_sonar_paramsConfig
 void GlobalSonarNode::setupSubscribers(){
     sub_elaser.shutdown();
     sub_pos.shutdown();
-    sub_walls.shutdown();
+    sub_walls_.shutdown();
     if(config.simulation_mode_){
         //Subscribe to topic e_laser_scan (from sonar)
         sub_elaser = node_.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, this);
@@ -231,7 +231,7 @@ void GlobalSonarNode::setupSubscribers(){
         sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, this);
     }else{
         //Subscribe to topic walls
-        sub_walls = node_.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, this);
+        sub_walls_ = node_.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, this);
 
         //Subscribe to the current position
         sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, this);

@@ -11,8 +11,13 @@ WallFollowFancyAlgo::WallFollowFancyAlgo(){
 
     //create NodeHandle
     ros::NodeHandle n;
-    pub_all_ = n.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_poly", 1000);
-    pub_path_ = n.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_path", 1000);
+    pub_all_ = node_.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_poly", 1000);
+    pub_path_ = node_.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_path", 1000);
+
+    // Set up a dynamic reconfigure server.
+    // This should be done before reading parameter server values.
+    cb_ = boost::bind(&WallFollowFancyAlgo::configCallback, this, _1, _2);
+    dr_srv_.setCallback(cb_);
 
 #endif //DEBUG
 }
@@ -46,16 +51,12 @@ void WallFollowFancyAlgo::sonarLaserUpdate(
 
 
     // create std::vector<Vector3d> of points in a circle
-    const unsigned int step = 2; //steps of point in circe (degree)
-    const double distance = 7; //radius of the circle
     std::vector<Vector3d> circ;
-    for (unsigned int i = 0; i < 360; i+=step) {
-        const Vector3d dVector = distance * Vector3d::UnitX();
+    for (unsigned int i = 0; i < 360; i+=config_.boundingcircle_angle_steps_) {
+        const Vector3d dVector = config_.boundingcircle_radius_ * Vector3d::UnitX();
         AngleAxisd rotate(angles::from_degrees((double) i), Vector3d::UnitZ());
         circ.push_back(rotate * dVector);
     }
-
-    double tolerance = 0; //to check if points lie within other circles
     std::list<Vector3d> result;
     for (const auto &p: global_front_sonar_points) {
         //create point circle for current point
@@ -69,7 +70,7 @@ void WallFollowFancyAlgo::sonarLaserUpdate(
         for (std::list<Vector3d>::iterator it = pCirc.begin(); it != pCirc.end(); ) {
             // remove all points that lie inside other circles
             const Vector3d &pc(*it);
-            if(isInsideOtherCircle(distance, global_front_sonar_points, pc, tolerance)){
+            if(isInsideOtherCircle(config_.boundingcircle_radius_, global_front_sonar_points, pc)){
                 //remove point if it lies inside another circle
                 it = pCirc.erase(it);
             } else if(isBehindRobot(pc, robot_yaw_angle, robot_position)){
@@ -89,12 +90,12 @@ void WallFollowFancyAlgo::sonarLaserUpdate(
     //getting a list of points by looking at the next points that are close to each other
     //limit by a limit_lookahead_distancee, limit_lookahead_index_delta and limit_point_sdistance
     //TODO ensure that this algorithm won't go backward!
-    const double limit_lookahead_sdistance = DBL_MAX;
-    const unsigned int limit_lookahead_index_delta = 40;
-    const double limit_point_sdistance = pow(6, 2);
+
+    const double limit_point_sdistance = pow(config_.limit_point_distance_, 2);
+    const double limit_lookahead_sdistance = pow(config_.limit_lookahead_distance_, 2);
 
     std::vector<Vector3d> nearest_point_list = {robot_position};
-    for(unsigned int i = 0; i < limit_lookahead_index_delta; i++){
+    for(int i = 0; i < config_.limit_lookahead_index_delta_; i++){
         //use last point in nearest_point_list as reference point
         const Vector3d &ref_point(*(--nearest_point_list.end()));
         //initialize
@@ -152,10 +153,10 @@ bool WallFollowFancyAlgo::isBehindRobot(const Vector3d &p, const double &robot_y
     return (fabs(diff) > M_PI/2 );
 }
 
-bool WallFollowFancyAlgo::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance)
+bool WallFollowFancyAlgo::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc)
 {
     for (const Vector3d &q : global_sonar_points) {
-        if ((q - pc).norm() < distance - tolerance) {
+        if ((q - pc).norm() < distance) {
             return true;
         }
     }
@@ -194,3 +195,7 @@ void WallFollowFancyAlgo::publishDebugInfo(const std::list<Vector3d> &all,const 
 }
 
 #endif //DEBUG
+
+void WallFollowFancyAlgo::configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level){
+    this->config_ = config;
+}

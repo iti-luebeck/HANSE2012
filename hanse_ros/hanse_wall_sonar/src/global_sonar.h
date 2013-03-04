@@ -98,7 +98,7 @@ private:
     //! list of all messages that are stored.
     std::list<posStamped> pos_list_;
     //! Subscriber for the sonar data in real world
-    ros::Subscriber sub_walls;
+    ros::Subscriber sub_walls_;
 
 
     //! last known pose

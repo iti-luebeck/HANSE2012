@@ -4,6 +4,8 @@
 //! \todo{TODO Memory management?}
 
 WallFollowNode::WallFollowNode(ros::NodeHandle n) : node_(n) {
+    WallFollowNode::setupSubscribers();
+
    //advertise to navigation goal
     pub_ = node_.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
 
@@ -47,7 +49,7 @@ void WallFollowNode::gSonarUpdate(const geometry_msgs::PolygonStamped::ConstPtr&
     spose.pose.orientation.w = goal_orientation.w();
 
     //limit publish rate
-    if(ros::Time::now().sec - last_goal_update_ > 5){
+    if(ros::Time::now().sec > config_.goal_publish_rate_ + last_goal_update_){
         pub_.publish(spose);
         debug_pub_.publish(spose);
 
@@ -70,16 +72,13 @@ int main(int argc, char **argv)
     
     WallFollowNode follow(n);
 
-    //Subscribe to topic laser_scan (from sonar)
-    ros::Subscriber sub_laser = n.subscribe<geometry_msgs::PolygonStamped>("/oa_globalsonar", 1000, &WallFollowNode::gSonarUpdate, &follow);
 
-#ifdef SIMULATION_MODE
-    //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/posemeter", 1000, &WallFollowNode::posUpdate, &follow);
-#else
-    //Subscribe to the current position
-    ros::Subscriber sub_pos = n.subscribe<geometry_msgs::PoseStamped>("/hanse/position/estimate", 1000, &WallFollowNode::pos_update, &follow);
-#endif
+    // Set up a dynamic reconfigure server.
+    // This should be done before reading parameter server values.
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_paramsConfig> dr_srv;
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_paramsConfig>::CallbackType cb;
+    cb = boost::bind(&WallFollowNode::configCallback, &follow, _1, _2);
+    dr_srv.setCallback(cb);
 
     ros::Rate loop_rate(10);
 
@@ -87,3 +86,29 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+void WallFollowNode::configCallback(hanse_wall_sonar::wall_follow_paramsConfig &config, uint32_t level){
+    bool old_sim_mode = this->config_.simulation_mode_;
+    this->config_ = config;
+    if (config.simulation_mode_ != old_sim_mode){
+        setupSubscribers();
+    }
+}
+
+void WallFollowNode::setupSubscribers(){
+    sub_pos_.shutdown();
+    sub_laser_.shutdown();
+
+    //Subscribe to topic laser_scan (from sonar)
+    sub_laser_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowNode::gSonarUpdate, this);
+
+    if(config_.simulation_mode_){
+        //Subscribe to the current position
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &WallFollowNode::posUpdate, this);
+    }else {
+        //Subscribe to the current position
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &WallFollowNode::posUpdate, this);
+    }
+}
+
+

@@ -13,6 +13,11 @@
 #include <vector>
 #include "angles/angles.h"
 
+// Dynamic reconfigure includes.
+#include <dynamic_reconfigure/server.h>
+#include <hanse_wall_sonar/wall_follow_fancy_algo_paramsConfig.h>
+
+
 #ifndef WALL_FOLLOW_FANCY_ALGO_H
 #define WALL_FOLLOW_FANCY_ALGO_H
 
@@ -29,9 +34,17 @@ public:
             Quaterniond &orientation) throw (std::runtime_error);
 
 
+    void configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level);
+
 private:
     bool isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position);
-    bool isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc, const double &tolerance);
+    bool isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc);
+
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig> dr_srv_;
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig>::CallbackType cb_;
+
+    hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig config_;
+
 #ifdef DEBUG
     ros::NodeHandle node_;
     ros::Publisher pub_all_;
