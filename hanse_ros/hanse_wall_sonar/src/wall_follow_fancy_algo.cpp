@@ -3,37 +3,25 @@
 using namespace Eigen;
 
 
-WallFollowFancyAlgo::WallFollowFancyAlgo(){
-#ifdef DEBUG
-    // init wall follow node
-    char *argv[] = {}; int argc = 0;
-    ros::init(argc, argv, "debug_fancy");
+WallFollowFancyAlgoNode::WallFollowFancyAlgoNode(ros::NodeHandle n):node_(n){
 
-    //create NodeHandle
-    ros::NodeHandle n;
-    pub_all_ = node_.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_poly", 1000);
-    pub_path_ = node_.advertise<geometry_msgs::PolygonStamped>("/debug_fancy_path", 1000);
+    pub_ = node_.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
+    pub_all_ = node_.advertise<geometry_msgs::PolygonStamped>("debug_fancy_poly", 1000);
+    pub_path_ = node_.advertise<geometry_msgs::PolygonStamped>("debug_fancy_path", 1000);
 
-    // Set up a dynamic reconfigure server.
-    // This should be done before reading parameter server values.
-    cb_ = boost::bind(&WallFollowFancyAlgo::configCallback, this, _1, _2);
-    dr_srv_.setCallback(cb_);
+    setupSubscribers();
 
-#endif //DEBUG
 }
 
-void WallFollowFancyAlgo::sonarLaserUpdate(
-        const geometry_msgs::PolygonStamped::ConstPtr& msg,
-        const geometry_msgs::Pose& pose,
-        Vector3d &goal,
-        Quaterniond &orientation) throw (std::runtime_error)
+void WallFollowFancyAlgoNode::sonarLaserUpdate(
+        const geometry_msgs::PolygonStamped::ConstPtr& msg) throw (std::runtime_error)
 {
 
-    const Vector3d robot_position(pose.position.x, pose.position.y, pose.position.z);
-    const Quaterniond robot_oriantation(pose.orientation.w,
-                                  pose.orientation.x,
-                                  pose.orientation.y,
-                                  pose.orientation.z);
+    const Vector3d robot_position(last_pose_.position.x, last_pose_.position.y, last_pose_.position.z);
+    const Quaterniond robot_oriantation(last_pose_.orientation.w,
+                                  last_pose_.orientation.x,
+                                  last_pose_.orientation.y,
+                                  last_pose_.orientation.z);
     Vector3d robot_rot;
     robot_rot = robot_oriantation * Vector3d::UnitX();
     const double robot_yaw_angle = atan2(robot_rot(1), robot_rot(0));
@@ -43,10 +31,10 @@ void WallFollowFancyAlgo::sonarLaserUpdate(
     std::vector<Vector3d> global_front_sonar_points;
     for(const geometry_msgs::Point32 &p : msg->polygon.points){
         Vector3d vp(p.x, p.y, p.z);
-        if(!isBehindRobot(vp, robot_yaw_angle, robot_position)){
+        //if(!isBehindRobot(vp, robot_yaw_angle, robot_position)){
             //add point if it isn't behind the robot
             global_front_sonar_points.push_back(vp);
-        }
+        //}
     }
 
 
@@ -131,29 +119,50 @@ void WallFollowFancyAlgo::sonarLaserUpdate(
     }
 
 
+    Vector3d goal;
     goal = sum / sum.norm() + robot_position;
 
+    Quaterniond goal_orientation;
+    goal_orientation = AngleAxisd(atan2(sum(1), sum(0)), Vector3d::UnitZ());
 
-    orientation = AngleAxisd(atan2(sum(1), sum(0)), Vector3d::UnitZ());
+    geometry_msgs::PoseStamped spose;
+    spose.header.frame_id = "/map";
+    spose.header.stamp = ros::Time::now();
+
+    spose.pose.position.x = goal(0);
+    spose.pose.position.y = goal(1);
+    spose.pose.position.z = goal(2);
+    spose.pose.orientation.x = goal_orientation.x();
+    spose.pose.orientation.y = goal_orientation.y();
+    spose.pose.orientation.z = goal_orientation.z();
+    spose.pose.orientation.w = goal_orientation.w();
 
 
-#ifdef DEBUG
     publishDebugInfo(result, nearest_point_list);
-#endif //DEBUG
 
+    //TODO: Auslagern / dyn reconf
+    const unsigned int publishrate = 7;
+
+    if(ros::Time::now().sec > publishrate  + last_goal_update_){
+        pub_.publish(spose);
+        //debug_pub_.publish(spose);
+
+        last_goal_update_ = ros::Time::now().sec;
+    }
 }
 
-bool WallFollowFancyAlgo::isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position)
+bool WallFollowFancyAlgoNode::isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position)
 {
     //calculate position relative to robot
     Vector3d p_reltative = p - robot_position;
     double p_angle = atan2(p_reltative(1), p_reltative(0));
     double diff = robot_yaw_angle - p_angle;
+    diff = fmod(diff + 2.5 * M_PI, 2 * M_PI);
     //return true if the point p is behind
-    return (fabs(diff) > M_PI/2 );
+    return ((diff > M_PI));
 }
 
-bool WallFollowFancyAlgo::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc)
+bool WallFollowFancyAlgoNode::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc)
 {
     for (const Vector3d &q : global_sonar_points) {
         if ((q - pc).norm() < distance) {
@@ -164,8 +173,8 @@ bool WallFollowFancyAlgo::isInsideOtherCircle(const double &distance, const std:
 }
 
 
-#ifdef DEBUG
-void WallFollowFancyAlgo::publishDebugInfo(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
+
+void WallFollowFancyAlgoNode::publishDebugInfo(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
     geometry_msgs::PolygonStamped spolygon;
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
@@ -194,8 +203,63 @@ void WallFollowFancyAlgo::publishDebugInfo(const std::list<Vector3d> &all,const 
     pub_path_.publish(spolygon);
 }
 
-#endif //DEBUG
 
-void WallFollowFancyAlgo::configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level){
+
+void WallFollowFancyAlgoNode::configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level){
+    bool old_sim_mode = this->config_.simulation_mode_;
     this->config_ = config;
+    if (config.simulation_mode_ != old_sim_mode){
+        setupSubscribers();
+    }
+
+    ROS_INFO("%lf", config_.boundingcircle_radius_);
+}
+
+void WallFollowFancyAlgoNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
+    //update last pose
+    last_pose_ = msg->pose;
+}
+
+void WallFollowFancyAlgoNode::setupSubscribers(){
+    sub_pos_.shutdown();
+    sub_laser_.shutdown();
+
+    //Subscribe to topic laser_scan (from sonar)
+    sub_laser_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowFancyAlgoNode::sonarLaserUpdate, this);
+
+    if(config_.simulation_mode_){
+        //Subscribe to the current position
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &WallFollowFancyAlgoNode::posUpdate, this);
+    }else {
+        //Subscribe to the current position
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &WallFollowFancyAlgoNode::posUpdate, this);
+    }
+}
+
+
+int main(int argc, char **argv)
+{
+    // init wall follow node
+    ros::init(argc, argv, "wall_follow_fancy_algo");
+
+    //create NodeHandle
+    ros::NodeHandle n;
+
+    WallFollowFancyAlgoNode wall_follow_fancy_algo(n);
+
+    // Set up a dynamic reconfigure server.
+    // This should be done before reading parameter server values.
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig> dr_srv;
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig>::CallbackType cb;
+    cb = boost::bind(&WallFollowFancyAlgoNode::configCallback, &wall_follow_fancy_algo, _1, _2);
+    dr_srv.setCallback(cb);
+
+    //TODO load parameters for dyn reconfigure
+
+
+    ros::Rate loop_rate(10);
+
+    ros::spin();
+
+    return 0;
 }

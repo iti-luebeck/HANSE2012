@@ -15,7 +15,7 @@ WallFollowNode::WallFollowNode(ros::NodeHandle n) : node_(n) {
 
     //TODO: think about memory ;)
     //algo = new wall_follow_shift_algo();
-    algo_ = new WallFollowFancyAlgo();
+    //algo_ = new WallFollowFancyAlgoNode();
 
 
 
@@ -57,6 +57,7 @@ void WallFollowNode::gSonarUpdate(const geometry_msgs::PolygonStamped::ConstPtr&
     }
 }
 
+//fancy algo ok
 void WallFollowNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
     //update last pose
     last_pose_ = msg->pose;
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+//fancy algo ok
 void WallFollowNode::configCallback(hanse_wall_sonar::wall_follow_paramsConfig &config, uint32_t level){
     bool old_sim_mode = this->config_.simulation_mode_;
     this->config_ = config;
@@ -95,6 +97,7 @@ void WallFollowNode::configCallback(hanse_wall_sonar::wall_follow_paramsConfig &
     }
 }
 
+//fancy_algo ok
 void WallFollowNode::setupSubscribers(){
     sub_pos_.shutdown();
     sub_laser_.shutdown();
