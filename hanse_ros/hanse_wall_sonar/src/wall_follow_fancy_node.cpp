@@ -1,19 +1,19 @@
-#include "wall_follow_fancy_algo.h"
+#include "wall_follow_fancy_node.h"
 
 using namespace Eigen;
 
 
-WallFollowFancyAlgoNode::WallFollowFancyAlgoNode(ros::NodeHandle n):node_(n){
+WallFollowFancyNode::WallFollowFancyNode(ros::NodeHandle n):node_(n){
 
-    pub_ = node_.advertise<geometry_msgs::PoseStamped>("/goal", 1000);
-    pub_all_ = node_.advertise<geometry_msgs::PolygonStamped>("debug_fancy_poly", 1000);
-    pub_path_ = node_.advertise<geometry_msgs::PolygonStamped>("debug_fancy_path", 1000);
+    pub_ = node_.advertise<geometry_msgs::PoseStamped>("sonar/wall_follow/goal", 1000);
+    pub_all_ = node_.advertise<geometry_msgs::PolygonStamped>("sonar/fancy/circles", 1000);
+    pub_path_ = node_.advertise<geometry_msgs::PolygonStamped>("sonar/fancy/path", 1000);
 
     setupSubscribers();
 
 }
 
-void WallFollowFancyAlgoNode::sonarLaserUpdate(
+void WallFollowFancyNode::sonarLaserUpdate(
         const geometry_msgs::PolygonStamped::ConstPtr& msg) throw (std::runtime_error)
 {
 
@@ -140,18 +140,11 @@ void WallFollowFancyAlgoNode::sonarLaserUpdate(
 
     publishDebugInfo(result, nearest_point_list);
 
-    //TODO: Auslagern / dyn reconf
-    const unsigned int publishrate = 7;
+    pub_.publish(spose);
 
-    if(ros::Time::now().sec > publishrate  + last_goal_update_){
-        pub_.publish(spose);
-        //debug_pub_.publish(spose);
-
-        last_goal_update_ = ros::Time::now().sec;
-    }
 }
 
-bool WallFollowFancyAlgoNode::isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position)
+bool WallFollowFancyNode::isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position)
 {
     //calculate position relative to robot
     Vector3d p_reltative = p - robot_position;
@@ -162,7 +155,7 @@ bool WallFollowFancyAlgoNode::isBehindRobot(const Vector3d &p, const double &rob
     return ((diff > M_PI));
 }
 
-bool WallFollowFancyAlgoNode::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc)
+bool WallFollowFancyNode::isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc)
 {
     for (const Vector3d &q : global_sonar_points) {
         if ((q - pc).norm() < distance) {
@@ -174,7 +167,7 @@ bool WallFollowFancyAlgoNode::isInsideOtherCircle(const double &distance, const 
 
 
 
-void WallFollowFancyAlgoNode::publishDebugInfo(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
+void WallFollowFancyNode::publishDebugInfo(const std::list<Vector3d> &all,const std::vector<Vector3d> &path){
     geometry_msgs::PolygonStamped spolygon;
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
@@ -205,53 +198,52 @@ void WallFollowFancyAlgoNode::publishDebugInfo(const std::list<Vector3d> &all,co
 
 
 
-void WallFollowFancyAlgoNode::configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level){
+void WallFollowFancyNode::configCallback(hanse_wall_sonar::wall_follow_fancy_node_paramsConfig &config, uint32_t level){
     bool old_sim_mode = this->config_.simulation_mode_;
     this->config_ = config;
     if (config.simulation_mode_ != old_sim_mode){
         setupSubscribers();
     }
-
-    ROS_INFO("%lf", config_.boundingcircle_radius_);
 }
 
-void WallFollowFancyAlgoNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
+void WallFollowFancyNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg){
     //update last pose
     last_pose_ = msg->pose;
 }
 
-void WallFollowFancyAlgoNode::setupSubscribers(){
+void WallFollowFancyNode::setupSubscribers(){
     sub_pos_.shutdown();
     sub_laser_.shutdown();
 
     //Subscribe to topic laser_scan (from sonar)
-    sub_laser_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowFancyAlgoNode::sonarLaserUpdate, this);
+    sub_laser_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowFancyNode::sonarLaserUpdate, this);
 
     if(config_.simulation_mode_){
         //Subscribe to the current position
-        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &WallFollowFancyAlgoNode::posUpdate, this);
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &WallFollowFancyNode::posUpdate, this);
     }else {
         //Subscribe to the current position
-        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &WallFollowFancyAlgoNode::posUpdate, this);
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &WallFollowFancyNode::posUpdate, this);
     }
 }
 
 
 int main(int argc, char **argv)
 {
+
     // init wall follow node
-    ros::init(argc, argv, "wall_follow_fancy_algo");
+    ros::init(argc, argv, "wall_follow_fancy_node");
 
     //create NodeHandle
     ros::NodeHandle n;
 
-    WallFollowFancyAlgoNode wall_follow_fancy_algo(n);
+    WallFollowFancyNode wall_follow_fancy_node(n);
 
     // Set up a dynamic reconfigure server.
     // This should be done before reading parameter server values.
-    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig> dr_srv;
-    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig>::CallbackType cb;
-    cb = boost::bind(&WallFollowFancyAlgoNode::configCallback, &wall_follow_fancy_algo, _1, _2);
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_node_paramsConfig> dr_srv;
+    dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_fancy_node_paramsConfig>::CallbackType cb;
+    cb = boost::bind(&WallFollowFancyNode::configCallback, &wall_follow_fancy_node, _1, _2);
     dr_srv.setCallback(cb);
 
     //TODO load parameters for dyn reconfigure

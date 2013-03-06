@@ -16,7 +16,12 @@ It is optimized for usage with MARS simulator
 	<group ns="hanse">
 		<!-- wall dedection node-->
 		<node name="wall_detection" pkg="hanse_sonarlocalization" type="sonar_wall_detection" />
-		<!-- debug sonar node -->
-		<node name="debug_sonar" pkg="hanse_wall_sonar" type="debug_sonar" />
+		<!-- global sonar-->
+		<node name="global_sonar" pkg="hanse_wall_sonar" type="global_sonar" />
+		<!-- wall follow fancy-->
+		<node name="wall_follow_shift" pkg="hanse_wall_sonar" type="wall_follow_shift_node" />
+		<!-- wall dedection node-->
+		<node name="wall_follow_publisher" pkg="hanse_wall_sonar" type="wall_follow_publisher_node" />
+		
 	</group>
 </launch>

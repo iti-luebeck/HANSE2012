@@ -14,31 +14,29 @@
 
 // Dynamic reconfigure includes.
 #include <dynamic_reconfigure/server.h>
-#include <hanse_wall_sonar/wall_follow_fancy_algo_paramsConfig.h>
+#include <hanse_wall_sonar/wall_follow_fancy_node_paramsConfig.h>
 
 using namespace Eigen;
 
-#ifndef WALL_FOLLOW_FANCY_ALGO_H
-#define WALL_FOLLOW_FANCY_ALGO_H
+#ifndef WALL_FOLLOW_FANCY_NODE_H
+#define WALL_FOLLOW_FANCY_NODE_H
 
-class WallFollowFancyAlgoNode
+class WallFollowFancyNode
 {
 public:
-    WallFollowFancyAlgoNode(ros::NodeHandle n);
+    WallFollowFancyNode(ros::NodeHandle n);
     void sonarLaserUpdate(const geometry_msgs::PolygonStamped::ConstPtr& msg) throw (std::runtime_error);
 
 
-    void configCallback(hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig &config, uint32_t level);
+    void configCallback(hanse_wall_sonar::wall_follow_fancy_node_paramsConfig &config, uint32_t level);
 
 private:
     bool isBehindRobot(const Vector3d &p, const double &robot_yaw_angle, const Vector3d &robot_position);
     bool isInsideOtherCircle(const double &distance, const std::vector<Vector3d> &global_sonar_points, const Vector3d &pc);
 
-    uint32_t last_goal_update_;
-
     geometry_msgs::Pose last_pose_;
 
-    hanse_wall_sonar::wall_follow_fancy_algo_paramsConfig config_;
+    hanse_wall_sonar::wall_follow_fancy_node_paramsConfig config_;
 
     ros::NodeHandle node_;
     ros::Publisher pub_all_;
@@ -57,4 +55,4 @@ private:
 
 //int main(int argc, char **argv);
 
-#endif // WALL_FOLLOW_SHIFT_ALGO_H
+#endif // WALL_FOLLOW_FANCY_NODE_H
