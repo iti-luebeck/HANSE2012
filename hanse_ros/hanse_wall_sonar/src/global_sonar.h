@@ -1,13 +1,10 @@
 #include "ros/ros.h"
 #include <ros/console.h>
 #include <Eigen/Dense>
-#include <iostream>
-#include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/Polygon.h"
 #include "geometry_msgs/PolygonStamped.h"
-#include "visualization_msgs/Marker.h"
 #include <vector>
 #include <list>
 #include <math.h>
@@ -24,7 +21,6 @@
 
 using namespace Eigen;
 
-//!
 /*!
  * Calculates orientation aware global sonar data.
  * Attention! The order isn't perfect for translational moving.
@@ -32,40 +28,46 @@ using namespace Eigen;
  */
 class GlobalSonarNode {
 public:
-    //!
     /*!
-      \param node handle of the node
+     * \brief setup subscribers and publisher
+     * advertise publisher to "sonar/global_sonar/polygon" and call setupSubscribers()
+     * \param node handle of the node
      */
     GlobalSonarNode(ros::NodeHandle node_);
 
 
-    //! laser scan callback for Simulation
     /*!
-      \param msg received message.
+     * \brief (Simulation mode) ros callback for sonar data to calculate global sonar
+     * \param msg laserscan data
      */
     void sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& msg);
 
-    //! WallDetecion callback for real world
     /*!
-      \param msg received message.
+     * \brief (Real World) ros callback for sonar data to calculate global sonar
+     * Stores new data for config.store_time_sec_
+     * \param msg new points
      */
     void wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg);
 
-
-    //! position callback
     /*!
-      Callback method receiving position updates
-      \param msg received message.
+     * \brief callback of ros for new pose
+     * stores the current pose
+     * \param msg current pose
      */
     void posUpdate(const geometry_msgs::PoseStamped::ConstPtr& msg);
-
+    /*!
+     * \brief dynamic reconfigure callback
+     * overwrites config
+     * \param config new config
+     * \param level
+     */
     void configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level);
 
 private:
     //! true: active simulation_mode
     bool simulation_mode_;
     //! publisher for the global sonar
-    ros::Publisher pub_;
+    ros::Publisher pub_global_sonar_;
     //! handle of global sonar node
     ros::NodeHandle node_;
 
@@ -104,7 +106,11 @@ private:
     //! last known pose
     geometry_msgs::Pose last_pose_;
 
-    //! Subscribing to the topics corresponding to the current mode
+    /*!
+     * \brief setupSubscribers
+     * Simulation Mode: sub_elaser_ subscribes to "sonar/e_laser_scan", sub_pos_ subscribes to "posemeter"
+     * Real World: sub_walls_ subscribes to "sonar/scan/walls", sub_pos_ subscribes to "position/estimate"
+     */
     void setupSubscribers();
 
     //! returns the Affine3d to transform from robot to global coordinates
@@ -123,13 +129,5 @@ private:
      */
     geometry_msgs::Point32 calculateGlobalPoint(double local_angle, double local_distance);
 };
-
-/*!
-  Start the orientation_aware_global_sonar node. Isn't using any input arguments.
-  \param argc unused
-  \param argv unused
-*/
-int main(int argc, char **argv);
-
 
 #endif // ORIENTATION_AWARE_GLOBAL_SONAR_H

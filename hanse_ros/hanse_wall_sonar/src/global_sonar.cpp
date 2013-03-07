@@ -6,14 +6,9 @@ GlobalSonarNode::GlobalSonarNode(ros::NodeHandle n) : node_(n){
     setupSubscribers();
 
     //advertize node for sonar with global points
-    this->pub_ = this->node_.advertise<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000);
-
-
-    config.store_time_sec_ = 7;
+    this->pub_global_sonar_ = this->node_.advertise<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000);
 
     ROS_INFO("Global sonar node initialized");
-
-
 }
 
 void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& msg){
@@ -31,7 +26,7 @@ void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& m
         return;
     }
 
-     //let i the first index to read from incomming laser scan
+    //let i the first index to read from incomming laser scan
     unsigned int i = (last_newchange_ + 1) % msg->laser_scan.ranges.size();
     //let j the first index to write to the saved laser scan
     //(j is orientation aware)
@@ -89,7 +84,7 @@ void GlobalSonarNode::sonarLaserUpdate(const hanse_msgs::ELaserScan::ConstPtr& m
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
     spolygon.polygon.points = polygonPoints;
-    pub_.publish(spolygon);
+    pub_global_sonar_.publish(spolygon);
 
     //let the last new change the actual new change
     last_newchange_ = msg->changed;
@@ -139,14 +134,14 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
     spolygon.header.frame_id = "/map";
     spolygon.header.stamp = ros::Time::now();
     spolygon.polygon.points = polygonPoints;
-    pub_.publish(spolygon);
+    pub_global_sonar_.publish(spolygon);
 }
 
 
 geometry_msgs::Point32 GlobalSonarNode::calculateGlobalPoint(double local_angle, double local_distance){
     //calculating x, y coordinates from local angle and distance
     Vector3d p(local_distance, 0, 0);
-//inverting angle
+    //inverting angle
     AngleAxis<double> rotation;
     if(simulation_mode_){
         rotation = AngleAxis<double>(-local_angle, Vector3d::UnitZ());
@@ -213,6 +208,7 @@ void GlobalSonarNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg)
 void GlobalSonarNode::configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level){
     bool old_sim_mode = this->config.simulation_mode_;
     this->config = config;
+    //check if simulation mode changed and subscribe to new subscriber if needed
     if (config.simulation_mode_ != old_sim_mode){
         setupSubscribers();
     }
@@ -255,9 +251,6 @@ int main(int argc, char **argv)
     dynamic_reconfigure::Server<hanse_wall_sonar::global_sonar_paramsConfig>::CallbackType cb;
     cb = boost::bind(&GlobalSonarNode::configCallback, &global_sonar, _1, _2);
     dr_srv.setCallback(cb);
-
-    //TODO load parameters for dyn reconfigure
-
     
     ros::Rate loop_rate(10);
 

@@ -1,24 +1,10 @@
 #include "wall_follow_shift_node.h"
 
 using namespace Eigen;
-using std::set;
-
-class CompPointsX
-{
-public:
-    bool operator()(Vector3d v1, Vector3d v2)
-    {
-        if(v1(0) < v2(0))
-            return true;
-        else
-            return false;
-    }
-};
-
 
 WallFollowShiftNode::WallFollowShiftNode(ros::NodeHandle n):node_(n){
 
-    pub_goal_ = node_.advertise<geometry_msgs::PoseStamped>("sonar/wall_follow/goall", 1000);
+    pub_goal_ = node_.advertise<geometry_msgs::PoseStamped>("sonar/wall_follow/goal", 1000);
     pub_poly_ = node_.advertise<geometry_msgs::PolygonStamped>("sonar/shift/poly", 1000);
 
     setupSubscribers();
@@ -132,10 +118,10 @@ void WallFollowShiftNode::publishDebugInfo(const std::vector<Vector3d> &shifted_
 
 void WallFollowShiftNode::setupSubscribers(){
     sub_pos_.shutdown();
-    sub_laser_.shutdown();
+    sub_global_sonar_.shutdown();
 
     //Subscribe to topic laser_scan (from sonar)
-    sub_laser_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowShiftNode::sonarLaserUpdate, this);
+    sub_global_sonar_ = node_.subscribe<geometry_msgs::PolygonStamped>("sonar/global_sonar/polygon", 1000, &WallFollowShiftNode::sonarLaserUpdate, this);
 
     if(config_.simulation_mode_){
         //Subscribe to the current position
@@ -168,9 +154,6 @@ int main(int argc, char **argv)
     dynamic_reconfigure::Server<hanse_wall_sonar::wall_follow_shift_node_paramsConfig>::CallbackType cb;
     cb = boost::bind(&WallFollowShiftNode::configCallback, &wall_follow_shift_node, _1, _2);
     dr_srv.setCallback(cb);
-
-    //TODO load parameters for dyn reconfigure
-
 
     ros::Rate loop_rate(10);
 
