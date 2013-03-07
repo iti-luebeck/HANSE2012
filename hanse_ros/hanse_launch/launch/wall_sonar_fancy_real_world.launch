@@ -1,0 +1,17 @@
+<!--
+This launchfile is used for programming & testing the hanse_wall_sonar package.
+It is optimized for usage with MARS simulator
+-->
+<launch>
+	<include file="$(find hanse_launch)/launch/hanse.launch" />
+
+	<group ns="hanse">
+		<!-- global sonar-->
+		<node name="global_sonar" pkg="hanse_wall_sonar" type="global_sonar" />
+		<!-- wall follow fancy-->
+		<node name="wall_follow_fancy" pkg="hanse_wall_sonar" type="wall_follow_fancy_node" />
+		<!-- wall dedection node-->
+		<node name="wall_follow_publisher" pkg="hanse_wall_sonar" type="wall_follow_publisher_node" />
+		
+	</group>
+</launch>
