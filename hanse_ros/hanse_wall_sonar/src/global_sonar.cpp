@@ -110,7 +110,7 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
 
     //handling outdated data
     for(std::list<posStamped>::iterator it = pos_list_.begin() ; it != pos_list_.end(); ){
-        if((*it).sec_ + config.store_time_sec_ < current_time){
+        if((*it).sec_ + config_.store_time_sec_ < current_time){
             //remove old position from list
             it = pos_list_.erase(it);
         }else{
@@ -120,7 +120,7 @@ void GlobalSonarNode::wallsUpdate(const hanse_msgs::WallDetection::ConstPtr& msg
     }
 
 
-    std::cout << config.store_time_sec_ << "\n";
+    std::cout << config_.store_time_sec_ << "\n";
 
 
     //create polygon from pos_list_
@@ -206,8 +206,8 @@ void GlobalSonarNode::posUpdate(const geometry_msgs::PoseStamped::ConstPtr &msg)
 
 
 void GlobalSonarNode::configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level){
-    bool old_sim_mode = this->config.simulation_mode_;
-    this->config = config;
+    bool old_sim_mode = this->config_.simulation_mode_;
+    this->config_ = config;
     //check if simulation mode changed and subscribe to new subscriber if needed
     if (config.simulation_mode_ != old_sim_mode){
         setupSubscribers();
@@ -216,21 +216,21 @@ void GlobalSonarNode::configCallback(hanse_wall_sonar::global_sonar_paramsConfig
 
 
 void GlobalSonarNode::setupSubscribers(){
-    sub_elaser.shutdown();
-    sub_pos.shutdown();
+    sub_elaser_.shutdown();
+    sub_pos_.shutdown();
     sub_walls_.shutdown();
-    if(config.simulation_mode_){
+    if(config_.simulation_mode_){
         //Subscribe to topic e_laser_scan (from sonar)
-        sub_elaser = node_.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, this);
+        sub_elaser_ = node_.subscribe<hanse_msgs::ELaserScan>("sonar/e_laser_scan", 1000, &GlobalSonarNode::sonarLaserUpdate, this);
 
         //Subscribe to the current position
-        sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, this);
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("posemeter", 1000, &GlobalSonarNode::posUpdate, this);
     }else{
         //Subscribe to topic walls
         sub_walls_ = node_.subscribe<hanse_msgs::WallDetection>("sonar/scan/walls", 1000, &GlobalSonarNode::wallsUpdate, this);
 
         //Subscribe to the current position
-        sub_pos = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, this);
+        sub_pos_ = node_.subscribe<geometry_msgs::PoseStamped>("position/estimate", 1000, &GlobalSonarNode::posUpdate, this);
     }
 }
 

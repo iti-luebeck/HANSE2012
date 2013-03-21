@@ -61,7 +61,7 @@ public:
      * \param config new config
      * \param level
      */
-    void configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config, uint32_t level);
+    void configCallback(hanse_wall_sonar::global_sonar_paramsConfig &config_, uint32_t level);
 
 private:
     //! true: active simulation_mode
@@ -72,7 +72,7 @@ private:
     ros::NodeHandle node_;
 
     //! Subscriber for the current position
-    ros::Subscriber sub_pos;
+    ros::Subscriber sub_pos_;
 
 
     //Members needed for Simulation
@@ -86,10 +86,10 @@ private:
     //! index of the last changed value of internal laser scan
     uint16_t last_j_;
     //! Subscriber for the sonar data in simulation mode
-    ros::Subscriber sub_elaser;
+    ros::Subscriber sub_elaser_;
 
     //Members needed for Realworld
-    hanse_wall_sonar::global_sonar_paramsConfig config;
+    hanse_wall_sonar::global_sonar_paramsConfig config_;
     //! time to store WallDetection positions.
     uint32_t store_time_sec_;
     //! datastructure to store incomming WallDetection messages.
