@@ -1,0 +1,9 @@
+<package>
+  <description brief="Hanse Moving Camera">
+     Hanse Moving Camera
+  </description>
+  <author>Christopher Gudat, Alexander Faißt</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>https://wiki.iti.uni-luebeck.de/redmine/projects/hanse/wiki/Bewegliche_Kamera</url>
+</package>
