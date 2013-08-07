@@ -1,0 +1,16 @@
+<package>
+  <description brief="hanse_movingcameranode">
+
+     hanse_movingcameranode
+
+  </description>
+  <author>Hanse</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_movingcameranode</url>
+  <depend package="rospy"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+
