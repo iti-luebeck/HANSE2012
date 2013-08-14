@@ -1,4 +1,4 @@
-#include "avr_uart.h"
+#include <avr/io.h>
 
 #define BAUD 57600
 #define UBRR_VAL ((F_CPU / (16UL * BAUD)) - 1)
@@ -14,6 +14,7 @@ void avr_uart_init(void)
   UCSR0B |= _BV(RXEN0) | _BV(TXEN0);
   // Use 8-bit characters
   UCSR0C |= _BV(UCSZ10) | _BV(UCSZ11);
+  
 }
 
 
@@ -28,8 +29,8 @@ void avr_uart_send_byte(uint8_t tx_byte)
 }
 
 
-// Get one char if available, otherwise -128
-int8_t avr_uart_receive_byte(void)
+// Get one char if available, otherwise -1
+int16_t avr_uart_receive_byte(void)
 {
   if((UCSR0A & _BV(RXC0)) != 0)
   {
@@ -37,20 +38,6 @@ int8_t avr_uart_receive_byte(void)
   }
   else
   {
-    return -128;
+    return -1;
   }
-}
-
-void avr_uart_send_position(int8_t servo_position_degree){
-	avr_uart_send_byte(servo_position_degree);
-}
-
-int8_t avr_uart_receive_servo_position(int8_t servo_position_old)
-{
-  int8_t servo_position = avr_uart_receive_byte();
-  if(servo_position != -128)
-  {
-    return servo_position;
-  }
-  return servo_position_old;
 }

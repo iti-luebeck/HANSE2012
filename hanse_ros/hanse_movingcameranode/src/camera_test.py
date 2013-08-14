@@ -14,6 +14,10 @@ def camera_test():
             pub.publish(i)
             rospy.sleep(0.01)
         pub.publish(0)
+        while 1:
+            message = input('Grad:')
+            message = int(message)
+            pub.publish(message)
 
 if __name__ == '__main__':
     try:
