@@ -80,7 +80,7 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = avr_time.c avr_uart.c
+SRC = avr_uart.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
@@ -123,7 +123,6 @@ EXTRAINCDIRS = ./ros_lib
 #     c99   = ISO C99 standard (not yet fully implemented)
 #     gnu99 = c99 plus GCC extensions
 CSTANDARD = -std=gnu99
-
 
 # Place -D or -U options here for C sources
 CDEFS = -DF_CPU=$(F_CPU)UL
@@ -178,7 +177,8 @@ CFLAGS += $(CSTANDARD)
 #  -Wall...:     warning level
 #  -Wa,...:      tell GCC to pass this to the assembler.
 #    -adhlns...: create assembler listing
-CPPFLAGS = -g$(DEBUG)
+CPPFLAGS = -std=gnu++0x
+CPPFLAGS += -g$(DEBUG)
 CPPFLAGS += $(CPPDEFS)
 CPPFLAGS += $(CPPINCS)
 CPPFLAGS += -O$(OPT)
