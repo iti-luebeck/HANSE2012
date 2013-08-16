@@ -1,0 +1,21 @@
+<package>
+  <description brief="hanse_test_behaviour">
+
+     hanse_test_behaviour
+
+  </description>
+  <author>Hanse</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hanse_test_behaviour</url>
+  
+  <depend package="rospy" />
+  <depend package="smach"/>
+  <depend package="smach_ros"/>
+  <depend package="geometry_msgs" />
+  <depend package="hanse_msgs"/>
+  <depend package="dynamic_reconfigure" />
+
+</package>
+
+
