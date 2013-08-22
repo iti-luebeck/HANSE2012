@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hanse_msgs</url>
   <depend package="sensor_msgs"/>
-
+  <depend package="std_msgs"/>
 </package>
 
 
